@@ -204,7 +204,9 @@ def format_status_display(status: Status) -> str:
 
 
 def format_status_list(
-    status_list: StatusList, project_key: str | None = None, status_type: str | None = None
+    status_list: StatusList,
+    project_key: str | None = None,
+    status_type: str | None = None,
 ) -> str:
     """Format a list of statuses for display.
 
@@ -228,7 +230,9 @@ def format_status_list(
     # Create header with pagination info
     header = f"📋 **Found {len(status_list.values)} statuses"
     if status_list.total and status_list.total > len(status_list.values):
-        header += f" (showing {status_list.startAt + 1}-{status_list.startAt + len(status_list.values)} of {status_list.total})"
+        start_num = status_list.startAt + 1
+        end_num = status_list.startAt + len(status_list.values)
+        header += f" (showing {start_num}-{end_num} of {status_list.total})"
     header += ":**\n\n"
 
     # Add filter context if provided

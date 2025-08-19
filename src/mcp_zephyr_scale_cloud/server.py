@@ -353,6 +353,7 @@ async def update_priority(
 
 # Status MCP Tools
 
+
 @mcp.tool()
 async def get_statuses(
     project_key: str | None = None,
@@ -364,7 +365,8 @@ async def get_statuses(
 
     Args:
         project_key: Optional Jira project key to filter statuses (e.g., 'PROJ')
-        status_type: Optional status type filter ('TEST_CASE', 'TEST_PLAN', 'TEST_CYCLE', 'TEST_EXECUTION')
+        status_type: Optional status type filter ('TEST_CASE', 'TEST_PLAN',
+                 'TEST_CYCLE', 'TEST_EXECUTION')
         max_results: Maximum number of results to return (default: 50, max: 1000)
 
     Returns:
@@ -379,9 +381,10 @@ async def get_statuses(
         type_validation = validate_status_type(status_type)
         if not type_validation.is_valid:
             return format_validation_errors(type_validation.errors)
-        
+
         # Import here to avoid circular imports
         from .schemas.status import StatusType
+
         parsed_status_type = StatusType(status_type)
 
     # Validate project key if provided
@@ -427,7 +430,9 @@ async def get_status(status_id: int) -> str:
         return format_status_details(result.data)
     else:
         return format_error_message(
-            "Get Status", f"Failed to retrieve status {status_id}", "; ".join(result.errors)
+            "Get Status",
+            f"Failed to retrieve status {status_id}",
+            "; ".join(result.errors),
         )
 
 
@@ -445,7 +450,8 @@ async def create_status(
     Args:
         project_key: Jira project key where the status will be created (e.g., 'PROJ')
         name: Name of the status (max 255 characters)
-        status_type: Status type ('TEST_CASE', 'TEST_PLAN', 'TEST_CYCLE', 'TEST_EXECUTION')
+        status_type: Status type ('TEST_CASE', 'TEST_PLAN', 'TEST_CYCLE',
+                     'TEST_EXECUTION')
         description: Optional description of the status (max 255 characters)
         color: Optional color code for the status (e.g., '#FF0000')
 

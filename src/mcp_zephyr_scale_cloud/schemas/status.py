@@ -1,7 +1,6 @@
 """Pydantic schemas for Zephyr Scale Status operations."""
 
 from enum import Enum
-from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -26,17 +25,19 @@ class Status(BaseModel):
     id: int = Field(..., description="Status ID", ge=1)
     project: ProjectLink = Field(..., description="Project this status belongs to")
     name: str = Field(..., description="Status name", min_length=1, max_length=255)
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Status description", min_length=1, max_length=255
     )
     index: int = Field(..., description="Display order index", ge=0)
-    color: Optional[str] = Field(None, description="Color in hexadecimal format")
+    color: str | None = Field(None, description="Color in hexadecimal format")
     archived: bool = Field(default=False, description="Whether status is archived")
-    default: bool = Field(default=False, description="Whether this is the default status")
+    default: bool = Field(
+        default=False, description="Whether this is the default status"
+    )
 
     @field_validator("color")
     @classmethod
-    def validate_color(cls, v: Optional[str]) -> Optional[str]:
+    def validate_color(cls, v: str | None) -> str | None:
         """Validate color format if provided."""
         if v is None:
             return v
@@ -48,7 +49,7 @@ class Status(BaseModel):
 class StatusList(PagedResponse[Status]):
     """Paged list of statuses."""
 
-    values: List[Status] = Field(default_factory=list, description="List of statuses")
+    values: list[Status] = Field(default_factory=list, description="List of statuses")
 
 
 class CreateStatusRequest(BaseModel):
@@ -64,14 +65,14 @@ class CreateStatusRequest(BaseModel):
     )
     name: str = Field(..., description="Status name", min_length=1, max_length=255)
     type: StatusType = Field(..., description="Status type")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Status description", min_length=1, max_length=255
     )
-    color: Optional[str] = Field(None, description="Color in hexadecimal format")
+    color: str | None = Field(None, description="Color in hexadecimal format")
 
     @field_validator("color")
     @classmethod
-    def validate_color(cls, v: Optional[str]) -> Optional[str]:
+    def validate_color(cls, v: str | None) -> str | None:
         """Validate color format if provided."""
         if v is None:
             return v
@@ -88,17 +89,17 @@ class UpdateStatusRequest(BaseModel):
     id: int = Field(..., description="Status ID", ge=1)
     project: ProjectLink = Field(..., description="Project this status belongs to")
     name: str = Field(..., description="Status name", min_length=1, max_length=255)
-    description: Optional[str] = Field(
+    description: str | None = Field(
         None, description="Status description", min_length=1, max_length=255
     )
     index: int = Field(..., description="Display order index", ge=0)
     archived: bool = Field(..., description="Whether status is archived")
     default: bool = Field(..., description="Whether this is the default status")
-    color: Optional[str] = Field(None, description="Color in hexadecimal format")
+    color: str | None = Field(None, description="Color in hexadecimal format")
 
     @field_validator("color")
     @classmethod
-    def validate_color(cls, v: Optional[str]) -> Optional[str]:
+    def validate_color(cls, v: str | None) -> str | None:
         """Validate color format if provided."""
         if v is None:
             return v
