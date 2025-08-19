@@ -72,3 +72,6 @@ config.json
 
 # MCP configuration files with sensitive data
 claude-desktop-config.json
+
+# Cursor IDE files with sensitive data
+.cursor/
