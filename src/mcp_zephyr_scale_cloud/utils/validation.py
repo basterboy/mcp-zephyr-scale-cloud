@@ -216,8 +216,8 @@ def validate_status_type(status_type: str) -> ValidationResult:
         ValidationResult with validation status and any errors
     """
     try:
-        StatusType(status_type)
-        return ValidationResult(True)
+        validated_type = StatusType(status_type)
+        return ValidationResult(True, data=validated_type)
     except ValueError:
         valid_types = [t.value for t in StatusType]
         return ValidationResult(

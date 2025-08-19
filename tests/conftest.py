@@ -130,6 +130,89 @@ def sample_created_resource() -> dict:
 
 
 @pytest.fixture
+def sample_status_data() -> dict:
+    """Sample status data for testing."""
+    return {
+        "id": 1,
+        "name": "In Progress",
+        "description": "Test is currently in progress",
+        "type": "TEST_EXECUTION",
+        "index": 1,
+        "default": False,
+        "archived": False,
+        "color": "#FFA500",
+        "project": {
+            "id": 123,
+            "key": "TEST",
+            "name": "Test Project",
+            "self": "https://api.example.com/v2/projects/123",
+        },
+        "self": "https://api.example.com/v2/statuses/1",
+    }
+
+
+@pytest.fixture
+def sample_status_list() -> dict:
+    """Sample status list response for testing."""
+    return {
+        "values": [
+            {
+                "id": 1,
+                "name": "Pass",
+                "description": "Test passed successfully",
+                "type": "TEST_EXECUTION",
+                "index": 0,
+                "default": True,
+                "archived": False,
+                "color": "#00FF00",
+                "project": {
+                    "id": 123,
+                    "key": "TEST",
+                    "self": "https://api.example.com/v2/projects/123",
+                },
+                "self": "https://api.example.com/v2/statuses/1",
+            },
+            {
+                "id": 2,
+                "name": "Fail",
+                "description": "Test failed",
+                "type": "TEST_EXECUTION",
+                "index": 1,
+                "default": False,
+                "archived": False,
+                "color": "#FF0000",
+                "project": {
+                    "id": 123,
+                    "key": "TEST",
+                    "self": "https://api.example.com/v2/projects/123",
+                },
+                "self": "https://api.example.com/v2/statuses/2",
+            },
+            {
+                "id": 3,
+                "name": "In Progress",
+                "description": "Test is in progress",
+                "type": "TEST_EXECUTION",
+                "index": 2,
+                "default": False,
+                "archived": False,
+                "color": "#FFA500",
+                "project": {
+                    "id": 123,
+                    "key": "TEST",
+                    "self": "https://api.example.com/v2/projects/123",
+                },
+                "self": "https://api.example.com/v2/statuses/3",
+            },
+        ],
+        "total": 3,
+        "maxResults": 50,
+        "startAt": 0,
+        "isLast": True,
+    }
+
+
+@pytest.fixture
 def sample_validation_error() -> ValidationError:
     """Sample Pydantic validation error for testing."""
     try:

@@ -6,11 +6,13 @@ import pytest
 
 from src.mcp_zephyr_scale_cloud.config import ZephyrConfig
 from src.mcp_zephyr_scale_cloud.schemas.priority import CreatePriorityRequest
+from src.mcp_zephyr_scale_cloud.schemas.status import CreateStatusRequest, StatusType
 from src.mcp_zephyr_scale_cloud.server import mcp
 from src.mcp_zephyr_scale_cloud.utils.validation import (
     ValidationResult,
     validate_pagination_params,
     validate_project_key,
+    validate_status_type,
 )
 
 
@@ -123,6 +125,10 @@ class TestBasicFunctionality:
             "get_priority",
             "create_priority",
             "update_priority",
+            "get_statuses",
+            "get_status",
+            "create_status",
+            "update_status",
         ]
 
         for tool_name in expected_tools:
@@ -138,6 +144,74 @@ class TestBasicFunctionality:
         assert "projectKey" in dumped
         assert dumped["projectKey"] == "TEST"
         assert dumped["name"] == "Priority"
+
+    def test_status_schema_creation(self):
+        """Test creating status request schema."""
+        request = CreateStatusRequest(
+            project_key="TEST",
+            name="In Progress",
+            type="TEST_EXECUTION",
+            description="Test in progress",
+            color="#FFA500",
+        )
+
+        assert request.project_key == "TEST"
+        assert request.name == "In Progress"
+        assert request.type == StatusType.TEST_EXECUTION
+        assert request.description == "Test in progress"
+        assert request.color == "#FFA500"
+
+    def test_status_schema_validation(self):
+        """Test status schema validation."""
+        from pydantic import ValidationError
+
+        # Test invalid project key
+        with pytest.raises(ValidationError):
+            CreateStatusRequest(
+                project_key="invalid-key", 
+                name="Status",
+                type="TEST_EXECUTION"
+            )
+
+        # Test invalid status type
+        with pytest.raises(ValidationError):
+            CreateStatusRequest(
+                project_key="TEST",
+                name="Status", 
+                type="INVALID_TYPE"
+            )
+
+    def test_status_type_validation(self):
+        """Test status type validation."""
+        # Valid cases
+        for status_type in ["TEST_CASE", "TEST_PLAN", "TEST_CYCLE", "TEST_EXECUTION"]:
+            result = validate_status_type(status_type)
+            assert result.is_valid
+            assert result.data.value == status_type
+
+        # Invalid cases
+        result = validate_status_type("INVALID_TYPE")
+        assert not result.is_valid
+
+        result = validate_status_type("")
+        assert not result.is_valid
+
+    def test_status_model_dump_camelcase(self):
+        """Test that status models use camelCase in output."""
+        request = CreateStatusRequest(
+            project_key="TEST",
+            name="Status",
+            type="TEST_EXECUTION"
+        )
+
+        dumped = request.model_dump(exclude_none=True, by_alias=True)
+
+        # Should have camelCase key due to alias
+        assert "projectKey" in dumped
+        assert "project_key" not in dumped
+        assert dumped["projectKey"] == "TEST"
+        assert dumped["name"] == "Status"
+        assert dumped["type"] == "TEST_EXECUTION"
 
 
 class TestEnvironmentConfiguration:
