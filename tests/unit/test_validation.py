@@ -258,7 +258,8 @@ class TestStatusValidation:
     def test_validate_status_update_success(self):
         """Test successful status data validation for update."""
         data = {
-            "project_id": 123,
+            "id": 123,
+            "project": {"id": 456},
             "name": "Updated Status",
             "index": 5,
             "default": False,
@@ -270,7 +271,8 @@ class TestStatusValidation:
         result = validate_status_data(data, is_update=True)
 
         assert result.is_valid
-        assert result.data.project_id == 123
+        assert result.data.id == 123
+        assert result.data.project.id == 456
         assert result.data.name == "Updated Status"
         assert result.data.index == 5
         assert result.data.default is False
@@ -301,7 +303,7 @@ class TestStatusValidation:
 
     def test_validate_status_update_missing_fields(self):
         """Test status update validation with missing fields."""
-        data = {"name": "Status"}  # Missing project_id, index, archived, default
+        data = {"name": "Status"}  # Missing id, project, index, archived, default
 
         result = validate_status_data(data, is_update=True)
 

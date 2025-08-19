@@ -206,7 +206,8 @@ class TestStatusSchemas:
     def test_update_status_request_valid(self):
         """Test creating a valid UpdateStatusRequest."""
         request = UpdateStatusRequest(
-            project_id=123,
+            id=123,
+            project={"id": 456},
             name="Updated Status",
             index=5,
             default=False,
@@ -215,7 +216,8 @@ class TestStatusSchemas:
             color="#00FF00",
         )
 
-        assert request.project_id == 123
+        assert request.id == 123
+        assert request.project.id == 456
         assert request.name == "Updated Status"
         assert request.index == 5
         assert request.default is False
