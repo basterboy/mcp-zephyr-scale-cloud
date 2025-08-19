@@ -1,17 +1,27 @@
-"""HTTP client for Zephyr Scale Cloud API."""
-
-from typing import Any
+"""Schema-based HTTP client for Zephyr Scale Cloud API."""
 
 import httpx
 
 from ..config import ZephyrConfig
+from ..schemas.base import CreatedResource
+from ..schemas.priority import (
+    CreatePriorityRequest,
+    Priority,
+    PriorityList,
+    UpdatePriorityRequest,
+)
+from ..utils.validation import (
+    ValidationResult,
+    validate_api_response,
+    validate_pagination_params,
+)
 
 
 class ZephyrClient:
-    """HTTP client for Zephyr Scale Cloud API.
+    """Schema-based HTTP client for Zephyr Scale Cloud API.
 
-    This is an HTTP client that makes requests to the Zephyr Scale Cloud REST API.
-    It's used internally by the MCP server to fetch data and perform operations.
+    This client uses Pydantic schemas for request/response validation
+    and provides type-safe interactions with the Zephyr Scale Cloud REST API.
     """
 
     def __init__(self, config: ZephyrConfig):
@@ -22,8 +32,12 @@ class ZephyrClient:
             "Accept": "application/json",
         }
 
-    async def healthcheck(self) -> dict:
-        """Check if Zephyr Scale API is accessible."""
+    async def healthcheck(self) -> ValidationResult:
+        """Check if Zephyr Scale API is accessible.
+
+        Returns:
+            ValidationResult with health status
+        """
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
@@ -35,20 +49,22 @@ class ZephyrClient:
 
                 # Zephyr Scale healthcheck returns 200 OK with empty body
                 if response.status_code == 200:
-                    return {"status": "UP"}
+                    return ValidationResult(True, data={"status": "UP"})
                 else:
-                    return {"status": "DOWN", "http_status": response.status_code}
+                    return ValidationResult(
+                        False,
+                        ["API returned non-200 status"],
+                        {"status": "DOWN", "http_status": response.status_code},
+                    )
 
             except httpx.HTTPError as e:
-                return {
-                    "status": "ERROR",
-                    "error": str(e),
-                    "message": "Failed to connect to Zephyr Scale Cloud API",
-                }
+                return ValidationResult(
+                    False, [f"Failed to connect to Zephyr Scale Cloud API: {str(e)}"]
+                )
 
     async def get_priorities(
         self, project_key: str | None = None, max_results: int = 50, start_at: int = 0
-    ) -> dict[str, Any]:
+    ) -> ValidationResult:
         """Get all priorities from Zephyr Scale Cloud.
 
         Args:
@@ -57,14 +73,19 @@ class ZephyrClient:
             start_at: Zero-indexed starting position (default: 0)
 
         Returns:
-            Dict containing list of priorities and pagination info
+            ValidationResult containing PriorityList or errors
         """
+        # Validate pagination parameters
+        pagination_validation = validate_pagination_params(max_results, start_at)
+        if not pagination_validation:
+            return pagination_validation
+
+        params = pagination_validation.data
+        if project_key:
+            params["projectKey"] = project_key
+
         async with httpx.AsyncClient() as client:
             try:
-                params = {"maxResults": min(max_results, 1000), "startAt": start_at}
-                if project_key:
-                    params["projectKey"] = project_key
-
                 response = await client.get(
                     f"{self.config.base_url}/priorities",
                     headers=self.headers,
@@ -72,24 +93,27 @@ class ZephyrClient:
                     timeout=10.0,
                 )
                 response.raise_for_status()
-                return response.json()
+
+                # Validate response against schema
+                return validate_api_response(response.json(), PriorityList)
 
             except httpx.HTTPError as e:
-                return {
-                    "error": str(e),
-                    "message": "Failed to retrieve priorities from Zephyr Scale "
-                    "Cloud API",
-                }
+                return ValidationResult(
+                    False, [f"Failed to retrieve priorities: {str(e)}"]
+                )
 
-    async def get_priority(self, priority_id: int) -> dict[str, Any]:
+    async def get_priority(self, priority_id: int) -> ValidationResult:
         """Get a specific priority by ID.
 
         Args:
             priority_id: The ID of the priority to retrieve
 
         Returns:
-            Dict containing priority details
+            ValidationResult containing Priority or errors
         """
+        if priority_id < 1:
+            return ValidationResult(False, ["Priority ID must be a positive integer"])
+
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
@@ -98,46 +122,35 @@ class ZephyrClient:
                     timeout=10.0,
                 )
                 response.raise_for_status()
-                return response.json()
+
+                # Validate response against schema
+                return validate_api_response(response.json(), Priority)
 
             except httpx.HTTPError as e:
                 if hasattr(e, "response") and e.response.status_code == 404:
-                    return {
-                        "error": "Priority not found",
-                        "message": f"Priority with ID {priority_id} does not exist "
-                        f"or you do not have access to it",
-                    }
-                return {
-                    "error": str(e),
-                    "message": f"Failed to retrieve priority {priority_id} "
-                    f"from Zephyr Scale Cloud API",
-                }
+                    return ValidationResult(
+                        False,
+                        [
+                            f"Priority with ID {priority_id} does not exist or you do not have access to it"
+                        ],
+                    )
+                return ValidationResult(
+                    False, [f"Failed to retrieve priority {priority_id}: {str(e)}"]
+                )
 
-    async def create_priority(
-        self,
-        project_key: str,
-        name: str,
-        description: str | None = None,
-        color: str | None = None,
-    ) -> dict[str, Any]:
+    async def create_priority(self, request: CreatePriorityRequest) -> ValidationResult:
         """Create a new priority.
 
         Args:
-            project_key: Jira project key where the priority will be created
-            name: Name of the priority (max 255 characters)
-            description: Optional description of the priority (max 255 characters)
-            color: Optional color code for the priority (e.g., '#FF0000')
+            request: Validated CreatePriorityRequest schema
 
         Returns:
-            Dict containing created priority details
+            ValidationResult containing CreatedResource or errors
         """
         async with httpx.AsyncClient() as client:
             try:
-                payload = {"projectKey": project_key, "name": name}
-                if description:
-                    payload["description"] = description
-                if color:
-                    payload["color"] = color
+                # Convert Pydantic model to dict, excluding None values
+                payload = request.model_dump(exclude_none=True)
 
                 response = await client.post(
                     f"{self.config.base_url}/priorities",
@@ -146,51 +159,32 @@ class ZephyrClient:
                     timeout=10.0,
                 )
                 response.raise_for_status()
-                return response.json()
+
+                # Validate response against schema
+                return validate_api_response(response.json(), CreatedResource)
 
             except httpx.HTTPError as e:
-                return {
-                    "error": str(e),
-                    "message": "Failed to create priority in Zephyr Scale Cloud API",
-                }
+                return ValidationResult(False, [f"Failed to create priority: {str(e)}"])
 
     async def update_priority(
-        self,
-        priority_id: int,
-        project_id: int,
-        name: str,
-        index: int,
-        default: bool = False,
-        description: str | None = None,
-        color: str | None = None,
-    ) -> dict[str, Any]:
+        self, priority_id: int, request: UpdatePriorityRequest
+    ) -> ValidationResult:
         """Update an existing priority.
 
         Args:
             priority_id: ID of the priority to update
-            project_id: ID of the project the priority belongs to
-            name: Updated name of the priority
-            index: Index/order of the priority
-            default: Whether this is the default priority
-            description: Optional updated description
-            color: Optional updated color code
+            request: Validated UpdatePriorityRequest schema
 
         Returns:
-            Dict containing update result
+            ValidationResult indicating success or errors
         """
+        if priority_id < 1:
+            return ValidationResult(False, ["Priority ID must be a positive integer"])
+
         async with httpx.AsyncClient() as client:
             try:
-                payload = {
-                    "id": priority_id,
-                    "project": {"id": project_id},
-                    "name": name,
-                    "index": index,
-                    "default": default,
-                }
-                if description:
-                    payload["description"] = description
-                if color:
-                    payload["color"] = color
+                # Convert Pydantic model to dict, excluding None values
+                payload = request.model_dump(exclude_none=True)
 
                 response = await client.put(
                     f"{self.config.base_url}/priorities/{priority_id}",
@@ -201,14 +195,15 @@ class ZephyrClient:
                 response.raise_for_status()
 
                 # Update returns 200 OK with no body
-                return {
-                    "success": True,
-                    "message": f"Priority {priority_id} updated successfully",
-                }
+                return ValidationResult(
+                    True,
+                    data={
+                        "success": True,
+                        "message": f"Priority {priority_id} updated successfully",
+                    },
+                )
 
             except httpx.HTTPError as e:
-                return {
-                    "error": str(e),
-                    "message": f"Failed to update priority {priority_id} "
-                    f"in Zephyr Scale Cloud API",
-                }
+                return ValidationResult(
+                    False, [f"Failed to update priority {priority_id}: {str(e)}"]
+                )

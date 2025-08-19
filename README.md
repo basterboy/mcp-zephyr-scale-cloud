@@ -90,15 +90,28 @@ Zephyr Scale Cloud API
 src/mcp_zephyr_scale_cloud/
 ├── server.py              # MCP Server - exposes tools to AI assistants
 ├── config.py              # Configuration management
+├── schemas/               # Pydantic schemas for data validation
+│   ├── __init__.py
+│   ├── base.py           # Base schemas and common types
+│   ├── common.py         # Shared entity schemas
+│   ├── priority.py       # Priority-specific schemas
+│   └── project.py        # Project-specific schemas
+├── utils/                 # Utility functions
+│   ├── __init__.py
+│   ├── validation.py     # Input validation utilities
+│   └── formatting.py     # Output formatting utilities
 └── clients/
     ├── __init__.py
-    └── zephyr_client.py    # HTTP Client - makes REST API calls
+    └── zephyr_client.py   # Schema-based HTTP Client
 ```
 
 ### Key Concepts
 
 - **MCP Server** (`server.py`): Handles the Model Context Protocol, exposes tools/resources to AI assistants
-- **HTTP Client** (`clients/zephyr_client.py`): Makes REST API calls to Zephyr Scale Cloud
+- **HTTP Client** (`clients/zephyr_client.py`): Schema-based client making type-safe REST API calls to Zephyr Scale Cloud
+- **Pydantic Schemas** (`schemas/`): Data validation and serialization using Pydantic models
+- **Validation Utils** (`utils/validation.py`): Input validation with comprehensive error handling
+- **Formatting Utils** (`utils/formatting.py`): Rich output formatting for MCP tools
 - **Configuration** (`config.py`): Manages API tokens and settings
 
 ## MCP Tools
