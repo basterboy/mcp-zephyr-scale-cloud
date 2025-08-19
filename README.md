@@ -82,14 +82,34 @@ poetry install --with dev
 
 3. Run tests:
 ```bash
+# Run all tests
+make test
+
+# Or specific test types
+make test-unit          # Unit tests only
+make test-integration   # Integration tests only  
+make test-fast         # Fast tests (no coverage)
+make test-coverage     # Tests with detailed coverage
+
+# Or use Poetry directly
 poetry run pytest
 ```
 
-4. Run linting:
+4. Run code quality checks:
 ```bash
-poetry run black .
-poetry run isort .
-poetry run ruff check .
+# Run all quality checks
+make lint
+
+# Or individual tools
+poetry run black .      # Code formatting
+poetry run isort .      # Import sorting
+poetry run ruff check . # Linting
+poetry run mypy src/    # Type checking
+```
+
+5. Auto-fix code issues:
+```bash
+make format  # Fix formatting and imports
 ```
 
 ## Architecture
@@ -152,6 +172,51 @@ This MCP server implements advanced [server lifespan management](https://github.
 - 🚨 **Production Ready**: Fails fast instead of silently accepting broken configurations
 - 📊 **Monitoring**: Easy to detect configuration and connectivity issues
 - 🧹 **Resource Management**: Proper cleanup prevents resource leaks
+
+## Testing
+
+This project includes comprehensive testing to ensure reliability:
+
+### 🧪 Test Structure
+```
+tests/
+├── test_basic.py           # Basic functionality tests
+├── unit/                   # Unit tests for individual components
+│   ├── test_config.py      # Configuration tests
+│   ├── test_schemas.py     # Pydantic schema tests
+│   ├── test_validation.py  # Validation utility tests
+│   └── test_zephyr_client.py # HTTP client tests
+├── integration/            # Integration tests
+│   └── test_mcp_server.py  # MCP server integration tests
+└── conftest.py            # Shared test fixtures
+```
+
+### 🚀 Running Tests
+```bash
+# Quick test run
+make test-fast
+
+# Full test suite with coverage
+make test
+
+# Continuous testing during development
+poetry run pytest tests/ --tb=short -x
+
+# Test specific functionality
+poetry run pytest tests/test_basic.py -v
+```
+
+### 📊 Test Coverage
+- **Unit Tests**: Test individual components in isolation
+- **Integration Tests**: Test MCP server functionality end-to-end
+- **Schema Tests**: Validate Pydantic models and API contracts
+- **Validation Tests**: Ensure input validation works correctly
+
+### 🔧 CI/CD
+Tests run automatically on:
+- **GitHub Actions**: On push/PR to main branch
+- **Multiple Python versions**: 3.10, 3.11, 3.12
+- **Code quality checks**: Formatting, linting, type checking
 
 ## MCP Tools
 
