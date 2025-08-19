@@ -173,7 +173,9 @@ def sanitize_input(value: Any) -> Any:
     return value
 
 
-def validate_status_data(data: dict[str, Any], is_update: bool = False) -> ValidationResult:
+def validate_status_data(
+    data: dict[str, Any], is_update: bool = False
+) -> ValidationResult:
     """Validate status data using appropriate Pydantic schema.
 
     Args:
@@ -220,5 +222,8 @@ def validate_status_type(status_type: str) -> ValidationResult:
         valid_types = [t.value for t in StatusType]
         return ValidationResult(
             False,
-            [f"Invalid status type '{status_type}'. Valid types: {', '.join(valid_types)}"],
+            [
+                f"Invalid status type '{status_type}'. "
+                f"Valid types: {', '.join(valid_types)}"
+            ],
         )

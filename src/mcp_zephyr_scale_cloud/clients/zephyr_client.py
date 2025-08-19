@@ -365,7 +365,7 @@ class ZephyrClient:
                 )
 
                 response.raise_for_status()
-                
+
                 # Update returns 200 OK with no body
                 return ValidationResult(
                     True,
