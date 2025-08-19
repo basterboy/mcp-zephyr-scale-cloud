@@ -356,7 +356,8 @@ class TestZephyrClientStatus:
             mock_client.put.return_value = mock_response
 
             request = UpdateStatusRequest(
-                project_id=123,
+                id=1,
+                project={"id": 123},
                 name="Updated Status",
                 index=5,
                 default=False,
@@ -372,7 +373,8 @@ class TestZephyrClientStatus:
     async def test_update_status_invalid_id(self, mock_zephyr_client):
         """Test update_status with invalid ID."""
         request = UpdateStatusRequest(
-            project_id=123,
+            id=1,
+            project={"id": 123},
             name="Updated Status",
             index=5,
             default=False,

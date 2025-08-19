@@ -66,7 +66,7 @@ class CreateStatusRequest(BaseModel):
     name: str = Field(..., description="Status name", min_length=1, max_length=255)
     type: StatusType = Field(..., description="Status type")
     description: str | None = Field(
-        None, description="Status description", min_length=1, max_length=255
+        None, description="Status description", max_length=255
     )
     color: str | None = Field(None, description="Color in hexadecimal format")
 
@@ -90,7 +90,7 @@ class UpdateStatusRequest(BaseModel):
     project: ProjectLink = Field(..., description="Project this status belongs to")
     name: str = Field(..., description="Status name", min_length=1, max_length=255)
     description: str | None = Field(
-        None, description="Status description", min_length=1, max_length=255
+        None, description="Status description", max_length=255
     )
     index: int = Field(..., description="Display order index", ge=0)
     archived: bool = Field(..., description="Whether status is archived")
