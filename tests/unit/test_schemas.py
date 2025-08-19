@@ -11,6 +11,13 @@ from src.mcp_zephyr_scale_cloud.schemas.priority import (
     PriorityList,
     UpdatePriorityRequest,
 )
+from src.mcp_zephyr_scale_cloud.schemas.status import (
+    CreateStatusRequest,
+    Status,
+    StatusList,
+    StatusType,
+    UpdateStatusRequest,
+)
 
 
 class TestPrioritySchemas:
@@ -133,6 +140,152 @@ class TestBaseSchemas:
         assert paged.maxResults == 50
         assert paged.startAt == 0
         assert paged.isLast is True
+
+
+class TestStatusSchemas:
+    """Test cases for status-related schemas."""
+
+    def test_create_status_request_valid(self):
+        """Test creating a valid CreateStatusRequest."""
+        request = CreateStatusRequest(
+            project_key="TEST",
+            name="In Review",
+            type="TEST_EXECUTION",
+            description="Test is under review",
+            color="#FFA500",
+        )
+
+        assert request.project_key == "TEST"
+        assert request.name == "In Review"
+        assert request.type == StatusType.TEST_EXECUTION
+        assert request.description == "Test is under review"
+        assert request.color == "#FFA500"
+
+    def test_create_status_request_minimal(self):
+        """Test creating CreateStatusRequest with minimal data."""
+        request = CreateStatusRequest(
+            project_key="TEST", name="Pass", type="TEST_EXECUTION"
+        )
+
+        assert request.project_key == "TEST"
+        assert request.name == "Pass"
+        assert request.type == StatusType.TEST_EXECUTION
+        assert request.description is None
+        assert request.color is None
+
+    def test_create_status_request_invalid_project_key(self):
+        """Test CreateStatusRequest with invalid project key."""
+        with pytest.raises(ValidationError, match="String should match pattern"):
+            CreateStatusRequest(
+                project_key="invalid-key", name="Status", type="TEST_EXECUTION"
+            )
+
+    def test_create_status_request_invalid_status_type(self):
+        """Test CreateStatusRequest with invalid status type."""
+        with pytest.raises(ValidationError, match="Input should be"):
+            CreateStatusRequest(
+                project_key="TEST", name="Status", type="INVALID_TYPE"
+            )
+
+    def test_create_status_request_invalid_color(self):
+        """Test CreateStatusRequest with invalid color."""
+        with pytest.raises(ValidationError, match="Color must be in format"):
+            CreateStatusRequest(
+                project_key="TEST",
+                name="Status",
+                type="TEST_EXECUTION",
+                color="invalid-color",
+            )
+
+    def test_create_status_request_long_name(self):
+        """Test CreateStatusRequest with too long name."""
+        long_name = "x" * 256  # 256 characters, max is 255
+        with pytest.raises(ValidationError, match="String should have at most"):
+            CreateStatusRequest(
+                project_key="TEST", name=long_name, type="TEST_EXECUTION"
+            )
+
+    def test_update_status_request_valid(self):
+        """Test creating a valid UpdateStatusRequest."""
+        request = UpdateStatusRequest(
+            project_id=123,
+            name="Updated Status",
+            index=5,
+            default=False,
+            archived=False,
+            description="Updated description",
+            color="#00FF00",
+        )
+
+        assert request.project_id == 123
+        assert request.name == "Updated Status"
+        assert request.index == 5
+        assert request.default is False
+        assert request.archived is False
+        assert request.description == "Updated description"
+        assert request.color == "#00FF00"
+
+    def test_status_schema_valid(self, sample_status_data):
+        """Test Status schema with valid data."""
+        status = Status(**sample_status_data)
+
+        assert status.id == 1
+        assert status.name == "In Progress"
+        assert status.description == "Test is currently in progress"
+        assert status.type == StatusType.TEST_EXECUTION
+        assert status.index == 1
+        assert status.default is False
+        assert status.archived is False
+        assert status.color == "#FFA500"
+        assert status.project.id == 123
+        assert status.self == "https://api.example.com/v2/statuses/1"
+
+    def test_status_list_valid(self, sample_status_list):
+        """Test StatusList schema with valid data."""
+        status_list = StatusList(**sample_status_list)
+
+        assert len(status_list.values) == 3
+        assert status_list.total == 3
+        assert status_list.maxResults == 50
+        assert status_list.startAt == 0
+        assert status_list.isLast is True
+
+        # Test first status
+        first_status = status_list.values[0]
+        assert first_status.name == "Pass"
+        assert first_status.type == StatusType.TEST_EXECUTION
+        assert first_status.default is True
+
+    def test_status_type_enum(self):
+        """Test StatusType enum values."""
+        assert StatusType.TEST_CASE == "TEST_CASE"
+        assert StatusType.TEST_PLAN == "TEST_PLAN"
+        assert StatusType.TEST_CYCLE == "TEST_CYCLE"
+        assert StatusType.TEST_EXECUTION == "TEST_EXECUTION"
+
+        # Test that all enum values are valid
+        valid_types = ["TEST_CASE", "TEST_PLAN", "TEST_CYCLE", "TEST_EXECUTION"]
+        enum_values = [t.value for t in StatusType]
+        assert enum_values == valid_types
+
+    def test_model_dump_camelcase(self):
+        """Test that status request models dump to camelCase."""
+        request = CreateStatusRequest(
+            project_key="TEST",
+            name="Status",
+            type="TEST_EXECUTION",
+            description="Test status",
+        )
+
+        dumped = request.model_dump(exclude_none=True, by_alias=True)
+
+        # Should use camelCase aliases for API
+        assert "projectKey" in dumped
+        assert "project_key" not in dumped
+        assert dumped["projectKey"] == "TEST"
+        assert dumped["name"] == "Status"
+        assert dumped["type"] == "TEST_EXECUTION"
+        assert dumped["description"] == "Test status"
 
 
 class TestCommonSchemas:

@@ -28,12 +28,14 @@ class Status(BaseModel):
     description: str | None = Field(
         None, description="Status description", min_length=1, max_length=255
     )
+    type: StatusType = Field(..., description="Status type")
     index: int = Field(..., description="Display order index", ge=0)
     color: str | None = Field(None, description="Color in hexadecimal format")
     archived: bool = Field(default=False, description="Whether status is archived")
     default: bool = Field(
         default=False, description="Whether this is the default status"
     )
+    self: str = Field(..., description="Self reference URL", alias="self")
 
     @field_validator("color")
     @classmethod
@@ -86,8 +88,9 @@ class UpdateStatusRequest(BaseModel):
 
     model_config = {"extra": "forbid", "populate_by_name": True}
 
-    id: int = Field(..., description="Status ID", ge=1)
-    project: ProjectLink = Field(..., description="Project this status belongs to")
+    project_id: int = Field(
+        ..., description="Project ID", ge=1, alias="projectId"
+    )
     name: str = Field(..., description="Status name", min_length=1, max_length=255)
     description: str | None = Field(
         None, description="Status description", min_length=1, max_length=255

@@ -1,6 +1,7 @@
 """Tests for validation utilities."""
 
 from src.mcp_zephyr_scale_cloud.schemas.priority import Priority
+from src.mcp_zephyr_scale_cloud.schemas.status import Status
 from src.mcp_zephyr_scale_cloud.utils.validation import (
     ValidationResult,
     sanitize_input,
@@ -8,6 +9,8 @@ from src.mcp_zephyr_scale_cloud.utils.validation import (
     validate_pagination_params,
     validate_priority_data,
     validate_project_key,
+    validate_status_data,
+    validate_status_type,
 )
 
 
@@ -229,3 +232,119 @@ class TestInputSanitization:
         """Test sanitizing input with special characters."""
         result = sanitize_input("  Test@123!  ")
         assert result == "Test@123!"
+
+
+class TestStatusValidation:
+    """Test cases for status validation functions."""
+
+    def test_validate_status_create_success(self):
+        """Test successful status data validation for creation."""
+        data = {
+            "project_key": "TEST",
+            "name": "In Progress",
+            "type": "TEST_EXECUTION",
+            "description": "Test in progress",
+            "color": "#FFA500",
+        }
+
+        result = validate_status_data(data, is_update=False)
+
+        assert result.is_valid
+        assert result.data.project_key == "TEST"
+        assert result.data.name == "In Progress"
+        assert result.data.type.value == "TEST_EXECUTION"
+        assert result.data.description == "Test in progress"
+        assert result.data.color == "#FFA500"
+
+    def test_validate_status_update_success(self):
+        """Test successful status data validation for update."""
+        data = {
+            "project_id": 123,
+            "name": "Updated Status",
+            "index": 5,
+            "default": False,
+            "archived": False,
+            "description": "Updated description",
+            "color": "#00FF00",
+        }
+
+        result = validate_status_data(data, is_update=True)
+
+        assert result.is_valid
+        assert result.data.project_id == 123
+        assert result.data.name == "Updated Status"
+        assert result.data.index == 5
+        assert result.data.default is False
+        assert result.data.archived is False
+
+    def test_validate_status_create_invalid(self):
+        """Test status data validation with invalid data."""
+        data = {
+            "project_key": "invalid-key",  # Invalid format
+            "name": "",  # Empty name
+            "type": "INVALID_TYPE",  # Invalid status type
+            "color": "invalid-color",  # Invalid color format
+        }
+
+        result = validate_status_data(data, is_update=False)
+
+        assert not result.is_valid
+        assert len(result.errors) > 0
+
+    def test_validate_status_missing_required(self):
+        """Test status data validation with missing required fields."""
+        data = {"name": "Status"}  # Missing project_key and type
+
+        result = validate_status_data(data, is_update=False)
+
+        assert not result.is_valid
+        assert len(result.errors) > 0
+
+    def test_validate_status_update_missing_fields(self):
+        """Test status update validation with missing fields."""
+        data = {"name": "Status"}  # Missing project_id, index, archived, default
+
+        result = validate_status_data(data, is_update=True)
+
+        assert not result.is_valid
+        assert len(result.errors) > 0
+
+
+class TestStatusTypeValidation:
+    """Test cases for status type validation."""
+
+    def test_validate_status_type_valid(self):
+        """Test valid status type validation."""
+        for status_type in ["TEST_CASE", "TEST_PLAN", "TEST_CYCLE", "TEST_EXECUTION"]:
+            result = validate_status_type(status_type)
+            assert result.is_valid
+            assert result.data.value == status_type
+
+    def test_validate_status_type_invalid(self):
+        """Test invalid status type validation."""
+        result = validate_status_type("INVALID_TYPE")
+
+        assert not result.is_valid
+        assert "Invalid status type" in result.errors[0]
+        assert "INVALID_TYPE" in result.errors[0]
+
+    def test_validate_status_type_empty(self):
+        """Test empty status type validation."""
+        result = validate_status_type("")
+
+        assert not result.is_valid
+        assert "Invalid status type" in result.errors[0]
+
+    def test_validate_status_type_none(self):
+        """Test None status type validation."""
+        result = validate_status_type(None)
+
+        assert not result.is_valid
+        assert "Invalid status type" in result.errors[0]
+
+    def test_validate_status_type_case_sensitive(self):
+        """Test that status type validation is case sensitive."""
+        result = validate_status_type("test_execution")  # lowercase
+
+        assert not result.is_valid
+        assert "Invalid status type" in result.errors[0]
