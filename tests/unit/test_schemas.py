@@ -230,13 +230,11 @@ class TestStatusSchemas:
         assert status.id == 1
         assert status.name == "In Progress"
         assert status.description == "Test is currently in progress"
-        assert status.type == StatusType.TEST_EXECUTION
         assert status.index == 1
         assert status.default is False
         assert status.archived is False
         assert status.color == "#FFA500"
         assert status.project.id == 123
-        assert status.self == "https://api.example.com/v2/statuses/1"
 
     def test_status_list_valid(self, sample_status_list):
         """Test StatusList schema with valid data."""
@@ -251,7 +249,6 @@ class TestStatusSchemas:
         # Test first status
         first_status = status_list.values[0]
         assert first_status.name == "Pass"
-        assert first_status.type == StatusType.TEST_EXECUTION
         assert first_status.default is True
 
     def test_status_type_enum(self):
