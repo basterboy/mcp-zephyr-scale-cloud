@@ -10,7 +10,9 @@ class Priority(OptionValue):
     """Priority schema matching Zephyr Scale Cloud API."""
 
     color: str | None = Field(
-        None, description="Priority color in hex format", pattern=r"^#[0-9A-Fa-f]{6}$"
+        None,
+        description="Priority color in hex format (3 or 6 characters)",
+        pattern=r"^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$",
     )
     default: bool = Field(False, description="Whether this is the default priority")
 
@@ -27,7 +29,7 @@ class Priority(OptionValue):
     def validate_color(cls, v: str | None) -> str | None:
         """Validate color format."""
         if v and not v.startswith("#"):
-            raise ValueError("Color must be in hex format (e.g., '#FF0000')")
+            raise ValueError("Color must be in hex format (e.g., '#FFF' or '#FF0000')")
         return v
 
 
@@ -48,13 +50,13 @@ class CreatePriorityRequest(BaseEntity):
     )
     name: str = Field(..., description="Priority name", min_length=1, max_length=255)
     description: str | None = Field(
-        None, description="Priority description", max_length=255
+        None, description="Priority description", min_length=1, max_length=255
     )
     color: str | None = Field(
         None,
-        description="Priority color in hex format",
-        pattern=r"^#[0-9A-Fa-f]{6}$",
-        examples=["#FF0000"],
+        description="Priority color in hex format (3 or 6 characters)",
+        pattern=r"^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$",
+        examples=["#FFF", "#FF0000"],
     )
 
     @field_validator("name")
@@ -82,14 +84,14 @@ class UpdatePriorityRequest(BaseEntity):
         ..., description="Updated priority name", min_length=1, max_length=255
     )
     description: str | None = Field(
-        None, description="Updated priority description", max_length=255
+        None, description="Updated priority description", min_length=1, max_length=255
     )
     index: int = Field(..., description="Priority display order", ge=0)
-    default: bool = Field(False, description="Whether this is the default priority")
+    default: bool = Field(..., description="Whether this is the default priority")
     color: str | None = Field(
         None,
-        description="Updated priority color in hex format",
-        pattern=r"^#[0-9A-Fa-f]{6}$",
+        description="Updated priority color in hex format (3 or 6 characters)",
+        pattern=r"^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$",
     )
 
     @field_validator("name")

@@ -24,7 +24,7 @@ class OptionValue(BaseEntity):
     id: int = Field(..., description="Option ID", ge=1)
     name: str = Field(..., description="Option name", min_length=1, max_length=255)
     description: str | None = Field(
-        None, description="Option description", max_length=255
+        None, description="Option description", min_length=1, max_length=255
     )
     index: int = Field(..., description="Display order index", ge=0)
     project: ProjectLink = Field(..., description="Associated project")
@@ -35,7 +35,7 @@ class EntityColor(BaseEntity):
 
     color: str | None = Field(
         None,
-        description="Hex color code",
-        pattern=r"^#[0-9A-Fa-f]{6}$",
-        examples=["#FF0000", "#00FF00", "#0000FF"],
+        description="Hex color code (3 or 6 characters)",
+        pattern=r"^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$",
+        examples=["#FFF", "#FFFFFF", "#FF0000"],
     )
