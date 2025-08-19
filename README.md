@@ -33,6 +33,26 @@ ZEPHYR_SCALE_API_TOKEN=your_api_token_here
 ZEPHYR_SCALE_BASE_URL=https://api.zephyrscale.smartbear.com/v2
 ```
 
+### Logging Configuration
+
+The server uses Python's standard logging module. Configure logging levels as needed:
+
+```python
+import logging
+
+# For development - see all startup details
+logging.basicConfig(level=logging.INFO)
+
+# For production - warnings and errors only  
+logging.basicConfig(level=logging.WARNING)
+
+# Custom format
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+```
+
 ## Quick Start
 
 1. **Set up environment variables:**
@@ -125,7 +145,7 @@ This MCP server implements advanced [server lifespan management](https://github.
 - **Fast Failure**: Reports configuration errors immediately on startup
 - **Health Monitoring**: Automatically tests Zephyr Scale API accessibility during initialization 
 - **Graceful Shutdown**: Properly cleans up resources when the server stops
-- **Detailed Logging**: Provides clear startup/shutdown feedback for debugging
+- **Structured Logging**: Uses Python's logging module with proper log levels for production environments
 
 **Benefits:**
 - 🔧 **Better Developer Experience**: Clear error messages if API token is missing
