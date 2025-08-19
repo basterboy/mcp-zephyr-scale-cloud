@@ -48,7 +48,8 @@ def validate_project_key(project_key: str) -> ValidationResult:
         return ValidationResult(
             False,
             [
-                f"Project key '{project_key}' is invalid. Must start with a letter and contain only uppercase letters, numbers, and underscores."
+                f"Project key '{project_key}' is invalid. Must start with a letter "
+                "and contain only uppercase letters, numbers, and underscores."
             ],
         )
 

@@ -1,16 +1,16 @@
 """Basic integration tests for the MCP server."""
 
-import asyncio
 import os
+
 import pytest
 
 from src.mcp_zephyr_scale_cloud.config import ZephyrConfig
-from src.mcp_zephyr_scale_cloud.server import mcp
 from src.mcp_zephyr_scale_cloud.schemas.priority import CreatePriorityRequest
+from src.mcp_zephyr_scale_cloud.server import mcp
 from src.mcp_zephyr_scale_cloud.utils.validation import (
     ValidationResult,
-    validate_project_key,
     validate_pagination_params,
+    validate_project_key,
 )
 
 
@@ -22,9 +22,9 @@ class TestBasicFunctionality:
         config = ZephyrConfig(
             api_token="test_token",
             base_url="https://api.example.com/v2",
-            project_key="TEST"
+            project_key="TEST",
         )
-        
+
         assert config.api_token == "test_token"
         assert config.base_url == "https://api.example.com/v2"
         assert config.project_key == "TEST"
@@ -35,9 +35,9 @@ class TestBasicFunctionality:
             projectKey="TEST",
             name="High Priority",
             description="Test description",
-            color="#FF0000"
+            color="#FF0000",
         )
-        
+
         assert request.projectKey == "TEST"
         assert request.name == "High Priority"
         assert request.description == "Test description"
@@ -46,10 +46,11 @@ class TestBasicFunctionality:
     def test_priority_schema_validation(self):
         """Test priority schema validation."""
         # Test invalid project key
-        with pytest.raises(Exception):  # ValidationError
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
             CreatePriorityRequest(
-                projectKey="invalid-key",  # Should be uppercase
-                name="Priority"
+                projectKey="invalid-key", name="Priority"  # Should be uppercase
             )
 
     def test_validation_result(self):
@@ -114,28 +115,25 @@ class TestBasicFunctionality:
     async def test_mcp_server_tools(self):
         """Test MCP server has expected tools."""
         tools = await mcp.list_tools()
-        
+
         tool_names = [tool.name for tool in tools]
         expected_tools = [
             "healthcheck",
             "get_priorities",
-            "get_priority", 
+            "get_priority",
             "create_priority",
-            "update_priority"
+            "update_priority",
         ]
-        
+
         for tool_name in expected_tools:
             assert tool_name in tool_names, f"Tool {tool_name} not found"
 
     def test_model_dump_camelcase(self):
         """Test that Pydantic models use camelCase in output."""
-        request = CreatePriorityRequest(
-            projectKey="TEST",
-            name="Priority"
-        )
-        
+        request = CreatePriorityRequest(projectKey="TEST", name="Priority")
+
         dumped = request.model_dump(exclude_none=True)
-        
+
         # Should have camelCase key due to alias
         assert "projectKey" in dumped
         assert dumped["projectKey"] == "TEST"
@@ -149,19 +147,19 @@ class TestEnvironmentConfiguration:
         """Test config creation from test environment variables."""
         # Save original environment
         original_env = os.environ.copy()
-        
+
         try:
             # Set test environment variables
             os.environ["ZEPHYR_SCALE_API_TOKEN"] = "test_token_123"
             os.environ["ZEPHYR_SCALE_BASE_URL"] = "https://api.example.com/v2"
             os.environ["ZEPHYR_SCALE_DEFAULT_PROJECT_KEY"] = "TEST"
-            
+
             config = ZephyrConfig.from_env()
-            
+
             assert config.api_token == "test_token_123"
             assert config.base_url == "https://api.example.com/v2"
             assert config.project_key == "TEST"
-            
+
         finally:
             # Restore original environment
             os.environ.clear()
@@ -171,15 +169,18 @@ class TestEnvironmentConfiguration:
         """Test config creation fails when API token is missing."""
         # Save original environment
         original_env = os.environ.copy()
-        
+
         try:
             # Clear API token
             if "ZEPHYR_SCALE_API_TOKEN" in os.environ:
                 del os.environ["ZEPHYR_SCALE_API_TOKEN"]
-            
-            with pytest.raises(ValueError, match="ZEPHYR_SCALE_API_TOKEN environment variable is required"):
+
+            with pytest.raises(
+                ValueError,
+                match="ZEPHYR_SCALE_API_TOKEN environment variable is required",
+            ):
                 ZephyrConfig.from_env()
-                
+
         finally:
             # Restore original environment
             os.environ.clear()

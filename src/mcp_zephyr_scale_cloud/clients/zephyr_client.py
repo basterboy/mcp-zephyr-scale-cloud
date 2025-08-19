@@ -131,7 +131,8 @@ class ZephyrClient:
                     return ValidationResult(
                         False,
                         [
-                            f"Priority with ID {priority_id} does not exist or you do not have access to it"
+                            f"Priority with ID {priority_id} does not exist or "
+                            "you do not have access to it"
                         ],
                     )
                 return ValidationResult(
