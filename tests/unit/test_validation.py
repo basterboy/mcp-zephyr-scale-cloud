@@ -1,7 +1,6 @@
 """Tests for validation utilities."""
 
 from src.mcp_zephyr_scale_cloud.schemas.priority import Priority
-from src.mcp_zephyr_scale_cloud.schemas.status import Status
 from src.mcp_zephyr_scale_cloud.utils.validation import (
     ValidationResult,
     sanitize_input,

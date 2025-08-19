@@ -168,18 +168,12 @@ class TestBasicFunctionality:
         # Test invalid project key
         with pytest.raises(ValidationError):
             CreateStatusRequest(
-                project_key="invalid-key", 
-                name="Status",
-                type="TEST_EXECUTION"
+                project_key="invalid-key", name="Status", type="TEST_EXECUTION"
             )
 
         # Test invalid status type
         with pytest.raises(ValidationError):
-            CreateStatusRequest(
-                project_key="TEST",
-                name="Status", 
-                type="INVALID_TYPE"
-            )
+            CreateStatusRequest(project_key="TEST", name="Status", type="INVALID_TYPE")
 
     def test_status_type_validation(self):
         """Test status type validation."""
@@ -199,9 +193,7 @@ class TestBasicFunctionality:
     def test_status_model_dump_camelcase(self):
         """Test that status models use camelCase in output."""
         request = CreateStatusRequest(
-            project_key="TEST",
-            name="Status",
-            type="TEST_EXECUTION"
+            project_key="TEST", name="Status", type="TEST_EXECUTION"
         )
 
         dumped = request.model_dump(exclude_none=True, by_alias=True)

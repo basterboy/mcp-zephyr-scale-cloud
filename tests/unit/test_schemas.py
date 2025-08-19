@@ -183,9 +183,7 @@ class TestStatusSchemas:
     def test_create_status_request_invalid_status_type(self):
         """Test CreateStatusRequest with invalid status type."""
         with pytest.raises(ValidationError, match="Input should be"):
-            CreateStatusRequest(
-                project_key="TEST", name="Status", type="INVALID_TYPE"
-            )
+            CreateStatusRequest(project_key="TEST", name="Status", type="INVALID_TYPE")
 
     def test_create_status_request_invalid_color(self):
         """Test CreateStatusRequest with invalid color."""
