@@ -158,7 +158,7 @@ async def create_priority(
 
     # Validate input data using Pydantic schema
     request_data = {
-        "project_key": project_key,
+        "projectKey": project_key,
         "name": name,
         "description": description,
         "color": color,
