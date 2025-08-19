@@ -4,9 +4,9 @@ This file contains the Model Context Protocol (MCP) SERVER implementation
 using Pydantic schemas for validation and type safety.
 """
 
-import asyncio
 import logging
 from contextlib import asynccontextmanager
+
 from dotenv import load_dotenv
 from mcp.server import FastMCP
 
@@ -45,17 +45,17 @@ zephyr_client = None
 async def zephyr_server_lifespan(server):
     """
     Server lifespan context manager for startup and cleanup.
-    
+
     This function is called when the MCP server starts and stops,
     allowing us to validate configuration and manage resources properly.
     """
     global config, zephyr_client
-    
+
     # 🚀 STARTUP LOGIC
     logger.info("Zephyr Scale MCP Server starting up...")
-    
+
     startup_errors = []
-    
+
     try:
         # Load and validate configuration
         logger.info("Loading Zephyr Scale configuration...")
@@ -63,65 +63,71 @@ async def zephyr_server_lifespan(server):
         logger.info(
             "Configuration loaded successfully - Base URL: %s, Default Project: %s",
             config.base_url,
-            config.project_key or "None"
+            config.project_key or "None",
         )
-        
+
         # Initialize HTTP client
         logger.info("Initializing Zephyr Scale API client...")
         zephyr_client = ZephyrClient(config)
         logger.info("HTTP client initialized")
-        
+
         # Test API connectivity
         logger.info("Testing API connectivity...")
         health_result = await zephyr_client.healthcheck()
-        
+
         if health_result.is_valid and health_result.data.get("status") == "UP":
             logger.info("Zephyr Scale API connectivity verified")
         else:
-            error_msg = "; ".join(health_result.errors) if health_result.errors else "Unknown error"
+            error_msg = (
+                "; ".join(health_result.errors)
+                if health_result.errors
+                else "Unknown error"
+            )
             startup_errors.append(f"API connectivity test failed: {error_msg}")
             logger.warning(
-                "API connectivity test failed: %s - Server will start but API calls may fail",
-                error_msg
+                "API connectivity test failed: %s - Server will start but API calls may fail",  # noqa: E501
+                error_msg,
             )
-        
+
     except ValueError as e:
         startup_errors.append(f"Configuration error: {str(e)}")
         logger.error(
-            "Configuration error: %s - Server will start but tools will return configuration errors",
-            str(e)
+            "Configuration error: %s - Server will start but tools will return configuration errors",  # noqa: E501
+            str(e),
         )
-        
+
     except Exception as e:
         startup_errors.append(f"Unexpected startup error: {str(e)}")
         logger.error("Unexpected startup error: %s", str(e))
-    
+
     # Log startup result
     if not startup_errors:
         logger.info("Zephyr Scale MCP Server startup completed successfully!")
     else:
-        logger.warning("Zephyr Scale MCP Server started with %d warnings", len(startup_errors))
-    
+        logger.warning(
+            "Zephyr Scale MCP Server started with %d warnings", len(startup_errors)
+        )
+
     startup_result = {
         "config_valid": config is not None,
         "api_accessible": zephyr_client is not None and not startup_errors,
         "startup_errors": startup_errors,
         "tools_count": 5,  # We know we have 5 tools
-        "base_url": config.base_url if config else None
+        "base_url": config.base_url if config else None,
     }
-    
+
     # Yield to allow server to run
     yield startup_result
-    
+
     # 🧹 CLEANUP LOGIC
     logger.info("Zephyr Scale MCP Server shutting down...")
-    
+
     # Clean up HTTP client resources
     if zephyr_client:
         logger.info("Cleaning up HTTP client resources...")
         # Note: httpx.AsyncClient is automatically cleaned up, but we could
         # add explicit cleanup here if we had persistent connections
-    
+
     logger.info("Zephyr Scale MCP Server shutdown completed successfully!")
 
 

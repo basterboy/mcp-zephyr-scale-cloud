@@ -1,6 +1,5 @@
 """Tests for validation utilities."""
 
-
 from src.mcp_zephyr_scale_cloud.schemas.priority import Priority
 from src.mcp_zephyr_scale_cloud.utils.validation import (
     ValidationResult,
@@ -135,7 +134,7 @@ class TestProjectKeyValidation:
         result = validate_project_key("")
 
         assert not result.is_valid
-        assert "cannot be empty" in result.errors[0]
+        assert "required" in result.errors[0]
 
 
 class TestPaginationValidation:
