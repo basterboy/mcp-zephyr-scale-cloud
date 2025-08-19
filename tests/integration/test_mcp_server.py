@@ -198,9 +198,7 @@ class TestMCPServerIntegration:
                     assert result == "Priority updated successfully"
 
     @pytest.mark.asyncio
-    async def test_get_statuses_tool_success(
-        self, mock_env_vars, sample_status_list
-    ):
+    async def test_get_statuses_tool_success(self, mock_env_vars, sample_status_list):
         """Test get_statuses tool with successful response."""
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
             mock_result = AsyncMock()
@@ -219,7 +217,9 @@ class TestMCPServerIntegration:
                 mock_client.get_statuses.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_statuses_tool_with_filters(self, mock_env_vars, sample_status_list):
+    async def test_get_statuses_tool_with_filters(
+        self, mock_env_vars, sample_status_list
+    ):
         """Test get_statuses tool with project and type filters."""
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
             mock_result = AsyncMock()
