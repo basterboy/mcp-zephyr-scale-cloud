@@ -241,7 +241,6 @@ class TestZephyrClientStatus:
             assert result.is_valid
             assert len(result.data.values) == 3
             assert result.data.values[0].name == "Pass"
-            assert result.data.values[0].type == StatusType.TEST_EXECUTION
 
     @pytest.mark.asyncio
     async def test_get_statuses_with_filters(
@@ -286,7 +285,6 @@ class TestZephyrClientStatus:
             assert result.is_valid
             assert result.data.id == 1
             assert result.data.name == "In Progress"
-            assert result.data.type == StatusType.TEST_EXECUTION
 
     @pytest.mark.asyncio
     async def test_get_status_not_found(self, mock_zephyr_client):

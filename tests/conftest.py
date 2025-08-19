@@ -131,12 +131,11 @@ def sample_created_resource() -> dict:
 
 @pytest.fixture
 def sample_status_data() -> dict:
-    """Sample status data for testing."""
+    """Sample status data for testing (matches actual API response format)."""
     return {
         "id": 1,
         "name": "In Progress",
         "description": "Test is currently in progress",
-        "type": "TEST_EXECUTION",
         "index": 1,
         "default": False,
         "archived": False,
@@ -144,23 +143,20 @@ def sample_status_data() -> dict:
         "project": {
             "id": 123,
             "key": "TEST",
-            "name": "Test Project",
             "self": "https://api.example.com/v2/projects/123",
         },
-        "self": "https://api.example.com/v2/statuses/1",
     }
 
 
 @pytest.fixture
 def sample_status_list() -> dict:
-    """Sample status list response for testing."""
+    """Sample status list response for testing (matches actual API response format)."""
     return {
         "values": [
             {
                 "id": 1,
                 "name": "Pass",
                 "description": "Test passed successfully",
-                "type": "TEST_EXECUTION",
                 "index": 0,
                 "default": True,
                 "archived": False,
@@ -170,13 +166,11 @@ def sample_status_list() -> dict:
                     "key": "TEST",
                     "self": "https://api.example.com/v2/projects/123",
                 },
-                "self": "https://api.example.com/v2/statuses/1",
             },
             {
                 "id": 2,
                 "name": "Fail",
                 "description": "Test failed",
-                "type": "TEST_EXECUTION",
                 "index": 1,
                 "default": False,
                 "archived": False,
@@ -186,13 +180,11 @@ def sample_status_list() -> dict:
                     "key": "TEST",
                     "self": "https://api.example.com/v2/projects/123",
                 },
-                "self": "https://api.example.com/v2/statuses/2",
             },
             {
                 "id": 3,
                 "name": "In Progress",
                 "description": "Test is in progress",
-                "type": "TEST_EXECUTION",
                 "index": 2,
                 "default": False,
                 "archived": False,
@@ -202,7 +194,6 @@ def sample_status_list() -> dict:
                     "key": "TEST",
                     "self": "https://api.example.com/v2/projects/123",
                 },
-                "self": "https://api.example.com/v2/statuses/3",
             },
         ],
         "total": 3,
