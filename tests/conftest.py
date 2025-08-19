@@ -114,7 +114,7 @@ def mock_httpx_client() -> AsyncMock:
 
 
 @pytest.fixture
-async def mock_zephyr_client(mock_config: ZephyrConfig) -> ZephyrClient:
+def mock_zephyr_client(mock_config: ZephyrConfig) -> ZephyrClient:
     """Create a ZephyrClient instance for testing."""
     return ZephyrClient(mock_config)
 
