@@ -244,7 +244,9 @@ class TestZephyrClientStatus:
             assert result.data.values[0].type == StatusType.TEST_EXECUTION
 
     @pytest.mark.asyncio
-    async def test_get_statuses_with_filters(self, mock_zephyr_client, sample_status_list):
+    async def test_get_statuses_with_filters(
+        self, mock_zephyr_client, sample_status_list
+    ):
         """Test get_statuses with project and type filters."""
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
@@ -257,9 +259,9 @@ class TestZephyrClientStatus:
             mock_client.get.return_value = mock_response
 
             result = await mock_zephyr_client.get_statuses(
-                project_key="TEST", 
+                project_key="TEST",
                 status_type=StatusType.TEST_EXECUTION,
-                max_results=100
+                max_results=100,
             )
 
             assert result.is_valid
@@ -316,7 +318,9 @@ class TestZephyrClientStatus:
         assert "positive integer" in result.errors[0]
 
     @pytest.mark.asyncio
-    async def test_create_status_success(self, mock_zephyr_client, sample_created_resource):
+    async def test_create_status_success(
+        self, mock_zephyr_client, sample_created_resource
+    ):
         """Test successful create_status."""
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
@@ -330,9 +334,9 @@ class TestZephyrClientStatus:
 
             request = CreateStatusRequest(
                 project_key="TEST",
-                name="New Status", 
+                name="New Status",
                 type="TEST_EXECUTION",
-                description="Newly created status"
+                description="Newly created status",
             )
 
             result = await mock_zephyr_client.create_status(request)
@@ -358,7 +362,7 @@ class TestZephyrClientStatus:
                 name="Updated Status",
                 index=5,
                 default=False,
-                archived=False
+                archived=False,
             )
 
             result = await mock_zephyr_client.update_status(1, request)
@@ -374,7 +378,7 @@ class TestZephyrClientStatus:
             name="Updated Status",
             index=5,
             default=False,
-            archived=False
+            archived=False,
         )
 
         result = await mock_zephyr_client.update_status(-1, request)

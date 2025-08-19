@@ -88,9 +88,7 @@ class UpdateStatusRequest(BaseModel):
 
     model_config = {"extra": "forbid", "populate_by_name": True}
 
-    project_id: int = Field(
-        ..., description="Project ID", ge=1, alias="projectId"
-    )
+    project_id: int = Field(..., description="Project ID", ge=1, alias="projectId")
     name: str = Field(..., description="Status name", min_length=1, max_length=255)
     description: str | None = Field(
         None, description="Status description", min_length=1, max_length=255
