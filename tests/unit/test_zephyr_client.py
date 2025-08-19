@@ -1,6 +1,6 @@
 """Tests for ZephyrClient."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
@@ -32,7 +32,7 @@ class TestZephyrClient:
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
             # Mock successful response
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.raise_for_status.return_value = None
             mock_client.get.return_value = mock_response
@@ -67,7 +67,7 @@ class TestZephyrClient:
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
             # Mock successful response
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.json.return_value = sample_priority_list
             mock_response.raise_for_status.return_value = None
@@ -87,7 +87,7 @@ class TestZephyrClient:
             mock_client = AsyncMock()
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.json.return_value = sample_priority_list
             mock_response.raise_for_status.return_value = None
@@ -112,7 +112,7 @@ class TestZephyrClient:
             mock_client = AsyncMock()
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.json.return_value = sample_priority_data
             mock_response.raise_for_status.return_value = None
@@ -160,7 +160,7 @@ class TestZephyrClient:
             mock_client = AsyncMock()
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status_code = 201
             mock_response.json.return_value = sample_created_resource
             mock_response.raise_for_status.return_value = None
@@ -185,7 +185,7 @@ class TestZephyrClient:
             mock_client = AsyncMock()
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.raise_for_status.return_value = None
             mock_client.put.return_value = mock_response
