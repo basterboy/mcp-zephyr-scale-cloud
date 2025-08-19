@@ -4,6 +4,8 @@ This file contains the Model Context Protocol (MCP) SERVER implementation
 using Pydantic schemas for validation and type safety.
 """
 
+import asyncio
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from mcp.server import FastMCP
 
@@ -24,23 +26,97 @@ from .utils.validation import (
 # Load environment variables
 load_dotenv()
 
-# Initialize MCP server
-mcp = FastMCP("Zephyr Scale Cloud")
-
 # Error message constants
 _CONFIG_ERROR_MSG = (
     "❌ ERROR: Zephyr Scale configuration not found. "
     "Please set ZEPHYR_SCALE_API_TOKEN environment variable."
 )
 
-# Initialize HTTP client for Zephyr Scale API
-try:
-    config = ZephyrConfig.from_env()
-    zephyr_client = ZephyrClient(config)
-except ValueError:
-    # If config fails, we'll create a dummy client for error reporting
-    config = None
-    zephyr_client = None
+# Global variables for configuration and client
+config = None
+zephyr_client = None
+
+
+@asynccontextmanager
+async def zephyr_server_lifespan(server):
+    """
+    Server lifespan context manager for startup and cleanup.
+    
+    This function is called when the MCP server starts and stops,
+    allowing us to validate configuration and manage resources properly.
+    """
+    global config, zephyr_client
+    
+    # 🚀 STARTUP LOGIC
+    print("🔧 Zephyr Scale MCP Server starting up...")
+    
+    startup_errors = []
+    
+    try:
+        # Load and validate configuration
+        print("📋 Loading Zephyr Scale configuration...")
+        config = ZephyrConfig.from_env()
+        print(f"✅ Configuration loaded successfully")
+        print(f"   📍 Base URL: {config.base_url}")
+        print(f"   🏷️  Default Project: {config.project_key or 'None'}")
+        
+        # Initialize HTTP client
+        print("🌐 Initializing Zephyr Scale API client...")
+        zephyr_client = ZephyrClient(config)
+        print("✅ HTTP client initialized")
+        
+        # Test API connectivity
+        print("🔍 Testing API connectivity...")
+        health_result = await zephyr_client.healthcheck()
+        
+        if health_result.is_valid and health_result.data.get("status") == "UP":
+            print("✅ Zephyr Scale API connectivity verified")
+        else:
+            error_msg = "; ".join(health_result.errors) if health_result.errors else "Unknown error"
+            startup_errors.append(f"API connectivity test failed: {error_msg}")
+            print(f"⚠️  API connectivity test failed: {error_msg}")
+            print("   ℹ️  Server will start but API calls may fail")
+        
+    except ValueError as e:
+        startup_errors.append(f"Configuration error: {str(e)}")
+        print(f"❌ Configuration error: {str(e)}")
+        print("   ℹ️  Server will start but tools will return configuration errors")
+        
+    except Exception as e:
+        startup_errors.append(f"Unexpected startup error: {str(e)}")
+        print(f"❌ Unexpected startup error: {str(e)}")
+    
+    # Log startup result
+    if not startup_errors:
+        print("🚀 Zephyr Scale MCP Server startup completed successfully!")
+    else:
+        print(f"⚠️  Zephyr Scale MCP Server started with {len(startup_errors)} warnings")
+    
+    startup_result = {
+        "config_valid": config is not None,
+        "api_accessible": zephyr_client is not None and not startup_errors,
+        "startup_errors": startup_errors,
+        "tools_count": 5,  # We know we have 5 tools
+        "base_url": config.base_url if config else None
+    }
+    
+    # Yield to allow server to run
+    yield startup_result
+    
+    # 🧹 CLEANUP LOGIC
+    print("🛑 Zephyr Scale MCP Server shutting down...")
+    
+    # Clean up HTTP client resources
+    if zephyr_client:
+        print("🌐 Cleaning up HTTP client resources...")
+        # Note: httpx.AsyncClient is automatically cleaned up, but we could
+        # add explicit cleanup here if we had persistent connections
+    
+    print("✅ Zephyr Scale MCP Server shutdown completed successfully!")
+
+
+# Initialize MCP server with lifespan management
+mcp = FastMCP("Zephyr Scale Cloud", lifespan=zephyr_server_lifespan)
 
 
 @mcp.tool()

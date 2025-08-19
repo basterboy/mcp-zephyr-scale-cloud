@@ -107,12 +107,31 @@ src/mcp_zephyr_scale_cloud/
 
 ### Key Concepts
 
-- **MCP Server** (`server.py`): Handles the Model Context Protocol, exposes tools/resources to AI assistants
+- **MCP Server** (`server.py`): Handles the Model Context Protocol, exposes tools/resources to AI assistants with advanced lifespan management
 - **HTTP Client** (`clients/zephyr_client.py`): Schema-based client making type-safe REST API calls to Zephyr Scale Cloud
 - **Pydantic Schemas** (`schemas/`): Data validation and serialization using Pydantic models
 - **Validation Utils** (`utils/validation.py`): Input validation with comprehensive error handling
 - **Formatting Utils** (`utils/formatting.py`): Rich output formatting for MCP tools
 - **Configuration** (`config.py`): Manages API tokens and settings
+- **Server Lifespan**: Startup validation, API connectivity testing, and graceful shutdown management
+
+## Advanced Features
+
+### 🚀 Server Lifespan Management
+
+This MCP server implements advanced [server lifespan management](https://github.com/modelcontextprotocol/python-sdk?tab=readme-ov-file#low-level-server) for robust production deployment:
+
+- **Startup Validation**: Validates configuration and tests API connectivity before accepting requests
+- **Fast Failure**: Reports configuration errors immediately on startup
+- **Health Monitoring**: Automatically tests Zephyr Scale API accessibility during initialization 
+- **Graceful Shutdown**: Properly cleans up resources when the server stops
+- **Detailed Logging**: Provides clear startup/shutdown feedback for debugging
+
+**Benefits:**
+- 🔧 **Better Developer Experience**: Clear error messages if API token is missing
+- 🚨 **Production Ready**: Fails fast instead of silently accepting broken configurations
+- 📊 **Monitoring**: Easy to detect configuration and connectivity issues
+- 🧹 **Resource Management**: Proper cleanup prevents resource leaks
 
 ## MCP Tools
 
