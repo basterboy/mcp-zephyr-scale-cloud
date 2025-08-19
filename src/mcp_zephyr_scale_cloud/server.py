@@ -1,13 +1,7 @@
-"""MCP Server for Zephyr Scale Cloud.
+"""Enhanced MCP Server for Zephyr Scale Cloud with Pydantic schemas.
 
-This file contains the Model Context Protocol (MCP) SERVER implementation.
-The MCP server exposes tools, resources, and prompts that AI assistants can use
-to interact with Zephyr Scale Cloud.
-
-Architecture:
-- MCP Server (this file): Handles MCP protocol, exposes tools to AI assistants
-- HTTP Client (clients/): Makes REST API calls to Zephyr Scale Cloud
-- AI Assistant: Connects to MCP server to access Zephyr Scale functionality
+This file contains the Model Context Protocol (MCP) SERVER implementation
+using Pydantic schemas for validation and type safety.
 """
 
 from dotenv import load_dotenv
@@ -15,25 +9,34 @@ from mcp.server import FastMCP
 
 from .clients.zephyr_client import ZephyrClient
 from .config import ZephyrConfig
+from .utils.formatting import (
+    format_error_message,
+    format_priority_details,
+    format_priority_list,
+    format_success_message,
+    format_validation_errors,
+)
+from .utils.validation import (
+    validate_priority_data,
+    validate_project_key,
+)
 
 # Load environment variables
 load_dotenv()
 
-# Initialize MCP server - this is the MCP SERVER
+# Initialize MCP server
 mcp = FastMCP("Zephyr Scale Cloud")
 
-# Error message constants for reuse
+# Error message constants
 _CONFIG_ERROR_MSG = (
     "❌ ERROR: Zephyr Scale configuration not found. "
     "Please set ZEPHYR_SCALE_API_TOKEN environment variable."
 )
 
-_ERROR_DETAILS_FORMAT = "❌ ERROR: {error}\n🔍 Details: {details}"
-
 # Initialize HTTP client for Zephyr Scale API
 try:
     config = ZephyrConfig.from_env()
-    zephyr_client = ZephyrClient(config)  # This is an HTTP CLIENT
+    zephyr_client = ZephyrClient(config)
 except ValueError:
     # If config fails, we'll create a dummy client for error reporting
     config = None
@@ -55,30 +58,20 @@ async def healthcheck() -> str:
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
 
-    try:
-        # Use the HTTP client to check Zephyr Scale API
-        health_data = await zephyr_client.healthcheck()
+    result = await zephyr_client.healthcheck()
 
-        if health_data.get("status") == "UP":
-            return (
-                f"✅ SUCCESS: Zephyr Scale Cloud API is healthy\n"
-                f"📍 Base URL: {config.base_url}\n"
-                f"🔑 Authentication: Valid\n"
-                f"📊 Status: {health_data.get('status', 'Unknown')}"
-            )
-        else:
-            error_msg = health_data.get("error", "Unknown error")
-            return (
-                f"❌ ERROR: Zephyr Scale Cloud API health check failed\n"
-                f"📍 Base URL: {config.base_url}\n"
-                f"🔍 Error: {error_msg}"
-            )
-
-    except Exception as e:
+    if result.is_valid and result.data.get("status") == "UP":
         return (
-            f"❌ EXCEPTION: Failed to perform health check\n"
-            f"📍 Base URL: {config.base_url if config else 'Not configured'}\n"
-            f"🔍 Error: {str(e)}"
+            f"✅ SUCCESS: Zephyr Scale Cloud API is healthy\n"
+            f"📍 Base URL: {config.base_url}\n"
+            f"🔑 Authentication: Valid\n"
+            f"📊 Status: {result.data.get('status', 'Unknown')}"
+        )
+    else:
+        return format_error_message(
+            "Health Check",
+            "Zephyr Scale Cloud API health check failed",
+            "; ".join(result.errors) if result.errors else "Unknown error",
         )
 
 
@@ -97,46 +90,22 @@ async def get_priorities(project_key: str | None = None, max_results: int = 50) 
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
 
-    try:
-        result = await zephyr_client.get_priorities(
-            project_key=project_key, max_results=max_results
+    # Validate project key if provided
+    if project_key:
+        project_validation = validate_project_key(project_key)
+        if not project_validation:
+            return format_validation_errors(project_validation.errors)
+
+    result = await zephyr_client.get_priorities(
+        project_key=project_key, max_results=max_results
+    )
+
+    if result.is_valid:
+        return format_priority_list(result.data, project_key)
+    else:
+        return format_error_message(
+            "Get Priorities", "Failed to retrieve priorities", "; ".join(result.errors)
         )
-
-        if "error" in result:
-            return _ERROR_DETAILS_FORMAT.format(
-                error=result["error"], details=result.get("message", "Unknown error")
-            )
-
-        priorities = result.get("values", [])
-        total = result.get("total", len(priorities))
-
-        if not priorities:
-            filter_msg = f" for project {project_key}" if project_key else ""
-            return f"📋 No priorities found{filter_msg}."
-
-        output = f"📋 **Priorities** ({len(priorities)} of {total})\n"
-        if project_key:
-            output += f"🏷️ Project: {project_key}\n"
-        output += "\n"
-
-        for priority in priorities:
-            output += (
-                f"**{priority.get('name', 'Unknown')}** (ID: {priority.get('id')})\n"
-            )
-            if priority.get("description"):
-                output += f"   📝 {priority['description']}\n"
-            output += f"   📊 Index: {priority.get('index', 'N/A')}"
-            if priority.get("default"):
-                output += " ⭐ (Default)"
-            if priority.get("color"):
-                output += f" 🎨 {priority['color']}"
-            project_id = priority.get("project", {}).get("id", "Unknown")
-            output += f"\n   🏗️ Project: {project_id}\n\n"
-
-        return output.strip()
-
-    except Exception as e:
-        return f"❌ EXCEPTION: Failed to retrieve priorities\n🔍 Error: {str(e)}"
 
 
 @mcp.tool()
@@ -153,38 +122,15 @@ async def get_priority(priority_id: int) -> str:
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
 
-    try:
-        result = await zephyr_client.get_priority(priority_id)
+    result = await zephyr_client.get_priority(priority_id)
 
-        if "error" in result:
-            return _ERROR_DETAILS_FORMAT.format(
-                error=result["error"], details=result.get("message", "Unknown error")
-            )
-
-        output = "📋 **Priority Details**\n\n"
-        output += f"**{result.get('name', 'Unknown')}** (ID: {result.get('id')})\n"
-
-        if result.get("description"):
-            output += f"📝 **Description:** {result['description']}\n"
-
-        output += f"📊 **Index:** {result.get('index', 'N/A')}\n"
-
-        if result.get("default"):
-            output += "⭐ **Default Priority:** Yes\n"
-
-        if result.get("color"):
-            output += f"🎨 **Color:** {result['color']}\n"
-
-        project = result.get("project", {})
-        if project:
-            output += f"🏗️ **Project:** {project.get('id', 'Unknown')}\n"
-
-        return output
-
-    except Exception as e:
-        return (
-            f"❌ EXCEPTION: Failed to retrieve priority {priority_id}\n"
-            f"🔍 Error: {str(e)}"
+    if result.is_valid:
+        return format_priority_details(result.data)
+    else:
+        return format_error_message(
+            "Get Priority",
+            f"Failed to retrieve priority {priority_id}",
+            "; ".join(result.errors),
         )
 
 
@@ -210,51 +156,37 @@ async def create_priority(
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
 
-    # Validate inputs
-    if not name or len(name.strip()) == 0:
-        return "❌ ERROR: Priority name is required and cannot be empty."
+    # Validate input data using Pydantic schema
+    request_data = {
+        "project_key": project_key,
+        "name": name,
+        "description": description,
+        "color": color,
+    }
 
-    if len(name) > 255:
-        return "❌ ERROR: Priority name cannot exceed 255 characters."
+    validation_result = validate_priority_data(request_data, is_update=False)
+    if not validation_result:
+        return format_validation_errors(validation_result.errors)
 
-    if description and len(description) > 255:
-        return "❌ ERROR: Priority description cannot exceed 255 characters."
+    # Create priority using validated schema
+    result = await zephyr_client.create_priority(validation_result.data)
 
-    if color and not color.startswith("#"):
-        return "❌ ERROR: Color must be in hex format (e.g., '#FF0000')."
-
-    try:
-        result = await zephyr_client.create_priority(
+    if result.is_valid:
+        created_resource = result.data
+        return format_success_message(
+            "Created",
+            "Priority",
+            created_resource.id,
+            name=name,
             project_key=project_key,
-            name=name.strip(),
-            description=description.strip() if description else None,
+            description=description,
             color=color,
+            url=created_resource.self,
         )
-
-        if "error" in result:
-            return _ERROR_DETAILS_FORMAT.format(
-                error=result["error"], details=result.get("message", "Unknown error")
-            )
-
-        priority_id = result.get("id")
-        output = "✅ **Priority Created Successfully!**\n\n"
-        output += f"🆔 **ID:** {priority_id}\n"
-        output += f"📋 **Name:** {name}\n"
-        output += f"🏷️ **Project:** {project_key}\n"
-
-        if description:
-            output += f"📝 **Description:** {description}\n"
-
-        if color:
-            output += f"🎨 **Color:** {color}\n"
-
-        if result.get("self"):
-            output += f"🔗 **URL:** {result['self']}\n"
-
-        return output
-
-    except Exception as e:
-        return f"❌ EXCEPTION: Failed to create priority\n🔍 Error: {str(e)}"
+    else:
+        return format_error_message(
+            "Create Priority", "Failed to create priority", "; ".join(result.errors)
+        )
 
 
 @mcp.tool()
@@ -285,58 +217,41 @@ async def update_priority(
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
 
-    # Validate inputs
-    if not name or len(name.strip()) == 0:
-        return "❌ ERROR: Priority name is required and cannot be empty."
+    # Validate input data using Pydantic schema
+    request_data = {
+        "id": priority_id,
+        "project": {"id": project_id},
+        "name": name,
+        "description": description,
+        "index": index,
+        "default": default,
+        "color": color,
+    }
 
-    if len(name) > 255:
-        return "❌ ERROR: Priority name cannot exceed 255 characters."
+    validation_result = validate_priority_data(request_data, is_update=True)
+    if not validation_result:
+        return format_validation_errors(validation_result.errors)
 
-    if description and len(description) > 255:
-        return "❌ ERROR: Priority description cannot exceed 255 characters."
+    # Update priority using validated schema
+    result = await zephyr_client.update_priority(priority_id, validation_result.data)
 
-    if color and not color.startswith("#"):
-        return "❌ ERROR: Color must be in hex format (e.g., '#FF0000')."
-
-    if index < 0:
-        return "❌ ERROR: Index must be a non-negative integer."
-
-    try:
-        result = await zephyr_client.update_priority(
-            priority_id=priority_id,
+    if result.is_valid:
+        return format_success_message(
+            "Updated",
+            "Priority",
+            priority_id,
+            name=name,
             project_id=project_id,
-            name=name.strip(),
             index=index,
             default=default,
-            description=description.strip() if description else None,
+            description=description,
             color=color,
         )
-
-        if "error" in result:
-            return _ERROR_DETAILS_FORMAT.format(
-                error=result["error"], details=result.get("message", "Unknown error")
-            )
-
-        output = "✅ **Priority Updated Successfully!**\n\n"
-        output += f"🆔 **ID:** {priority_id}\n"
-        output += f"📋 **Name:** {name}\n"
-        output += f"🏗️ **Project ID:** {project_id}\n"
-        output += f"📊 **Index:** {index}\n"
-
-        if default:
-            output += "⭐ **Default Priority:** Yes\n"
-
-        if description:
-            output += f"📝 **Description:** {description}\n"
-
-        if color:
-            output += f"🎨 **Color:** {color}\n"
-
-        return output
-
-    except Exception as e:
-        return (
-            f"❌ EXCEPTION: Failed to update priority {priority_id}\n🔍 Error: {str(e)}"
+    else:
+        return format_error_message(
+            "Update Priority",
+            f"Failed to update priority {priority_id}",
+            "; ".join(result.errors),
         )
 
 
