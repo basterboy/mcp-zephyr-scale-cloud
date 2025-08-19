@@ -1,0 +1,104 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  # Test environment variables
+  ZEPHYR_SCALE_API_TOKEN: test_token_for_ci
+  ZEPHYR_SCALE_BASE_URL: https://api.example.com/v2
+  ZEPHYR_SCALE_DEFAULT_PROJECT_KEY: TEST
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          venv-${{ runner.os }}-${{ matrix.python-version }}-
+
+    - name: Install dependencies
+      run: |
+        poetry install --with dev
+
+    - name: Run code formatting check
+      run: |
+        poetry run black --check src/ tests/
+
+    - name: Run import sorting check
+      run: |
+        poetry run isort --check-only src/ tests/
+
+    - name: Run linting
+      run: |
+        poetry run ruff check src/ tests/
+
+    - name: Run type checking
+      run: |
+        poetry run mypy src/
+      continue-on-error: true  # Don't fail CI on type errors for now
+
+    - name: Run unit tests
+      run: |
+        poetry run pytest tests/unit/ -v --cov=src/mcp_zephyr_scale_cloud --cov-report=xml
+
+    - name: Run integration tests
+      run: |
+        poetry run pytest tests/integration/ -v
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      if: matrix.python-version == '3.11'  # Only upload once
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  test-package:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+
+    - name: Build package
+      run: |
+        poetry build
+
+    - name: Test package installation
+      run: |
+        pip install dist/*.whl
+        python -c "import mcp_zephyr_scale_cloud; print('Package imports successfully')"
