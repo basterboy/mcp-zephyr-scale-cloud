@@ -4,11 +4,20 @@ A Model Context Protocol (MCP) server for Zephyr Scale Cloud, enabling AI assist
 
 ## Features
 
+### ✅ **Currently Implemented:**
+- 🩺 **API Health Monitoring** - Check connectivity and authentication status
+- ⭐ **Priority Management** - Create, read, update priorities across projects
+- 📊 **Status Management** - Manage test execution statuses with type filtering
+- 🔧 **Production Ready** - Server lifespan management and structured logging
+- 🧪 **Comprehensive Testing** - Unit tests, integration tests, and CI/CD pipeline
+- 📝 **Type Safety** - Pydantic schema validation for all API operations
+
+### 🚧 **Planned Features:**
 - 🧪 Test case management
-- 📊 Test execution and results
-- 📈 Test reporting and analytics
+- 📈 Test execution and results
 - 🔄 Test cycle management
 - 👥 Project and team management
+- 📊 Test reporting and analytics
 
 ## Installation
 
@@ -65,6 +74,24 @@ cp env.template .env
 ```bash
 poetry install
 poetry run mcp-zephyr-scale-cloud
+```
+
+3. **Test your connection:**
+```bash
+# Check if your setup works
+poetry run python -c "
+from src.mcp_zephyr_scale_cloud.config import ZephyrConfig
+from src.mcp_zephyr_scale_cloud.clients.zephyr_client import ZephyrClient
+import asyncio
+
+async def test():
+    config = ZephyrConfig.from_env()
+    client = ZephyrClient(config)
+    result = await client.healthcheck()
+    print(f'API Status: {result.data.get(\"status\") if result.is_valid else \"Failed\"}')
+
+asyncio.run(test())
+"
 ```
 
 ## Development
@@ -135,6 +162,7 @@ src/mcp_zephyr_scale_cloud/
 │   ├── base.py           # Base schemas and common types
 │   ├── common.py         # Shared entity schemas
 │   ├── priority.py       # Priority-specific schemas
+│   ├── status.py         # Status-specific schemas
 │   └── project.py        # Project-specific schemas
 ├── utils/                 # Utility functions
 │   ├── __init__.py
@@ -220,14 +248,79 @@ Tests run automatically on:
 
 ## MCP Tools
 
-This server provides the following MCP tools:
+This server provides **9 MCP tools** for Zephyr Scale Cloud integration:
+
+| **Category** | **Tools** | **Description** |
+|--------------|-----------|-----------------|
+| **Health** | 1 tool | API connectivity and authentication |
+| **Priorities** | 4 tools | Full CRUD operations for priority management |
+| **Statuses** | 4 tools | Full CRUD operations for status management |
+| **Total** | **9 tools** | **Production-ready MCP server** |
 
 ### Currently Available:
+
+#### **🩺 Health & Connectivity**
 - `healthcheck` - Check Zephyr Scale Cloud API connectivity and authentication status
+
+#### **⭐ Priority Management**
 - `get_priorities` - Get all priorities with optional project filtering
 - `get_priority` - Get details of a specific priority by ID
 - `create_priority` - Create a new priority in a project
 - `update_priority` - Update an existing priority
+
+#### **📊 Status Management**
+- `get_statuses` - Get all statuses with optional project and type filtering
+- `get_status` - Get details of a specific status by ID
+- `create_status` - Create a new status in a project
+- `update_status` - Update an existing status
+
+## 📊 Status Operations Guide
+
+Status operations allow you to manage test execution statuses in Zephyr Scale Cloud. Each status can be associated with different entity types:
+
+### **Status Types:**
+- `TEST_CASE` - For test case statuses
+- `TEST_PLAN` - For test plan statuses  
+- `TEST_CYCLE` - For test cycle statuses
+- `TEST_EXECUTION` - For test execution statuses
+
+### **Example Usage:**
+
+```python
+# Get all statuses for a specific project and type
+statuses = await get_statuses(
+    project_key="MYPROJ",
+    status_type="TEST_EXECUTION",
+    max_results=100
+)
+
+# Create a new test execution status
+new_status = await create_status(
+    project_key="MYPROJ",
+    name="In Review",
+    status_type="TEST_EXECUTION",
+    description="Test is under review",
+    color="#FFA500"
+)
+
+# Update an existing status
+updated = await update_status(
+    status_id=123,
+    project_id=456,
+    name="Reviewed",
+    index=5,
+    description="Test has been reviewed and approved"
+)
+```
+
+### **Status Properties:**
+- **Name**: Human-readable status name (max 255 chars)
+- **Type**: One of the four status types listed above
+- **Description**: Optional detailed description (max 255 chars)
+- **Color**: Optional hex color code (e.g., '#FF0000')
+- **Index**: Position/order in status lists
+- **Default**: Whether this is the default status for the type
+- **Archived**: Whether the status is archived
 
 ### Planned:
 - `get_projects` - List all available projects
