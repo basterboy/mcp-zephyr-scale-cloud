@@ -42,11 +42,12 @@ class PriorityList(PagedResponse[Priority]):
 class CreatePriorityRequest(BaseEntity):
     """Request schema for creating a priority."""
 
-    project_key: str = Field(
+    projectKey: str = Field(
         ...,
         description="Jira project key",
         pattern=r"[A-Z][A-Z_0-9]+",
         examples=["PROJ", "TEST"],
+        alias="projectKey",
     )
     name: str = Field(..., description="Priority name", min_length=1, max_length=255)
     description: str | None = Field(
