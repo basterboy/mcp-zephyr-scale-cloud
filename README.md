@@ -107,6 +107,10 @@ This server provides the following MCP tools:
 
 ### Currently Available:
 - `healthcheck` - Check Zephyr Scale Cloud API connectivity and authentication status
+- `get_priorities` - Get all priorities with optional project filtering
+- `get_priority` - Get details of a specific priority by ID
+- `create_priority` - Create a new priority in a project
+- `update_priority` - Update an existing priority
 
 ### Planned:
 - `get_projects` - List all available projects
