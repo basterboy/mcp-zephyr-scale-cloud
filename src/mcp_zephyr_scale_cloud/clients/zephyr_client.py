@@ -10,6 +10,13 @@ from ..schemas.priority import (
     PriorityList,
     UpdatePriorityRequest,
 )
+from ..schemas.status import (
+    CreateStatusRequest,
+    Status,
+    StatusList,
+    StatusType,
+    UpdateStatusRequest,
+)
 from ..utils.validation import (
     ValidationResult,
     validate_api_response,
@@ -208,3 +215,176 @@ class ZephyrClient:
                 return ValidationResult(
                     False, [f"Failed to update priority {priority_id}: {str(e)}"]
                 )
+
+    # Status operations
+
+    async def get_statuses(
+        self,
+        project_key: str = None,
+        status_type: StatusType = None,
+        max_results: int = 50,
+        start_at: int = 0,
+    ) -> ValidationResult:
+        """Get all statuses with optional filtering.
+
+        Args:
+            project_key: Optional Jira project key filter
+            status_type: Optional status type filter
+            max_results: Maximum results to return (1-1000, default: 50)
+            start_at: Starting position for pagination (default: 0)
+
+        Returns:
+            ValidationResult containing StatusList or error messages
+        """
+        # Validate pagination parameters
+        pagination_result = validate_pagination_params(max_results, start_at)
+        if not pagination_result.is_valid:
+            return pagination_result
+
+        try:
+            params = {
+                "maxResults": max_results,
+                "startAt": start_at,
+            }
+
+            if project_key:
+                params["projectKey"] = project_key
+
+            if status_type:
+                params["statusType"] = status_type.value
+
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.config.base_url}/statuses",
+                    headers=self.headers,
+                    params=params,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                return validate_api_response(response.json(), StatusList)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [f"Failed to get statuses: {str(e)}"],
+            )
+
+    async def get_status(self, status_id: int) -> ValidationResult:
+        """Get a specific status by ID.
+
+        Args:
+            status_id: The ID of the status to retrieve
+
+        Returns:
+            ValidationResult containing Status or error messages
+        """
+        if status_id < 1:
+            return ValidationResult(False, ["Status ID must be a positive integer"])
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.config.base_url}/statuses/{status_id}",
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                return validate_api_response(response.json(), Status)
+
+        except httpx.HTTPError as e:
+            if hasattr(e, "response") and e.response.status_code == 404:
+                return ValidationResult(
+                    False,
+                    [
+                        f"Status with ID {status_id} does not exist or "
+                        "you do not have access to it"
+                    ],
+                )
+            return ValidationResult(
+                False,
+                [f"Failed to get status {status_id}: {str(e)}"],
+            )
+
+    async def create_status(self, request: CreateStatusRequest) -> ValidationResult:
+        """Create a new status.
+
+        Args:
+            request: CreateStatusRequest with status details
+
+        Returns:
+            ValidationResult containing CreatedResource or error messages
+        """
+        try:
+            # Convert to dict for API call, excluding None values
+            request_data = request.model_dump(exclude_none=True, by_alias=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/statuses",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                return validate_api_response(response.json(), CreatedResource)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [f"Failed to create status: {str(e)}"],
+            )
+
+    async def update_status(
+        self, status_id: int, request: UpdateStatusRequest
+    ) -> ValidationResult:
+        """Update an existing status.
+
+        Args:
+            status_id: The ID of the status to update
+            request: UpdateStatusRequest with updated status details
+
+        Returns:
+            ValidationResult indicating success or error messages
+        """
+        if status_id < 1:
+            return ValidationResult(False, ["Status ID must be a positive integer"])
+
+        try:
+            # Convert to dict for API call, excluding None values
+            request_data = request.model_dump(exclude_none=True, by_alias=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.put(
+                    f"{self.config.base_url}/statuses/{status_id}",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                
+                # Update returns 200 OK with no body
+                return ValidationResult(
+                    True,
+                    data={
+                        "success": True,
+                        "message": f"Status {status_id} updated successfully",
+                    },
+                )
+
+        except httpx.HTTPError as e:
+            if hasattr(e, "response") and e.response.status_code == 404:
+                return ValidationResult(
+                    False,
+                    [
+                        f"Status with ID {status_id} does not exist or "
+                        "you do not have access to it"
+                    ],
+                )
+            return ValidationResult(
+                False,
+                [f"Failed to update status {status_id}: {str(e)}"],
+            )
