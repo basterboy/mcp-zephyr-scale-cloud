@@ -16,12 +16,16 @@ from .utils.formatting import (
     format_error_message,
     format_priority_details,
     format_priority_list,
+    format_status_details,
+    format_status_list,
     format_success_message,
     format_validation_errors,
 )
 from .utils.validation import (
     validate_priority_data,
     validate_project_key,
+    validate_status_data,
+    validate_status_type,
 )
 
 # Load environment variables
@@ -343,6 +347,214 @@ async def update_priority(
         return format_error_message(
             "Update Priority",
             f"Failed to update priority {priority_id}",
+            "; ".join(result.errors),
+        )
+
+
+# Status MCP Tools
+
+@mcp.tool()
+async def get_statuses(
+    project_key: str | None = None,
+    status_type: str | None = None,
+    max_results: int = 50,
+) -> str:
+    """
+    Get all statuses from Zephyr Scale Cloud.
+
+    Args:
+        project_key: Optional Jira project key to filter statuses (e.g., 'PROJ')
+        status_type: Optional status type filter ('TEST_CASE', 'TEST_PLAN', 'TEST_CYCLE', 'TEST_EXECUTION')
+        max_results: Maximum number of results to return (default: 50, max: 1000)
+
+    Returns:
+        str: Formatted list of statuses with their details
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate status type if provided
+    parsed_status_type = None
+    if status_type:
+        type_validation = validate_status_type(status_type)
+        if not type_validation.is_valid:
+            return format_validation_errors(type_validation.errors)
+        
+        # Import here to avoid circular imports
+        from .schemas.status import StatusType
+        parsed_status_type = StatusType(status_type)
+
+    # Validate project key if provided
+    if project_key:
+        project_validation = validate_project_key(project_key)
+        if not project_validation.is_valid:
+            return format_validation_errors(project_validation.errors)
+
+    result = await zephyr_client.get_statuses(
+        project_key=project_key,
+        status_type=parsed_status_type,
+        max_results=max_results,
+    )
+
+    if result.is_valid:
+        return format_status_list(result.data, project_key, status_type)
+    else:
+        return format_error_message(
+            "Get Statuses", "Failed to retrieve statuses", "; ".join(result.errors)
+        )
+
+
+@mcp.tool()
+async def get_status(status_id: int) -> str:
+    """
+    Get details of a specific status by its ID.
+
+    Args:
+        status_id: The ID of the status to retrieve
+
+    Returns:
+        str: Formatted status details
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    if status_id < 1:
+        return format_validation_errors(["Status ID must be a positive integer"])
+
+    result = await zephyr_client.get_status(status_id)
+
+    if result.is_valid:
+        return format_status_details(result.data)
+    else:
+        return format_error_message(
+            "Get Status", f"Failed to retrieve status {status_id}", "; ".join(result.errors)
+        )
+
+
+@mcp.tool()
+async def create_status(
+    project_key: str,
+    name: str,
+    status_type: str,
+    description: str | None = None,
+    color: str | None = None,
+) -> str:
+    """
+    Create a new status in Zephyr Scale Cloud.
+
+    Args:
+        project_key: Jira project key where the status will be created (e.g., 'PROJ')
+        name: Name of the status (max 255 characters)
+        status_type: Status type ('TEST_CASE', 'TEST_PLAN', 'TEST_CYCLE', 'TEST_EXECUTION')
+        description: Optional description of the status (max 255 characters)
+        color: Optional color code for the status (e.g., '#FF0000')
+
+    Returns:
+        str: Result of the status creation
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate input data using Pydantic schema
+    request_data = {
+        "projectKey": project_key,
+        "name": name,
+        "type": status_type,
+        "description": description,
+        "color": color,
+    }
+
+    validation_result = validate_status_data(request_data, is_update=False)
+    if not validation_result.is_valid:
+        return format_validation_errors(validation_result.errors)
+
+    # Create status using validated schema
+    result = await zephyr_client.create_status(validation_result.data)
+
+    if result.is_valid:
+        created_resource = result.data
+        return format_success_message(
+            "Created",
+            "Status",
+            created_resource.id,
+            name=name,
+            project_key=project_key,
+            description=description,
+            color=color,
+            status_type=status_type,
+            url=created_resource.self,
+        )
+    else:
+        return format_error_message(
+            "Create Status", "Failed to create status", "; ".join(result.errors)
+        )
+
+
+@mcp.tool()
+async def update_status(
+    status_id: int,
+    project_id: int,
+    name: str,
+    index: int,
+    archived: bool = False,
+    default: bool = False,
+    description: str | None = None,
+    color: str | None = None,
+) -> str:
+    """
+    Update an existing status in Zephyr Scale Cloud.
+
+    Args:
+        status_id: ID of the status to update
+        project_id: ID of the project the status belongs to
+        name: Updated name of the status (max 255 characters)
+        index: Index/order position of the status (0-based)
+        archived: Whether this status should be archived (default: False)
+        default: Whether this should be the default status (default: False)
+        description: Optional updated description (max 255 characters)
+        color: Optional updated color code (e.g., '#FF0000')
+
+    Returns:
+        str: Result of the status update
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate input data using Pydantic schema
+    request_data = {
+        "id": status_id,
+        "project": {"id": project_id},
+        "name": name,
+        "index": index,
+        "archived": archived,
+        "default": default,
+        "description": description,
+        "color": color,
+    }
+
+    validation_result = validate_status_data(request_data, is_update=True)
+    if not validation_result.is_valid:
+        return format_validation_errors(validation_result.errors)
+
+    # Update status using validated schema
+    result = await zephyr_client.update_status(status_id, validation_result.data)
+
+    if result.is_valid:
+        return format_success_message(
+            "Updated",
+            "Status",
+            status_id,
+            name=name,
+            index=index,
+            archived=archived,
+            default=default,
+            description=description,
+            color=color,
+        )
+    else:
+        return format_error_message(
+            "Update Status",
+            f"Failed to update status {status_id}",
             "; ".join(result.errors),
         )
 

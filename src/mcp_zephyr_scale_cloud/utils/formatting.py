@@ -3,6 +3,7 @@
 from typing import Any
 
 from ..schemas.priority import Priority, PriorityList
+from ..schemas.status import Status, StatusList
 
 
 def format_priority_display(priority: Priority) -> str:
@@ -168,5 +169,108 @@ def format_validation_errors(errors: list[str]) -> str:
     output = "❌ **Validation Errors:**\n"
     for error in errors:
         output += f"   • {error}\n"
+
+    return output.strip()
+
+
+def format_status_display(status: Status) -> str:
+    """Format a single status for display.
+
+    Args:
+        status: Status schema instance
+
+    Returns:
+        Formatted status string
+    """
+    output = f"**{status.name}** (ID: {status.id})\n"
+
+    if status.description:
+        output += f"   📝 {status.description}\n"
+
+    output += f"   📊 Index: {status.index}"
+
+    if status.default:
+        output += " ⭐ (Default)"
+
+    if status.archived:
+        output += " 📦 (Archived)"
+
+    if status.color:
+        output += f" 🎨 {status.color}"
+
+    output += f"\n   🏗️ Project: {status.project.id}\n"
+
+    return output
+
+
+def format_status_list(
+    status_list: StatusList, project_key: str | None = None, status_type: str | None = None
+) -> str:
+    """Format a list of statuses for display.
+
+    Args:
+        status_list: StatusList schema instance
+        project_key: Optional project key for context
+        status_type: Optional status type for context
+
+    Returns:
+        Formatted status list string
+    """
+    if not status_list.values:
+        filters = []
+        if project_key:
+            filters.append(f"project {project_key}")
+        if status_type:
+            filters.append(f"type {status_type}")
+        filter_msg = f" for {' and '.join(filters)}" if filters else ""
+        return f"📋 No statuses found{filter_msg}."
+
+    # Create header with pagination info
+    header = f"📋 **Found {len(status_list.values)} statuses"
+    if status_list.total and status_list.total > len(status_list.values):
+        header += f" (showing {status_list.startAt + 1}-{status_list.startAt + len(status_list.values)} of {status_list.total})"
+    header += ":**\n\n"
+
+    # Add filter context if provided
+    if project_key or status_type:
+        filters = []
+        if project_key:
+            filters.append(f"🏗️ Project: {project_key}")
+        if status_type:
+            filters.append(f"🏷️ Type: {status_type}")
+        header += f"*Filters: {' | '.join(filters)}*\n\n"
+
+    # Format each status
+    formatted_statuses = []
+    for status in status_list.values:
+        formatted_statuses.append(format_status_display(status))
+
+    return header + "\n".join(formatted_statuses)
+
+
+def format_status_details(status: Status) -> str:
+    """Format detailed status information for display.
+
+    Args:
+        status: Status schema instance
+
+    Returns:
+        Formatted status details string
+    """
+    output = f"🎯 **Status Details: {status.name}**\n\n"
+    output += f"📊 **ID:** {status.id}\n"
+    output += f"📝 **Name:** {status.name}\n"
+
+    if status.description:
+        output += f"📋 **Description:** {status.description}\n"
+
+    output += f"📈 **Index:** {status.index}\n"
+    output += f"⭐ **Default:** {'Yes' if status.default else 'No'}\n"
+    output += f"📦 **Archived:** {'Yes' if status.archived else 'No'}\n"
+
+    if status.color:
+        output += f"🎨 **Color:** {status.color}\n"
+
+    output += f"🏗️ **Project ID:** {status.project.id}\n"
 
     return output.strip()

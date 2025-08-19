@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from ..schemas.priority import CreatePriorityRequest, UpdatePriorityRequest
+from ..schemas.status import CreateStatusRequest, StatusType, UpdateStatusRequest
 
 
 class ValidationResult:
@@ -170,3 +171,54 @@ def sanitize_input(value: Any) -> Any:
         return sanitized
 
     return value
+
+
+def validate_status_data(data: dict[str, Any], is_update: bool = False) -> ValidationResult:
+    """Validate status data using appropriate Pydantic schema.
+
+    Args:
+        data: Dictionary of status data to validate
+        is_update: Whether this is for an update operation
+
+    Returns:
+        ValidationResult with validation status and validated data or errors
+    """
+    try:
+        if is_update:
+            validated_status = UpdateStatusRequest(**data)
+        else:
+            validated_status = CreateStatusRequest(**data)
+
+        return ValidationResult(True, data=validated_status)
+
+    except ValidationError as e:
+        errors = []
+        for error in e.errors():
+            field = ".".join(str(loc) for loc in error["loc"])
+            message = error["msg"]
+            errors.append(f"Field '{field}': {message}")
+
+        return ValidationResult(False, errors)
+
+    except Exception as e:
+        return ValidationResult(False, [f"Unexpected validation error: {str(e)}"])
+
+
+def validate_status_type(status_type: str) -> ValidationResult:
+    """Validate status type value.
+
+    Args:
+        status_type: Status type to validate
+
+    Returns:
+        ValidationResult with validation status and any errors
+    """
+    try:
+        StatusType(status_type)
+        return ValidationResult(True)
+    except ValueError:
+        valid_types = [t.value for t in StatusType]
+        return ValidationResult(
+            False,
+            [f"Invalid status type '{status_type}'. Valid types: {', '.join(valid_types)}"],
+        )
