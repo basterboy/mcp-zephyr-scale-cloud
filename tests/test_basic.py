@@ -274,6 +274,7 @@ class TestEnvironmentConfiguration:
     def test_folder_schema_validation(self):
         """Test folder schema validation."""
         from pydantic import ValidationError
+
         from src.mcp_zephyr_scale_cloud.schemas.folder import CreateFolderRequest
 
         # Test invalid project key
