@@ -23,6 +23,7 @@ from ..schemas.status import (
     StatusType,
     UpdateStatusRequest,
 )
+from ..schemas.test_step import TestStepsList
 from ..utils.validation import (
     ValidationResult,
     validate_api_response,
@@ -524,4 +525,53 @@ class ZephyrClient:
             return ValidationResult(
                 False,
                 [f"Failed to create folder: {str(e)}"],
+            )
+
+    async def get_test_steps(
+        self,
+        test_case_key: str,
+        max_results: int = 10,
+        start_at: int = 0,
+    ) -> "ValidationResult[TestStepsList]":
+        """
+        Get test steps for a specific test case.
+
+        Args:
+            test_case_key: The key of the test case (format: [A-Z]+-T[0-9]+)
+            max_results: Maximum number of results to return (default: 10, max: 1000)
+            start_at: Zero-indexed starting position (default: 0)
+
+        Returns:
+            ValidationResult with TestStepsList data or error messages
+        """
+        # Validate pagination parameters
+        pagination_validation = validate_pagination_params(max_results, start_at)
+        if not pagination_validation.is_valid:
+            return ValidationResult(False, pagination_validation.errors)
+
+        try:
+            # Build query parameters
+            params = {
+                "maxResults": max_results,
+                "startAt": start_at,
+            }
+
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.config.base_url}/testcases/{test_case_key}/teststeps",
+                    headers=self.headers,
+                    params=params,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, TestStepsList)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [f"Failed to get test steps for test case {test_case_key}: {str(e)}"],
             )

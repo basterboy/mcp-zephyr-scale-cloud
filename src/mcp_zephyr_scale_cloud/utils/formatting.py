@@ -5,6 +5,7 @@ from typing import Any
 from ..schemas.folder import Folder, FolderList
 from ..schemas.priority import Priority, PriorityList
 from ..schemas.status import Status, StatusList
+from ..schemas.test_step import TestStep, TestStepsList
 
 
 def format_priority_display(priority: Priority) -> str:
@@ -376,5 +377,96 @@ def format_folder_details(folder: Folder) -> str:
 
     if folder.project:
         output += f"🏗️ **Project ID:** {folder.project.id}\n"
+
+    return output.strip()
+
+
+def format_test_step_display(step: TestStep, step_number: int) -> str:
+    """Format a single test step for compact display."""
+
+    if step.inline:
+        description = (
+            step.inline.description[:80] + "..."
+            if len(step.inline.description) > 80
+            else step.inline.description
+        )
+        step_type = "📝 Inline"
+        return f"**Step {step_number}:** {step_type} - {description}"
+    elif step.test_case:
+        step_type = "🔗 Test Case"
+        return f"**Step {step_number}:** {step_type} - {step.test_case.test_case_key}"
+    else:
+        return f"**Step {step_number}:** ❓ Unknown step type"
+
+
+def format_test_steps_list(
+    test_steps_list: TestStepsList,
+    test_case_key: str,
+    max_results: int | None = None,
+    start_at: int | None = None,
+) -> str:
+    """Format a list of test steps for display."""
+
+    if not test_steps_list.values:
+        return f"📝 No test steps found for test case {test_case_key}."
+
+    # Create header with pagination info
+    total_steps = len(test_steps_list.values)
+    header = f"📝 **Found {total_steps} test steps for {test_case_key}"
+
+    if test_steps_list.total and test_steps_list.total > len(test_steps_list.values):
+        header += f" (showing {len(test_steps_list.values)} of {test_steps_list.total})"
+
+    header += "**\n\n"
+
+    # Format each test step
+    steps_output = []
+    start_index = start_at or 0
+    for i, step in enumerate(test_steps_list.values):
+        step_number = start_index + i + 1
+        steps_output.append(format_test_step_display(step, step_number))
+
+    # Add pagination info if applicable
+    footer = ""
+    if test_steps_list.total and test_steps_list.total > len(test_steps_list.values):
+        start_num = (start_at or 0) + 1
+        end_num = (start_at or 0) + len(test_steps_list.values)
+        footer = (
+            f"\n\n📄 **Pagination:** Showing results "
+            f"{start_num}-{end_num} of {test_steps_list.total}"
+        )
+
+    return header + "\n".join(steps_output) + footer
+
+
+def format_test_step_details(step: TestStep, step_number: int | None = None) -> str:
+    """Format detailed view of a single test step."""
+
+    step_header = f"**Step {step_number}**" if step_number else "**Test Step**"
+    output = f"📝 {step_header}\n\n"
+
+    if step.inline:
+        output += "📋 **Type:** Inline Step\n"
+        output += f"📄 **Description:** {step.inline.description}\n"
+
+        if step.inline.test_data:
+            output += f"📊 **Test Data:** {step.inline.test_data}\n"
+
+        if step.inline.expected_result:
+            output += f"✅ **Expected Result:** {step.inline.expected_result}\n"
+
+        if step.inline.reflect_ref:
+            output += f"🤖 **AI Reference:** {step.inline.reflect_ref}\n"
+
+    elif step.test_case:
+        output += "📋 **Type:** Test Case Delegation\n"
+        output += f"🔗 **Test Case Key:** {step.test_case.test_case_key}\n"
+
+        if step.test_case.parameters:
+            output += "⚙️ **Parameters:**\n"
+            for param in step.test_case.parameters:
+                output += f"  • {param.name} ({param.type}): {param.value}\n"
+    else:
+        output += "❓ **Type:** Unknown step type\n"
 
     return output.strip()

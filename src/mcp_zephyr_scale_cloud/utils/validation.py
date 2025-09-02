@@ -277,3 +277,32 @@ def validate_folder_type(folder_type: str) -> ValidationResult:
                 f"Valid types: {', '.join(valid_types)}"
             ],
         )
+
+
+def validate_test_case_key(test_case_key: str) -> "ValidationResult[str]":
+    """
+    Validate test case key format.
+
+    Args:
+        test_case_key: Test case key to validate
+
+    Returns:
+        ValidationResult with validated test case key or error messages
+    """
+    import re
+
+    if not test_case_key:
+        return ValidationResult(False, ["Test case key is required"])
+
+    # Pattern from OpenAPI: (.+-T[0-9]+)
+    pattern = r"^.+-T[0-9]+$"
+    if not re.match(pattern, test_case_key):
+        return ValidationResult(
+            False,
+            [
+                f"Invalid test case key format '{test_case_key}'. "
+                "Expected format: [PROJECT]-T[NUMBER] (e.g., 'PROJ-T123')"
+            ],
+        )
+
+    return ValidationResult(True, data=test_case_key)

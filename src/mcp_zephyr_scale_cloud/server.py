@@ -21,6 +21,7 @@ from .utils.formatting import (
     format_status_details,
     format_status_list,
     format_success_message,
+    format_test_steps_list,
     format_validation_errors,
 )
 from .utils.validation import (
@@ -30,6 +31,7 @@ from .utils.validation import (
     validate_project_key,
     validate_status_data,
     validate_status_type,
+    validate_test_case_key,
 )
 
 # Load environment variables
@@ -120,7 +122,7 @@ async def zephyr_server_lifespan(server):
         "config_valid": config is not None,
         "api_accessible": zephyr_client is not None and not startup_errors,
         "startup_errors": startup_errors,
-        "tools_count": 12,  # healthcheck + 4 priorities + 4 statuses + 3 folders
+        "tools_count": 13,  # healthcheck + priorities + statuses + folders + test steps
         "base_url": config.base_url if config else None,
     }
 
@@ -744,6 +746,53 @@ async def create_folder(
         return format_error_message(
             "Create Folder",
             f"Failed to create folder '{name}'",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def get_test_steps(
+    test_case_key: str,
+    max_results: int = 10,
+    start_at: int = 0,
+) -> str:
+    """Get test steps for a specific test case from Zephyr Scale Cloud.
+
+    Args:
+        test_case_key: The key of the test case (format: [PROJECT]-T[NUMBER])
+        max_results: Maximum number of results to return (default: 10, max: 1000)
+        start_at: Zero-indexed starting position (default: 0)
+
+    Returns:
+        Formatted list of test steps or error message
+    """
+    if not zephyr_client:
+        return format_error_message(
+            "Get Test Steps", "Client not initialized", _CONFIG_ERROR_MSG
+        )
+
+    # Validate test case key
+    test_case_validation = validate_test_case_key(test_case_key)
+    if not test_case_validation.is_valid:
+        return format_error_message(
+            "Get Test Steps",
+            "Invalid test case key",
+            "; ".join(test_case_validation.errors),
+        )
+
+    # Get test steps from API
+    result = await zephyr_client.get_test_steps(
+        test_case_key=test_case_key,
+        max_results=max_results,
+        start_at=start_at,
+    )
+
+    if result.is_valid:
+        return format_test_steps_list(result.data, test_case_key, max_results, start_at)
+    else:
+        return format_error_message(
+            "Get Test Steps",
+            f"Failed to retrieve test steps for {test_case_key}",
             "; ".join(result.errors),
         )
 

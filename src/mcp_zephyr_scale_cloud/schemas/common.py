@@ -1,8 +1,19 @@
 """Common schemas shared across entities."""
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from .base import BaseEntity, EntityWithLink
+
+
+class CustomFields(BaseModel):
+    """Custom fields schema for entities.
+
+    Multi-line text fields should denote a new line with the <br> syntax.
+    """
+
+    model_config = {"extra": "allow"}
+
+    # This allows any additional fields to be set dynamically
 
 
 class Project(EntityWithLink):
