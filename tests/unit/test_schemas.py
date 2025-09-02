@@ -11,6 +11,12 @@ from src.mcp_zephyr_scale_cloud.schemas.priority import (
     PriorityList,
     UpdatePriorityRequest,
 )
+from src.mcp_zephyr_scale_cloud.schemas.folder import (
+    CreateFolderRequest,
+    Folder,
+    FolderList,
+    FolderType,
+)
 from src.mcp_zephyr_scale_cloud.schemas.status import (
     CreateStatusRequest,
     Status,
@@ -294,3 +300,137 @@ class TestCommonSchemas:
 
         assert project.id == 123
         assert project.self == "https://api.example.com/projects/123"
+
+
+class TestFolderSchemas:
+    """Test cases for folder-related schemas."""
+
+    def test_create_folder_request_valid(self):
+        """Test creating a valid CreateFolderRequest."""
+        request = CreateFolderRequest(
+            projectKey="TEST",
+            name="Test Folder",
+            folderType="TEST_CASE",
+            parentId=1,
+        )
+
+        assert request.project_key == "TEST"
+        assert request.name == "Test Folder"
+        assert request.folder_type == FolderType.TEST_CASE
+        assert request.parent_id == 1
+
+    def test_create_folder_request_minimal(self):
+        """Test creating CreateFolderRequest with minimal data (root folder)."""
+        request = CreateFolderRequest(
+            projectKey="TEST", name="Root Folder", folderType="TEST_PLAN"
+        )
+
+        assert request.project_key == "TEST"
+        assert request.name == "Root Folder"
+        assert request.folder_type == FolderType.TEST_PLAN
+        assert request.parent_id is None
+
+    def test_create_folder_request_invalid_project_key(self):
+        """Test CreateFolderRequest with invalid project key."""
+        with pytest.raises(ValidationError) as exc_info:
+            CreateFolderRequest(
+                projectKey="invalid", name="Folder", folderType="TEST_CASE"
+            )
+
+        errors = exc_info.value.errors()
+        assert any("String should match pattern" in str(error) for error in errors)
+
+    def test_create_folder_request_invalid_folder_type(self):
+        """Test CreateFolderRequest with invalid folder type."""
+        with pytest.raises(ValidationError) as exc_info:
+            CreateFolderRequest(
+                projectKey="TEST", name="Folder", folderType="INVALID_TYPE"
+            )
+
+        errors = exc_info.value.errors()
+        assert any("Input should be" in str(error) for error in errors)
+
+    def test_create_folder_request_long_name(self):
+        """Test CreateFolderRequest with name too long."""
+        long_name = "x" * 256  # Max is 255
+        with pytest.raises(ValidationError) as exc_info:
+            CreateFolderRequest(
+                projectKey="TEST", name=long_name, folderType="TEST_CASE"
+            )
+
+        errors = exc_info.value.errors()
+        assert any("String should have at most 255 characters" in str(error) for error in errors)
+
+    def test_create_folder_request_empty_name(self):
+        """Test CreateFolderRequest with empty name."""
+        with pytest.raises(ValidationError) as exc_info:
+            CreateFolderRequest(projectKey="TEST", name="", folderType="TEST_CASE")
+
+        errors = exc_info.value.errors()
+        assert any("String should have at least 1 character" in str(error) for error in errors)
+
+    def test_folder_schema_valid(self, sample_folder_data):
+        """Test creating a valid Folder from API response."""
+        folder = Folder(**sample_folder_data)
+
+        assert folder.id == 1
+        assert folder.parent_id is None
+        assert folder.name == "Test Cases"
+        assert folder.index == 0
+        assert folder.folder_type == FolderType.TEST_CASE
+        assert folder.project.id == 123
+
+    def test_folder_list_valid(self, sample_folder_list):
+        """Test creating a valid FolderList from API response."""
+        folder_list = FolderList(**sample_folder_list)
+
+        assert len(folder_list.values) == 3
+        assert folder_list.total == 3
+        assert folder_list.maxResults == 50
+        assert folder_list.startAt == 0
+        assert folder_list.isLast is True
+
+        # Test first folder
+        first_folder = folder_list.values[0]
+        assert first_folder.name == "Test Cases"
+        assert first_folder.folder_type == FolderType.TEST_CASE
+        assert first_folder.parent_id is None
+
+        # Test second folder (child)
+        second_folder = folder_list.values[1]
+        assert second_folder.name == "Smoke Tests"
+        assert second_folder.parent_id == 1
+
+    def test_folder_type_enum(self):
+        """Test FolderType enum values."""
+        assert FolderType.TEST_CASE == "TEST_CASE"
+        assert FolderType.TEST_PLAN == "TEST_PLAN"
+        assert FolderType.TEST_CYCLE == "TEST_CYCLE"
+
+        # Test that all enum values are valid
+        valid_types = ["TEST_CASE", "TEST_PLAN", "TEST_CYCLE"]
+        enum_values = [t.value for t in FolderType]
+        assert enum_values == valid_types
+
+    def test_model_dump_camelcase(self):
+        """Test that folder request models dump to camelCase."""
+        request = CreateFolderRequest(
+            project_key="TEST",
+            name="Test Folder",
+            folder_type="TEST_CASE",
+            parent_id=1,
+        )
+
+        dumped = request.model_dump(exclude_none=True, by_alias=True)
+
+        # Should use camelCase aliases for API
+        assert "projectKey" in dumped
+        assert "project_key" not in dumped
+        assert "folderType" in dumped
+        assert "folder_type" not in dumped
+        assert "parentId" in dumped
+        assert "parent_id" not in dumped
+        assert dumped["projectKey"] == "TEST"
+        assert dumped["name"] == "Test Folder"
+        assert dumped["folderType"] == "TEST_CASE"
+        assert dumped["parentId"] == 1

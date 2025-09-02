@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from ..schemas.folder import Folder, FolderList
 from ..schemas.priority import Priority, PriorityList
 from ..schemas.status import Status, StatusList
 
@@ -276,5 +277,104 @@ def format_status_details(status: Status) -> str:
         output += f"🎨 **Color:** {status.color}\n"
 
     output += f"🏗️ **Project ID:** {status.project.id}\n"
+
+    return output.strip()
+
+
+def format_folder_display(folder: Folder) -> str:
+    """Format a single folder for display.
+
+    Args:
+        folder: Folder schema instance
+
+    Returns:
+        Formatted folder string
+    """
+    output = f"**{folder.name}** (ID: {folder.id})\n"
+    output += f"   📁 Type: {folder.folder_type.value}\n"
+    output += f"   📊 Index: {folder.index}\n"
+
+    if folder.parent_id:
+        output += f"   📂 Parent ID: {folder.parent_id}\n"
+    else:
+        output += "   📂 Root folder\n"
+
+    if folder.project:
+        output += f"   🏗️ Project: {folder.project.id}\n"
+
+    return output
+
+
+def format_folder_list(
+    folder_list: FolderList,
+    project_key: str | None = None,
+    folder_type: str | None = None,
+) -> str:
+    """Format a list of folders for display.
+
+    Args:
+        folder_list: FolderList schema instance
+        project_key: Optional project key for context
+        folder_type: Optional folder type for context
+
+    Returns:
+        Formatted folder list string
+    """
+    if not folder_list.values:
+        filters = []
+        if project_key:
+            filters.append(f"project {project_key}")
+        if folder_type:
+            filters.append(f"type {folder_type}")
+        filter_msg = f" for {' and '.join(filters)}" if filters else ""
+        return f"📁 No folders found{filter_msg}."
+
+    # Create header with pagination info
+    header = f"📁 **Found {len(folder_list.values)} folders"
+    if folder_list.total and folder_list.total > len(folder_list.values):
+        start_num = folder_list.startAt + 1
+        end_num = folder_list.startAt + len(folder_list.values)
+        header += f" (showing {start_num}-{end_num} of {folder_list.total})"
+    header += ":**\n\n"
+
+    # Add filter context if provided
+    if project_key or folder_type:
+        filters = []
+        if project_key:
+            filters.append(f"🏗️ Project: {project_key}")
+        if folder_type:
+            filters.append(f"📁 Type: {folder_type}")
+        header += f"*Filters: {' | '.join(filters)}*\n\n"
+
+    # Format each folder
+    formatted_folders = []
+    for folder in folder_list.values:
+        formatted_folders.append(format_folder_display(folder))
+
+    return header + "\n".join(formatted_folders)
+
+
+def format_folder_details(folder: Folder) -> str:
+    """Format detailed folder information for display.
+
+    Args:
+        folder: Folder schema instance
+
+    Returns:
+        Formatted folder details string
+    """
+    output = f"📁 **Folder Details: {folder.name}**\n\n"
+    output += f"📊 **ID:** {folder.id}\n"
+    output += f"📝 **Name:** {folder.name}\n"
+    output += f"📁 **Type:** {folder.folder_type.value}\n"
+    output += f"📈 **Index:** {folder.index}\n"
+
+    if folder.parent_id:
+        output += f"📂 **Parent ID:** {folder.parent_id}\n"
+    else:
+        output += "📂 **Parent:** Root folder\n"
+
+    if folder.project:
+        output += f"🏗️ **Project ID:** {folder.project.id}\n"
 
     return output.strip()

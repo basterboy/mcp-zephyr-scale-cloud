@@ -349,3 +349,102 @@ class TestStatusTypeValidation:
 
         assert not result.is_valid
         assert "Invalid status type" in result.errors[0]
+
+
+class TestFolderValidation:
+    """Test cases for folder validation."""
+
+    def test_validate_folder_create_success(self):
+        """Test successful folder creation validation."""
+        data = {
+            "name": "Test Folder",
+            "project_key": "TEST",
+            "folder_type": "TEST_CASE",
+            "parent_id": 1,
+        }
+
+        result = validate_folder_data(data)
+
+        assert result.is_valid
+        assert result.data.name == "Test Folder"
+        assert result.data.project_key == "TEST"
+        assert result.data.folder_type.value == "TEST_CASE"
+        assert result.data.parent_id == 1
+
+    def test_validate_folder_create_minimal(self):
+        """Test folder creation validation with minimal data (root folder)."""
+        data = {
+            "name": "Root Folder",
+            "project_key": "TEST",
+            "folder_type": "TEST_PLAN",
+        }
+
+        result = validate_folder_data(data)
+
+        assert result.is_valid
+        assert result.data.name == "Root Folder"
+        assert result.data.project_key == "TEST"
+        assert result.data.folder_type.value == "TEST_PLAN"
+        assert result.data.parent_id is None
+
+    def test_validate_folder_create_invalid(self):
+        """Test folder creation validation with invalid data."""
+        data = {
+            "name": "",  # Empty name
+            "project_key": "invalid",  # Invalid project key
+            "folder_type": "INVALID_TYPE",  # Invalid folder type
+        }
+
+        result = validate_folder_data(data)
+
+        assert not result.is_valid
+        assert len(result.errors) > 0
+
+    def test_validate_folder_missing_required(self):
+        """Test folder validation with missing required fields."""
+        data = {"name": "Folder"}  # Missing project_key and folder_type
+
+        result = validate_folder_data(data)
+
+        assert not result.is_valid
+        assert len(result.errors) > 0
+
+
+class TestFolderTypeValidation:
+    """Test cases for folder type validation."""
+
+    def test_validate_folder_type_valid(self):
+        """Test valid folder type validation."""
+        for folder_type in ["TEST_CASE", "TEST_PLAN", "TEST_CYCLE"]:
+            result = validate_folder_type(folder_type)
+            assert result.is_valid
+            assert result.data.value == folder_type
+
+    def test_validate_folder_type_invalid(self):
+        """Test invalid folder type validation."""
+        result = validate_folder_type("INVALID_TYPE")
+
+        assert not result.is_valid
+        assert "Invalid folder type" in result.errors[0]
+        assert "INVALID_TYPE" in result.errors[0]
+
+    def test_validate_folder_type_empty(self):
+        """Test empty folder type validation."""
+        result = validate_folder_type("")
+
+        assert not result.is_valid
+        assert "Invalid folder type" in result.errors[0]
+
+    def test_validate_folder_type_none(self):
+        """Test None folder type validation."""
+        result = validate_folder_type(None)
+
+        assert not result.is_valid
+        assert "Invalid folder type" in result.errors[0]
+
+    def test_validate_folder_type_case_sensitive(self):
+        """Test that folder type validation is case sensitive."""
+        result = validate_folder_type("test_case")  # lowercase
+
+        assert not result.is_valid
+        assert "Invalid folder type" in result.errors[0]

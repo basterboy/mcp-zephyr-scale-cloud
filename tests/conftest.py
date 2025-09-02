@@ -204,6 +204,72 @@ def sample_status_list() -> dict:
 
 
 @pytest.fixture
+def sample_folder_data() -> dict:
+    """Sample folder data for testing."""
+    return {
+        "id": 1,
+        "parentId": None,
+        "name": "Test Cases",
+        "index": 0,
+        "folderType": "TEST_CASE",
+        "project": {
+            "id": 123,
+            "key": "TEST",
+            "self": "https://api.example.com/v2/projects/123",
+        },
+    }
+
+
+@pytest.fixture
+def sample_folder_list() -> dict:
+    """Sample folder list response for testing."""
+    return {
+        "values": [
+            {
+                "id": 1,
+                "parentId": None,
+                "name": "Test Cases",
+                "index": 0,
+                "folderType": "TEST_CASE",
+                "project": {
+                    "id": 123,
+                    "key": "TEST",
+                    "self": "https://api.example.com/v2/projects/123",
+                },
+            },
+            {
+                "id": 2,
+                "parentId": 1,
+                "name": "Smoke Tests",
+                "index": 1,
+                "folderType": "TEST_CASE",
+                "project": {
+                    "id": 123,
+                    "key": "TEST",
+                    "self": "https://api.example.com/v2/projects/123",
+                },
+            },
+            {
+                "id": 3,
+                "parentId": None,
+                "name": "Test Plans",
+                "index": 0,
+                "folderType": "TEST_PLAN",
+                "project": {
+                    "id": 123,
+                    "key": "TEST",
+                    "self": "https://api.example.com/v2/projects/123",
+                },
+            },
+        ],
+        "total": 3,
+        "maxResults": 50,
+        "startAt": 0,
+        "isLast": True,
+    }
+
+
+@pytest.fixture
 def sample_validation_error() -> ValidationError:
     """Sample Pydantic validation error for testing."""
     try:

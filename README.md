@@ -8,6 +8,7 @@ A Model Context Protocol (MCP) server for Zephyr Scale Cloud, enabling AI assist
 - 🩺 **API Health Monitoring** - Check connectivity and authentication status
 - ⭐ **Priority Management** - Create, read, update priorities across projects
 - 📊 **Status Management** - Manage test execution statuses with type filtering
+- 📁 **Folder Management** - Organize test artifacts with hierarchical folder structure
 - 🔧 **Production Ready** - Server lifespan management and structured logging
 - 🧪 **Comprehensive Testing** - Unit tests, integration tests, and CI/CD pipeline
 - 📝 **Type Safety** - Pydantic schema validation for all API operations
@@ -248,14 +249,15 @@ Tests run automatically on:
 
 ## MCP Tools
 
-This server provides **9 MCP tools** for Zephyr Scale Cloud integration:
+This server provides **12 MCP tools** for Zephyr Scale Cloud integration:
 
 | **Category** | **Tools** | **Description** |
 |--------------|-----------|-----------------|
 | **Health** | 1 tool | API connectivity and authentication |
 | **Priorities** | 4 tools | Full CRUD operations for priority management |
 | **Statuses** | 4 tools | Full CRUD operations for status management |
-| **Total** | **9 tools** | **Production-ready MCP server** |
+| **Folders** | 3 tools | Folder management and organization |
+| **Total** | **12 tools** | **Production-ready MCP server** |
 
 ### Currently Available:
 
@@ -273,6 +275,11 @@ This server provides **9 MCP tools** for Zephyr Scale Cloud integration:
 - `get_status` - Get details of a specific status by ID
 - `create_status` - Create a new status in a project
 - `update_status` - Update an existing status
+
+#### **📁 Folder Management**
+- `get_folders` - Get all folders with optional project and type filtering
+- `get_folder` - Get details of a specific folder by ID
+- `create_folder` - Create a new folder in a project
 
 ## 📊 Status Operations Guide
 
@@ -321,6 +328,59 @@ updated = await update_status(
 - **Index**: Position/order in status lists
 - **Default**: Whether this is the default status for the type
 - **Archived**: Whether the status is archived
+
+## 📁 Folder Operations Guide
+
+Folder operations allow you to organize and manage test artifacts in Zephyr Scale Cloud. Folders provide hierarchical structure for test cases, test plans, and test cycles.
+
+### **Folder Types:**
+- `TEST_CASE` - For organizing test cases
+- `TEST_PLAN` - For organizing test plans  
+- `TEST_CYCLE` - For organizing test cycles
+
+### **Example Usage:**
+
+```python
+# Get all folders for a specific project and type
+folders = await get_folders(
+    project_key="MYPROJ",
+    folder_type="TEST_CASE",
+    max_results=100
+)
+
+# Create a new root folder
+root_folder = await create_folder(
+    name="Smoke Tests",
+    project_key="MYPROJ",
+    folder_type="TEST_CASE"
+    # parent_id is None for root folders
+)
+
+# Create a child folder
+child_folder = await create_folder(
+    name="Login Tests",
+    project_key="MYPROJ", 
+    folder_type="TEST_CASE",
+    parent_id=123  # ID of the parent folder
+)
+
+# Get details of a specific folder
+folder_details = await get_folder(folder_id=456)
+```
+
+### **Folder Properties:**
+- **Name**: Human-readable folder name (1-255 chars)
+- **Type**: One of the three folder types listed above
+- **Project Key**: Jira project key where the folder belongs
+- **Parent ID**: ID of parent folder (null for root folders)
+- **Index**: Position/order within the parent folder
+- **ID**: Unique identifier assigned by Zephyr Scale
+
+### **Folder Hierarchy:**
+- Folders can be nested to create hierarchical organization
+- Root folders have `parent_id = null`
+- Child folders reference their parent via `parent_id`
+- Each folder type maintains its own hierarchy within a project
 
 ### Planned:
 - `get_projects` - List all available projects
