@@ -132,6 +132,7 @@ class TestBasicFunctionality:
             "get_folders",
             "get_folder",
             "create_folder",
+            "get_test_steps",
         ]
 
         for tool_name in expected_tools:
@@ -327,3 +328,61 @@ class TestEnvironmentConfiguration:
         assert dumped["name"] == "Folder"
         assert dumped["folderType"] == "TEST_CASE"
         assert dumped["parentId"] == 1
+
+    def test_test_step_schema_creation(self):
+        """Test test step schema creation."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_step import (
+            TestStep,
+            TestStepInline,
+            TestStepsList,
+            TestStepTestCase,
+        )
+
+        # Test inline step
+        inline_step = TestStepInline(
+            description="Login to application",
+            testData="username=admin, password=secret",
+            expectedResult="Login successful",
+        )
+        assert inline_step.description == "Login to application"
+        assert inline_step.test_data == "username=admin, password=secret"
+        assert inline_step.expected_result == "Login successful"
+
+        # Test step with inline
+        step = TestStep(inline=inline_step)
+        assert step.inline is not None
+        assert step.test_case is None
+
+        # Test case delegation step
+        test_case = TestStepTestCase(testCaseKey="PROJ-T123")
+        step_with_delegation = TestStep(test_case=test_case)
+        assert step_with_delegation.test_case is not None
+        assert step_with_delegation.inline is None
+
+        # Test steps list
+        steps_list = TestStepsList(
+            values=[step, step_with_delegation],
+            total=2,
+            maxResults=10,
+            startAt=0,
+            isLast=True,
+        )
+        assert len(steps_list.values) == 2
+        assert steps_list.total == 2
+
+    def test_test_case_key_validation(self):
+        """Test test case key validation."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import validate_test_case_key
+
+        # Valid cases
+        valid_keys = ["PROJ-T123", "ABC-T1", "LONG_PROJECT_NAME-T999"]
+        for key in valid_keys:
+            result = validate_test_case_key(key)
+            assert result.is_valid, f"Key '{key}' should be valid"
+            assert result.data == key
+
+        # Invalid cases
+        invalid_keys = ["", "PROJ-123", "PROJ-T", "PROJ", "T123", "proj-t123"]
+        for key in invalid_keys:
+            result = validate_test_case_key(key)
+            assert not result.is_valid, f"Key '{key}' should be invalid"

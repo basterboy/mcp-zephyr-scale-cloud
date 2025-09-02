@@ -11,6 +11,7 @@ from .base import (
     PagedResponse,
 )
 from .common import (
+    CustomFields,
     EntityColor,
     OptionValue,
     Project,
@@ -27,6 +28,13 @@ from .priority import (
     Priority,
     PriorityList,
     UpdatePriorityRequest,
+)
+from .test_step import (
+    TestStep,
+    TestStepInline,
+    TestStepsList,
+    TestStepTestCase,
+    TestStepTestCaseParameters,
 )
 
 __all__ = [
@@ -50,4 +58,10 @@ __all__ = [
     "ProjectLink",
     "OptionValue",
     "EntityColor",
+    "CustomFields",
+    "TestStep",
+    "TestStepInline",
+    "TestStepsList",
+    "TestStepTestCase",
+    "TestStepTestCaseParameters",
 ]
