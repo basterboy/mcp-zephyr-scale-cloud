@@ -14,6 +14,8 @@ from .clients.zephyr_client import ZephyrClient
 from .config import ZephyrConfig
 from .utils.formatting import (
     format_error_message,
+    format_folder_details,
+    format_folder_list,
     format_priority_details,
     format_priority_list,
     format_status_details,
@@ -22,6 +24,8 @@ from .utils.formatting import (
     format_validation_errors,
 )
 from .utils.validation import (
+    validate_folder_data,
+    validate_folder_type,
     validate_priority_data,
     validate_project_key,
     validate_status_data,
@@ -116,7 +120,7 @@ async def zephyr_server_lifespan(server):
         "config_valid": config is not None,
         "api_accessible": zephyr_client is not None and not startup_errors,
         "startup_errors": startup_errors,
-        "tools_count": 9,  # We have 9 tools: healthcheck + 4 priorities + 4 statuses
+        "tools_count": 12,  # We have 12 tools: healthcheck + 4 priorities + 4 statuses + 3 folders
         "base_url": config.base_url if config else None,
     }
 
@@ -561,6 +565,161 @@ async def update_status(
         return format_error_message(
             "Update Status",
             f"Failed to update status {status_id}",
+            "; ".join(result.errors),
+        )
+
+
+# Folder operations
+
+
+@mcp.tool()
+async def get_folders(
+    project_key: str | None = None,
+    folder_type: str | None = None,
+    max_results: int = 50,
+) -> str:
+    """Get folders from Zephyr Scale Cloud.
+
+    Args:
+        project_key: Optional project key to filter folders
+        folder_type: Optional folder type filter (TEST_CASE, TEST_PLAN, TEST_CYCLE)
+        max_results: Maximum number of results to return (1-1000, default 50)
+
+    Returns:
+        Formatted list of folders or error message
+    """
+    if not zephyr_client:
+        return format_error_message("Get Folders", "Client not initialized", _CONFIG_ERROR_MSG)
+
+    # Validate folder type if provided
+    validated_folder_type = None
+    if folder_type:
+        folder_type_result = validate_folder_type(folder_type)
+        if not folder_type_result:
+            return format_error_message(
+                "Get Folders",
+                "Invalid folder type",
+                folder_type_result.error_message,
+            )
+        validated_folder_type = folder_type_result.data
+
+    # Validate project key if provided
+    if project_key:
+        project_key_result = validate_project_key(project_key)
+        if not project_key_result:
+            return format_error_message(
+                "Get Folders",
+                "Invalid project key",
+                project_key_result.error_message,
+            )
+
+    # Get folders from API
+    result = await zephyr_client.get_folders(
+        project_key=project_key,
+        folder_type=validated_folder_type,
+        max_results=max_results,
+    )
+
+    if result:
+        return format_folder_list(result.data, project_key, folder_type)
+    else:
+        return format_error_message(
+            "Get Folders",
+            "Failed to retrieve folders",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def get_folder(folder_id: int) -> str:
+    """Get a specific folder by ID from Zephyr Scale Cloud.
+
+    Args:
+        folder_id: Folder ID to retrieve
+
+    Returns:
+        Formatted folder details or error message
+    """
+    if not zephyr_client:
+        return format_error_message("Get Folder", "Client not initialized", _CONFIG_ERROR_MSG)
+
+    if folder_id < 1:
+        return format_error_message(
+            "Get Folder",
+            "Invalid folder ID",
+            "❌ Folder ID must be a positive integer",
+        )
+
+    # Get folder from API
+    result = await zephyr_client.get_folder(folder_id)
+
+    if result:
+        return format_folder_details(result.data)
+    else:
+        return format_error_message(
+            "Get Folder",
+            f"Failed to retrieve folder {folder_id}",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def create_folder(
+    name: str,
+    project_key: str,
+    folder_type: str,
+    parent_id: int | None = None,
+) -> str:
+    """Create a new folder in Zephyr Scale Cloud.
+
+    Args:
+        name: Folder name (1-255 characters)
+        project_key: Jira project key
+        folder_type: Folder type (TEST_CASE, TEST_PLAN, TEST_CYCLE)
+        parent_id: Optional parent folder ID (null for root folders)
+
+    Returns:
+        Success message with created folder ID or error message
+    """
+    if not zephyr_client:
+        return format_error_message("Create Folder", "Client not initialized", _CONFIG_ERROR_MSG)
+
+    # Build request data
+    request_data = {
+        "name": name,
+        "project_key": project_key,
+        "folder_type": folder_type,
+    }
+
+    if parent_id is not None:
+        request_data["parent_id"] = parent_id
+
+    # Validate folder data
+    validation_result = validate_folder_data(request_data)
+    if not validation_result:
+        return format_error_message(
+            "Create Folder",
+            "Invalid folder data",
+            validation_result.error_message,
+        )
+
+    # Create folder via API
+    result = await zephyr_client.create_folder(validation_result.data)
+
+    if result:
+        return format_success_message(
+            "Created",
+            "Folder",
+            result.data.id,
+            name=name,
+            project_key=project_key,
+            folder_type=folder_type,
+            parent_id=parent_id,
+        )
+    else:
+        return format_error_message(
+            "Create Folder",
+            f"Failed to create folder '{name}'",
             "; ".join(result.errors),
         )
 

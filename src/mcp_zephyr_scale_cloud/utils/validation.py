@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from ..schemas.folder import CreateFolderRequest, FolderType
 from ..schemas.priority import CreatePriorityRequest, UpdatePriorityRequest
 from ..schemas.status import CreateStatusRequest, StatusType, UpdateStatusRequest
 
@@ -224,6 +225,55 @@ def validate_status_type(status_type: str) -> ValidationResult:
             False,
             [
                 f"Invalid status type '{status_type}'. "
+                f"Valid types: {', '.join(valid_types)}"
+            ],
+        )
+
+
+def validate_folder_data(data: dict[str, Any]) -> ValidationResult:
+    """Validate folder data using CreateFolderRequest Pydantic schema.
+
+    Args:
+        data: Dictionary of folder data to validate
+
+    Returns:
+        ValidationResult with validation status and validated data or errors
+    """
+    try:
+        validated_folder = CreateFolderRequest(**data)
+        return ValidationResult(True, data=validated_folder)
+
+    except ValidationError as e:
+        errors = []
+        for error in e.errors():
+            field = ".".join(str(loc) for loc in error["loc"])
+            message = error["msg"]
+            errors.append(f"Field '{field}': {message}")
+
+        return ValidationResult(False, errors)
+
+    except Exception as e:
+        return ValidationResult(False, [f"Unexpected validation error: {str(e)}"])
+
+
+def validate_folder_type(folder_type: str) -> ValidationResult:
+    """Validate folder type value.
+
+    Args:
+        folder_type: Folder type to validate
+
+    Returns:
+        ValidationResult with validation status and any errors
+    """
+    try:
+        validated_type = FolderType(folder_type)
+        return ValidationResult(True, data=validated_type)
+    except ValueError:
+        valid_types = [t.value for t in FolderType]
+        return ValidationResult(
+            False,
+            [
+                f"Invalid folder type '{folder_type}'. "
                 f"Valid types: {', '.join(valid_types)}"
             ],
         )

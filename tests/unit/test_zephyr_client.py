@@ -385,3 +385,133 @@ class TestZephyrClientStatus:
 
         assert not result.is_valid
         assert "positive integer" in result.errors[0]
+
+
+class TestZephyrClientFolder:
+    """Test cases for ZephyrClient folder operations."""
+
+    @pytest.mark.asyncio
+    async def test_get_folders_success(self, mock_zephyr_client, sample_folder_list):
+        """Test successful get_folders."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.raise_for_status.return_value = None
+            mock_response.json.return_value = sample_folder_list
+            mock_client.get.return_value = mock_response
+
+            result = await mock_zephyr_client.get_folders()
+
+            assert result.is_valid
+            assert len(result.data.values) == 3
+            assert result.data.values[0].name == "Test Cases"
+            assert result.data.values[0].folder_type.value == "TEST_CASE"
+
+    @pytest.mark.asyncio
+    async def test_get_folders_with_filters(self, mock_zephyr_client, sample_folder_list):
+        """Test get_folders with project and folder type filters."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.raise_for_status.return_value = None
+            mock_response.json.return_value = sample_folder_list
+            mock_client.get.return_value = mock_response
+
+            from src.mcp_zephyr_scale_cloud.schemas.folder import FolderType
+
+            result = await mock_zephyr_client.get_folders(
+                project_key="TEST", folder_type=FolderType.TEST_CASE, max_results=25
+            )
+
+            assert result.is_valid
+            mock_client.get.assert_called_once()
+            call_args = mock_client.get.call_args
+            assert call_args[1]["params"]["projectKey"] == "TEST"
+            assert call_args[1]["params"]["folderType"] == "TEST_CASE"
+            assert call_args[1]["params"]["maxResults"] == 25
+
+    @pytest.mark.asyncio
+    async def test_get_folder_success(self, mock_zephyr_client, sample_folder_data):
+        """Test successful get_folder."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.raise_for_status.return_value = None
+            mock_response.json.return_value = sample_folder_data
+            mock_client.get.return_value = mock_response
+
+            result = await mock_zephyr_client.get_folder(1)
+
+            assert result.is_valid
+            assert result.data.id == 1
+            assert result.data.name == "Test Cases"
+            assert result.data.folder_type.value == "TEST_CASE"
+
+    @pytest.mark.asyncio
+    async def test_get_folder_not_found(self, mock_zephyr_client):
+        """Test get_folder with non-existent folder."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 404
+            mock_client.get.side_effect = httpx.HTTPStatusError(
+                "Not Found", request=MagicMock(), response=mock_response
+            )
+
+            result = await mock_zephyr_client.get_folder(999)
+
+            assert not result.is_valid
+            assert "does not exist" in result.errors[0]
+
+    @pytest.mark.asyncio
+    async def test_get_folder_invalid_id(self, mock_zephyr_client):
+        """Test get_folder with invalid ID."""
+        result = await mock_zephyr_client.get_folder(-1)
+
+        assert not result.is_valid
+        assert "positive integer" in result.errors[0]
+
+    @pytest.mark.asyncio
+    async def test_create_folder_success(self, mock_zephyr_client, sample_created_resource):
+        """Test successful create_folder."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 201
+            mock_response.raise_for_status.return_value = None
+            mock_response.json.return_value = sample_created_resource
+            mock_client.post.return_value = mock_response
+
+            from src.mcp_zephyr_scale_cloud.schemas.folder import CreateFolderRequest
+
+            request = CreateFolderRequest(
+                projectKey="TEST",
+                name="New Folder",
+                folderType="TEST_CASE",
+                parentId=1,
+            )
+
+            result = await mock_zephyr_client.create_folder(request)
+
+            assert result.is_valid
+            assert result.data.id == 123
+            mock_client.post.assert_called_once()
+            call_args = mock_client.post.call_args
+            request_data = call_args[1]["json"]
+            assert request_data["projectKey"] == "TEST"
+            assert request_data["name"] == "New Folder"
+            assert request_data["folderType"] == "TEST_CASE"
+            assert request_data["parentId"] == 1

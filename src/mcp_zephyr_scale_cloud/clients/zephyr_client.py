@@ -4,6 +4,12 @@ import httpx
 
 from ..config import ZephyrConfig
 from ..schemas.base import CreatedResource
+from ..schemas.folder import (
+    CreateFolderRequest,
+    Folder,
+    FolderList,
+    FolderType,
+)
 from ..schemas.priority import (
     CreatePriorityRequest,
     Priority,
@@ -387,4 +393,135 @@ class ZephyrClient:
             return ValidationResult(
                 False,
                 [f"Failed to update status {status_id}: {str(e)}"],
+            )
+
+    # Folder operations
+
+    async def get_folders(
+        self,
+        project_key: str | None = None,
+        folder_type: FolderType | None = None,
+        max_results: int = 10,
+        start_at: int = 0,
+    ) -> ValidationResult:
+        """Get folders with optional filtering.
+
+        Args:
+            project_key: Optional project key filter
+            folder_type: Optional folder type filter
+            max_results: Maximum number of results (1-1000, default 10)
+            start_at: Starting position for pagination (default 0)
+
+        Returns:
+            ValidationResult with FolderList data or error messages
+        """
+        # Validate pagination parameters
+        pagination_result = validate_pagination_params(max_results, start_at)
+        if not pagination_result:
+            return pagination_result
+
+        try:
+            # Build query parameters
+            params = {
+                "maxResults": max_results,
+                "startAt": start_at,
+            }
+
+            if project_key:
+                params["projectKey"] = project_key
+
+            if folder_type:
+                params["folderType"] = folder_type.value
+
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.config.base_url}/folders",
+                    headers=self.headers,
+                    params=params,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, FolderList)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [f"Failed to get folders: {str(e)}"],
+            )
+
+    async def get_folder(self, folder_id: int) -> ValidationResult:
+        """Get a specific folder by ID.
+
+        Args:
+            folder_id: Folder ID to retrieve
+
+        Returns:
+            ValidationResult with Folder data or error messages
+        """
+        if folder_id < 1:
+            return ValidationResult(False, ["Folder ID must be a positive integer"])
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.config.base_url}/folders/{folder_id}",
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, Folder)
+
+        except httpx.HTTPError as e:
+            if hasattr(e, "response") and e.response.status_code == 404:
+                return ValidationResult(
+                    False,
+                    [
+                        f"Folder with ID {folder_id} does not exist or "
+                        "you do not have access to it"
+                    ],
+                )
+            return ValidationResult(
+                False,
+                [f"Failed to get folder {folder_id}: {str(e)}"],
+            )
+
+    async def create_folder(self, request: CreateFolderRequest) -> ValidationResult:
+        """Create a new folder.
+
+        Args:
+            request: CreateFolderRequest with folder details
+
+        Returns:
+            ValidationResult with CreatedResource data or error messages
+        """
+        try:
+            # Convert to dict for API call, using aliases for camelCase
+            request_data = request.model_dump(exclude_none=True, by_alias=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/folders",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CreatedResource)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [f"Failed to create folder: {str(e)}"],
             )

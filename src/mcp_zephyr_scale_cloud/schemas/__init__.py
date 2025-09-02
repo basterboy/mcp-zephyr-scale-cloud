@@ -16,6 +16,12 @@ from .common import (
     Project,
     ProjectLink,
 )
+from .folder import (
+    CreateFolderRequest,
+    Folder,
+    FolderList,
+    FolderType,
+)
 from .priority import (
     CreatePriorityRequest,
     Priority,
@@ -32,6 +38,10 @@ __all__ = [
     "PagedResponse",
     "ErrorResponse",
     "CreatedResource",
+    "Folder",
+    "FolderList",
+    "CreateFolderRequest",
+    "FolderType",
     "Priority",
     "PriorityList",
     "CreatePriorityRequest",

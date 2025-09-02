@@ -129,6 +129,9 @@ class TestBasicFunctionality:
             "get_status",
             "create_status",
             "update_status",
+            "get_folders",
+            "get_folder",
+            "create_folder",
         ]
 
         for tool_name in expected_tools:
@@ -251,3 +254,75 @@ class TestEnvironmentConfiguration:
             # Restore original environment
             os.environ.clear()
             os.environ.update(original_env)
+
+    def test_folder_schema_creation(self):
+        """Test creating folder request schema."""
+        from src.mcp_zephyr_scale_cloud.schemas.folder import CreateFolderRequest
+
+        request = CreateFolderRequest(
+            project_key="TEST",
+            name="Test Folder",
+            folder_type="TEST_CASE",
+            parent_id=1,
+        )
+
+        assert request.project_key == "TEST"
+        assert request.name == "Test Folder"
+        assert request.folder_type.value == "TEST_CASE"
+        assert request.parent_id == 1
+
+    def test_folder_schema_validation(self):
+        """Test folder schema validation."""
+        from pydantic import ValidationError
+        from src.mcp_zephyr_scale_cloud.schemas.folder import CreateFolderRequest
+
+        # Test invalid project key
+        with pytest.raises(ValidationError):
+            CreateFolderRequest(
+                project_key="invalid-key", name="Folder", folder_type="TEST_CASE"
+            )
+
+        # Test invalid folder type
+        with pytest.raises(ValidationError):
+            CreateFolderRequest(
+                project_key="TEST", name="Folder", folder_type="INVALID_TYPE"
+            )
+
+    def test_folder_type_validation(self):
+        """Test folder type validation."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import validate_folder_type
+
+        # Valid cases
+        for folder_type in ["TEST_CASE", "TEST_PLAN", "TEST_CYCLE"]:
+            result = validate_folder_type(folder_type)
+            assert result.is_valid
+            assert result.data.value == folder_type
+
+        # Invalid cases
+        result = validate_folder_type("INVALID_TYPE")
+        assert not result.is_valid
+
+        result = validate_folder_type("")
+        assert not result.is_valid
+
+    def test_folder_model_dump_camelcase(self):
+        """Test that folder models use camelCase in output."""
+        from src.mcp_zephyr_scale_cloud.schemas.folder import CreateFolderRequest
+
+        request = CreateFolderRequest(
+            project_key="TEST", name="Folder", folder_type="TEST_CASE", parent_id=1
+        )
+
+        dumped = request.model_dump(exclude_none=True, by_alias=True)
+
+        # Should have camelCase keys due to aliases
+        assert "projectKey" in dumped
+        assert "project_key" not in dumped
+        assert "folderType" in dumped
+        assert "folder_type" not in dumped
+        assert "parentId" in dumped
+        assert "parent_id" not in dumped
+        assert dumped["projectKey"] == "TEST"
+        assert dumped["name"] == "Folder"
+        assert dumped["folderType"] == "TEST_CASE"
+        assert dumped["parentId"] == 1

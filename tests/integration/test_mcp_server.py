@@ -41,7 +41,7 @@ class TestMCPServerIntegration:
                 assert result["config_valid"] is True
                 assert result["api_accessible"] is True
                 assert result["startup_errors"] == []
-                assert result["tools_count"] == 9
+                assert result["tools_count"] == 12
 
     @pytest.mark.asyncio
     async def test_server_lifespan_config_error(self):
@@ -66,6 +66,9 @@ class TestMCPServerIntegration:
             "get_status",
             "create_status",
             "update_status",
+            "get_folders",
+            "get_folder",
+            "create_folder",
         ]
 
         for tool_name in expected_tools:
@@ -345,3 +348,154 @@ class TestMCPServerIntegration:
 
             assert result is not None
             # The result should be a CallToolResult with content
+
+
+class TestFolderMCPTools:
+    """Test cases for folder MCP tools."""
+
+    @pytest.mark.asyncio
+    async def test_get_folders_tool_success(self, mock_env_vars, sample_folder_list):
+        """Test get_folders tool with successful response."""
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
+            # Mock client success
+            mock_result = AsyncMock()
+            mock_result.is_valid = True
+            mock_result.data = type("MockFolderList", (), sample_folder_list)()
+            mock_client.get_folders.return_value = mock_result
+
+            with patch(
+                "src.mcp_zephyr_scale_cloud.server.format_folder_list"
+            ) as mock_format:
+                mock_format.return_value = "Formatted folder list"
+
+                result = await get_folders()
+
+                assert result == "Formatted folder list"
+                mock_client.get_folders.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_folders_tool_with_filters(self, mock_env_vars, sample_folder_list):
+        """Test get_folders tool with project and folder type filters."""
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
+            with patch(
+                "src.mcp_zephyr_scale_cloud.server.validate_folder_type"
+            ) as mock_validate_type:
+                with patch(
+                    "src.mcp_zephyr_scale_cloud.server.validate_project_key"
+                ) as mock_validate_key:
+                    # Mock validation success
+                    mock_type_result = AsyncMock()
+                    mock_type_result.is_valid = True
+                    mock_type_result.data = type("MockFolderType", (), {"value": "TEST_CASE"})()
+                    mock_validate_type.return_value = mock_type_result
+
+                    mock_key_result = AsyncMock()
+                    mock_key_result.is_valid = True
+                    mock_validate_key.return_value = mock_key_result
+
+                    # Mock client success
+                    mock_result = AsyncMock()
+                    mock_result.is_valid = True
+                    mock_result.data = type("MockFolderList", (), sample_folder_list)()
+                    mock_client.get_folders.return_value = mock_result
+
+                    with patch(
+                        "src.mcp_zephyr_scale_cloud.server.format_folder_list"
+                    ) as mock_format:
+                        mock_format.return_value = "Filtered folder list"
+
+                        result = await get_folders("TEST", "TEST_CASE", 25)
+
+                        assert result == "Filtered folder list"
+                        mock_client.get_folders.assert_called_once_with(
+                            project_key="TEST",
+                            folder_type=mock_type_result.data,
+                            max_results=25,
+                        )
+
+    @pytest.mark.asyncio
+    async def test_get_folder_tool_success(self, mock_env_vars, sample_folder_data):
+        """Test get_folder tool with successful response."""
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
+            # Mock client success
+            mock_result = AsyncMock()
+            mock_result.is_valid = True
+            mock_result.data = type("MockFolder", (), sample_folder_data)()
+            mock_client.get_folder.return_value = mock_result
+
+            with patch(
+                "src.mcp_zephyr_scale_cloud.server.format_folder_details"
+            ) as mock_format:
+                mock_format.return_value = "Formatted folder details"
+
+                result = await get_folder(1)
+
+                assert result == "Formatted folder details"
+                mock_client.get_folder.assert_called_once_with(1)
+
+    @pytest.mark.asyncio
+    async def test_create_folder_tool_success(
+        self, mock_env_vars, sample_created_resource
+    ):
+        """Test create_folder tool with successful response."""
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
+            with patch(
+                "src.mcp_zephyr_scale_cloud.server.validate_folder_data"
+            ) as mock_validate:
+                # Mock validation success
+                mock_request = AsyncMock()
+                mock_validate_result = AsyncMock()
+                mock_validate_result.is_valid = True
+                mock_validate_result.data = mock_request
+                mock_validate.return_value = mock_validate_result
+
+                # Mock client success
+                mock_result = AsyncMock()
+                mock_result.is_valid = True
+                mock_result.data = type(
+                    "MockCreatedResource", (), sample_created_resource
+                )()
+                mock_client.create_folder.return_value = mock_result
+
+                with patch(
+                    "src.mcp_zephyr_scale_cloud.server.format_success_message"
+                ) as mock_format:
+                    mock_format.return_value = "Folder created successfully"
+
+                    result = await create_folder(
+                        "Test Folder", "TEST", "TEST_CASE", 1
+                    )
+
+                    assert result == "Folder created successfully"
+
+    @pytest.mark.asyncio
+    async def test_folder_tools_error_handling(self, mock_env_vars):
+        """Test folder tools error handling."""
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
+            # Mock client failure
+            mock_result = AsyncMock()
+            mock_result.is_valid = False
+            mock_result.errors = ["API error"]
+            mock_client.get_folders.return_value = mock_result
+
+            with patch(
+                "src.mcp_zephyr_scale_cloud.server.format_error_message"
+            ) as mock_format:
+                mock_format.return_value = "Error occurred"
+
+                result = await get_folders()
+
+                assert result == "Error occurred"
+
+    @pytest.mark.asyncio
+    async def test_folder_tools_no_client(self, mock_env_vars):
+        """Test folder tools when client is not initialized."""
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", None):
+            with patch(
+                "src.mcp_zephyr_scale_cloud.server.format_error_message"
+            ) as mock_format:
+                mock_format.return_value = "Client not initialized"
+
+                result = await get_folders()
+
+                assert result == "Client not initialized"
