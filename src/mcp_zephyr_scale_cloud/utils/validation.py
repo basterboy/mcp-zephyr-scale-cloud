@@ -1,7 +1,7 @@
 """Validation utilities for Zephyr Scale Cloud API data."""
 
 import re
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import ValidationError
 
@@ -94,7 +94,7 @@ def validate_priority_data(
 
 
 def validate_pagination_params(
-    max_results: Optional[int] = None, start_at: Optional[int] = None
+    max_results: int | None = None, start_at: int | None = None
 ) -> ValidationResult:
     """Validate pagination parameters.
 

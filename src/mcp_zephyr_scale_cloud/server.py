@@ -6,7 +6,6 @@ using Pydantic schemas for validation and type safety.
 
 import logging
 from contextlib import asynccontextmanager
-from typing import Optional
 
 from dotenv import load_dotenv
 from mcp.server import FastMCP
@@ -121,7 +120,7 @@ async def zephyr_server_lifespan(server):
         "config_valid": config is not None,
         "api_accessible": zephyr_client is not None and not startup_errors,
         "startup_errors": startup_errors,
-        "tools_count": 12,  # We have 12 tools: healthcheck + 4 priorities + 4 statuses + 3 folders
+        "tools_count": 12,  # healthcheck + 4 priorities + 4 statuses + 3 folders
         "base_url": config.base_url if config else None,
     }
 
@@ -178,7 +177,7 @@ async def healthcheck() -> str:
 
 @mcp.tool()
 async def get_priorities(
-    project_key: Optional[str] = None, max_results: int = 50
+    project_key: str | None = None, max_results: int = 50
 ) -> str:
     """
     Get all priorities from Zephyr Scale Cloud.
@@ -241,8 +240,8 @@ async def get_priority(priority_id: int) -> str:
 async def create_priority(
     project_key: str,
     name: str,
-    description: Optional[str] = None,
-    color: Optional[str] = None,
+    description: str | None = None,
+    color: str | None = None,
 ) -> str:
     """
     Create a new priority in Zephyr Scale Cloud.
@@ -299,8 +298,8 @@ async def update_priority(
     name: str,
     index: int,
     default: bool = False,
-    description: Optional[str] = None,
-    color: Optional[str] = None,
+    description: str | None = None,
+    color: str | None = None,
 ) -> str:
     """
     Update an existing priority in Zephyr Scale Cloud.
@@ -363,8 +362,8 @@ async def update_priority(
 
 @mcp.tool()
 async def get_statuses(
-    project_key: Optional[str] = None,
-    status_type: Optional[str] = None,
+    project_key: str | None = None,
+    status_type: str | None = None,
     max_results: int = 50,
 ) -> str:
     """
@@ -448,8 +447,8 @@ async def create_status(
     project_key: str,
     name: str,
     status_type: str,
-    description: Optional[str] = None,
-    color: Optional[str] = None,
+    description: str | None = None,
+    color: str | None = None,
 ) -> str:
     """
     Create a new status in Zephyr Scale Cloud.
@@ -511,8 +510,8 @@ async def update_status(
     index: int,
     archived: bool = False,
     default: bool = False,
-    description: Optional[str] = None,
-    color: Optional[str] = None,
+    description: str | None = None,
+    color: str | None = None,
 ) -> str:
     """
     Update an existing status in Zephyr Scale Cloud.
@@ -577,8 +576,8 @@ async def update_status(
 
 @mcp.tool()
 async def get_folders(
-    project_key: Optional[str] = None,
-    folder_type: Optional[str] = None,
+    project_key: str | None = None,
+    folder_type: str | None = None,
     max_results: int = 50,
 ) -> str:
     """Get folders from Zephyr Scale Cloud.
@@ -675,7 +674,7 @@ async def create_folder(
     name: str,
     project_key: str,
     folder_type: str,
-    parent_id: Optional[int] = None,
+    parent_id: int | None = None,
 ) -> str:
     """Create a new folder in Zephyr Scale Cloud.
 
