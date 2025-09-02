@@ -176,9 +176,7 @@ async def healthcheck() -> str:
 
 
 @mcp.tool()
-async def get_priorities(
-    project_key: str | None = None, max_results: int = 50
-) -> str:
+async def get_priorities(project_key: str | None = None, max_results: int = 50) -> str:
     """
     Get all priorities from Zephyr Scale Cloud.
 
