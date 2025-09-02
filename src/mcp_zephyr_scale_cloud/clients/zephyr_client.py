@@ -580,7 +580,7 @@ class ZephyrClient:
         self,
         test_case_key: str,
         test_steps_input: TestStepsInput,
-    ) -> "ValidationResult[TestStepsList]":
+    ) -> "ValidationResult[CreatedResource]":
         """
         Create test steps for a specific test case.
 
@@ -589,7 +589,7 @@ class ZephyrClient:
             test_steps_input: TestStepsInput with mode and list of test steps
 
         Returns:
-            ValidationResult with TestStepsList data or error messages
+            ValidationResult with CreatedResource data or error messages
         """
         try:
             # Convert to dict for API call, using aliases for camelCase
@@ -607,7 +607,7 @@ class ZephyrClient:
                 response_data = response.json()
 
                 # Validate and parse response
-                return validate_api_response(response_data, TestStepsList)
+                return validate_api_response(response_data, CreatedResource)
 
         except httpx.HTTPError as e:
             return ValidationResult(

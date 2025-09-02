@@ -880,14 +880,13 @@ async def create_test_steps(
     )
 
     if result.is_valid:
-        step_count = len(result.data.values)
         return format_success_message(
             "Created",
             "Test Steps",
-            f"{step_count} steps",
+            "Successfully created test steps",
             test_case_key=test_case_key,
             mode=mode,
-            steps_count=step_count,
+            resource_id=result.data.id,
         )
     else:
         return format_error_message(
