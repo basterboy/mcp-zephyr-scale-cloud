@@ -504,3 +504,21 @@ class TestFolderMCPTools:
                 result = await get_folders()
 
                 assert result == "Client not initialized"
+
+    @pytest.mark.asyncio
+    async def test_create_folder_parent_id_validation(self, mock_env_vars):
+        """Test create_folder parent_id validation."""
+        # Test with invalid parent_id string
+        result = await create_folder("Test", "PROJ", "TEST_CASE", "invalid")
+        assert "Invalid parent folder ID" in result
+        assert "must be a valid integer" in result
+
+        # Test with negative parent_id
+        result = await create_folder("Test", "PROJ", "TEST_CASE", "-1")
+        assert "Invalid parent folder ID" in result
+        assert "must be a positive integer" in result
+
+        # Test with zero parent_id
+        result = await create_folder("Test", "PROJ", "TEST_CASE", "0")
+        assert "Invalid parent folder ID" in result
+        assert "must be a positive integer" in result
