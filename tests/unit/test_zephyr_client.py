@@ -411,7 +411,9 @@ class TestZephyrClientFolder:
             assert result.data.values[0].folder_type.value == "TEST_CASE"
 
     @pytest.mark.asyncio
-    async def test_get_folders_with_filters(self, mock_zephyr_client, sample_folder_list):
+    async def test_get_folders_with_filters(
+        self, mock_zephyr_client, sample_folder_list
+    ):
         """Test get_folders with project and folder type filters."""
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
@@ -483,7 +485,9 @@ class TestZephyrClientFolder:
         assert "positive integer" in result.errors[0]
 
     @pytest.mark.asyncio
-    async def test_create_folder_success(self, mock_zephyr_client, sample_created_resource):
+    async def test_create_folder_success(
+        self, mock_zephyr_client, sample_created_resource
+    ):
         """Test successful create_folder."""
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()

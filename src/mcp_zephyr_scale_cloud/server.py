@@ -177,7 +177,9 @@ async def healthcheck() -> str:
 
 
 @mcp.tool()
-async def get_priorities(project_key: Optional[str] = None, max_results: int = 50) -> str:
+async def get_priorities(
+    project_key: Optional[str] = None, max_results: int = 50
+) -> str:
     """
     Get all priorities from Zephyr Scale Cloud.
 
@@ -590,7 +592,9 @@ async def get_folders(
         Formatted list of folders or error message
     """
     if not zephyr_client:
-        return format_error_message("Get Folders", "Client not initialized", _CONFIG_ERROR_MSG)
+        return format_error_message(
+            "Get Folders", "Client not initialized", _CONFIG_ERROR_MSG
+        )
 
     # Validate folder type if provided
     validated_folder_type = None
@@ -642,7 +646,9 @@ async def get_folder(folder_id: int) -> str:
         Formatted folder details or error message
     """
     if not zephyr_client:
-        return format_error_message("Get Folder", "Client not initialized", _CONFIG_ERROR_MSG)
+        return format_error_message(
+            "Get Folder", "Client not initialized", _CONFIG_ERROR_MSG
+        )
 
     if folder_id < 1:
         return format_error_message(
@@ -683,7 +689,9 @@ async def create_folder(
         Success message with created folder ID or error message
     """
     if not zephyr_client:
-        return format_error_message("Create Folder", "Client not initialized", _CONFIG_ERROR_MSG)
+        return format_error_message(
+            "Create Folder", "Client not initialized", _CONFIG_ERROR_MSG
+        )
 
     # Build request data
     request_data = {

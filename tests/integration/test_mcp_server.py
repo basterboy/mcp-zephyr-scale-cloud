@@ -377,7 +377,9 @@ class TestFolderMCPTools:
                 mock_client.get_folders.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_folders_tool_with_filters(self, mock_env_vars, sample_folder_list):
+    async def test_get_folders_tool_with_filters(
+        self, mock_env_vars, sample_folder_list
+    ):
         """Test get_folders tool with project and folder type filters."""
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
             with patch(
@@ -389,7 +391,9 @@ class TestFolderMCPTools:
                     # Mock validation success
                     mock_type_result = AsyncMock()
                     mock_type_result.is_valid = True
-                    mock_type_result.data = type("MockFolderType", (), {"value": "TEST_CASE"})()
+                    mock_type_result.data = type(
+                        "MockFolderType", (), {"value": "TEST_CASE"}
+                    )()
                     mock_validate_type.return_value = mock_type_result
 
                     mock_key_result = AsyncMock()
@@ -465,9 +469,7 @@ class TestFolderMCPTools:
                 ) as mock_format:
                     mock_format.return_value = "Folder created successfully"
 
-                    result = await create_folder(
-                        "Test Folder", "TEST", "TEST_CASE", 1
-                    )
+                    result = await create_folder("Test Folder", "TEST", "TEST_CASE", 1)
 
                     assert result == "Folder created successfully"
 
