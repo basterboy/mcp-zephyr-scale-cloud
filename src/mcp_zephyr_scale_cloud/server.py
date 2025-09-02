@@ -32,6 +32,8 @@ from .utils.validation import (
     validate_status_data,
     validate_status_type,
     validate_test_case_key,
+    validate_test_steps_input,
+    validate_test_steps_mode,
 )
 
 # Load environment variables
@@ -122,7 +124,7 @@ async def zephyr_server_lifespan(server):
         "config_valid": config is not None,
         "api_accessible": zephyr_client is not None and not startup_errors,
         "startup_errors": startup_errors,
-        "tools_count": 13,  # healthcheck + priorities + statuses + folders + test steps
+        "tools_count": 14,  # healthcheck + priorities + statuses + folders + test steps
         "base_url": config.base_url if config else None,
     }
 
@@ -793,6 +795,104 @@ async def get_test_steps(
         return format_error_message(
             "Get Test Steps",
             f"Failed to retrieve test steps for {test_case_key}",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def create_test_steps(
+    test_case_key: str,
+    mode: str,
+    steps: str,
+) -> str:
+    """Create test steps for a specific test case in Zephyr Scale Cloud.
+
+    Args:
+        test_case_key: The key of the test case (format: [PROJECT]-T[NUMBER])
+        mode: Operation mode - "APPEND" adds to existing, "OVERWRITE" replaces all
+        steps: JSON string with test step objects. Each step should have either:
+               - "inline": {"description": "...", "testData": "...",
+                          "expectedResult": "..."}
+               - "testCase": {"testCaseKey": "...", "parameters": [...]}
+
+    Returns:
+        Success message with created test steps or error message
+    """
+    if not zephyr_client:
+        return format_error_message(
+            "Create Test Steps", "Client not initialized", _CONFIG_ERROR_MSG
+        )
+
+    # Validate test case key
+    test_case_validation = validate_test_case_key(test_case_key)
+    if not test_case_validation.is_valid:
+        return format_error_message(
+            "Create Test Steps",
+            "Invalid test case key",
+            "; ".join(test_case_validation.errors),
+        )
+
+    # Validate mode
+    mode_validation = validate_test_steps_mode(mode)
+    if not mode_validation.is_valid:
+        return format_error_message(
+            "Create Test Steps",
+            "Invalid mode",
+            "; ".join(mode_validation.errors),
+        )
+
+    # Parse and validate steps JSON
+    try:
+        import json
+
+        steps_data = json.loads(steps)
+        if not isinstance(steps_data, list):
+            return format_error_message(
+                "Create Test Steps",
+                "Invalid steps format",
+                "Steps must be a JSON array",
+            )
+    except json.JSONDecodeError as e:
+        return format_error_message(
+            "Create Test Steps",
+            "Invalid JSON format",
+            f"Failed to parse steps JSON: {str(e)}",
+        )
+
+    # Build and validate test steps input
+    test_steps_input_data = {
+        "mode": mode_validation.data,
+        "items": steps_data,
+    }
+
+    validation_result = validate_test_steps_input(test_steps_input_data)
+    if not validation_result.is_valid:
+        return format_error_message(
+            "Create Test Steps",
+            "Invalid test steps data",
+            "; ".join(validation_result.errors),
+        )
+
+    # Create test steps via API
+    result = await zephyr_client.create_test_steps(
+        test_case_key=test_case_key,
+        test_steps_input=validation_result.data,
+    )
+
+    if result.is_valid:
+        step_count = len(result.data.values)
+        return format_success_message(
+            "Created",
+            "Test Steps",
+            f"{step_count} steps",
+            test_case_key=test_case_key,
+            mode=mode,
+            steps_count=step_count,
+        )
+    else:
+        return format_error_message(
+            "Create Test Steps",
+            f"Failed to create test steps for {test_case_key}",
             "; ".join(result.errors),
         )
 

@@ -32,7 +32,9 @@ from .priority import (
 from .test_step import (
     TestStep,
     TestStepInline,
+    TestStepsInput,
     TestStepsList,
+    TestStepsMode,
     TestStepTestCase,
     TestStepTestCaseParameters,
 )
@@ -61,7 +63,9 @@ __all__ = [
     "CustomFields",
     "TestStep",
     "TestStepInline",
+    "TestStepsInput",
     "TestStepsList",
+    "TestStepsMode",
     "TestStepTestCase",
     "TestStepTestCaseParameters",
 ]

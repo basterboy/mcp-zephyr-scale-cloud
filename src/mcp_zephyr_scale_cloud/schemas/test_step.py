@@ -1,9 +1,18 @@
 """Pydantic models for Zephyr Scale test step entities."""
 
-from pydantic import BaseModel, Field
+from enum import Enum
+
+from pydantic import BaseModel, Field, field_validator
 
 from .base import Link, PagedResponse
 from .common import CustomFields
+
+
+class TestStepsMode(str, Enum):
+    """Mode for test steps operation."""
+
+    APPEND = "APPEND"
+    OVERWRITE = "OVERWRITE"
 
 
 class TestStepInline(BaseModel):
@@ -79,3 +88,32 @@ class TestStepsList(PagedResponse[TestStep]):
     values: list[TestStep] = Field(
         default_factory=list, description="The list of test steps"
     )
+
+
+class TestStepsInput(BaseModel):
+    """Request body for creating test steps."""
+
+    mode: TestStepsMode = Field(
+        ...,
+        description="Operation mode: APPEND adds to existing, OVERWRITE replaces all",
+        example="APPEND",
+    )
+    items: list[TestStep] = Field(
+        ...,
+        description="List of test steps to create (max 100 per request)",
+        min_length=1,
+        max_length=100,
+    )
+
+    @field_validator("items")
+    @classmethod
+    def validate_items(cls, v):
+        """Validate that each test step has either inline or testCase, but not both."""
+        for i, step in enumerate(v):
+            if step.inline and step.test_case:
+                raise ValueError(f"Step {i + 1}: cannot have both inline and testCase")
+            if not step.inline and not step.test_case:
+                raise ValueError(f"Step {i + 1}: must have either inline or testCase")
+        return v
+
+    model_config = {"populate_by_name": True}

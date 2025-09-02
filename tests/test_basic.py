@@ -133,6 +133,7 @@ class TestBasicFunctionality:
             "get_folder",
             "create_folder",
             "get_test_steps",
+            "create_test_steps",
         ]
 
         for tool_name in expected_tools:
@@ -386,3 +387,52 @@ class TestEnvironmentConfiguration:
         for key in invalid_keys:
             result = validate_test_case_key(key)
             assert not result.is_valid, f"Key '{key}' should be invalid"
+
+    def test_test_steps_input_creation(self):
+        """Test test steps input schema creation and validation."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_step import (
+            TestStep,
+            TestStepInline,
+            TestStepsInput,
+            TestStepsMode,
+        )
+
+        # Create test step
+        step = TestStep(
+            inline=TestStepInline(
+                description="Test login functionality",
+                testData="username=admin, password=secret",
+                expectedResult="Login successful",
+            )
+        )
+
+        # Create test steps input
+        test_steps_input = TestStepsInput(
+            mode=TestStepsMode.APPEND,
+            items=[step],
+        )
+
+        assert test_steps_input.mode == TestStepsMode.APPEND
+        assert len(test_steps_input.items) == 1
+        assert test_steps_input.items[0].inline is not None
+
+        # Test model dump with aliases
+        dumped = test_steps_input.model_dump(by_alias=True, exclude_none=True)
+        assert "mode" in dumped
+        assert dumped["mode"] == "APPEND"
+        assert "items" in dumped
+        assert len(dumped["items"]) == 1
+
+    def test_test_steps_mode_validation(self):
+        """Test test steps mode validation."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import validate_test_steps_mode
+
+        # Valid modes
+        for mode in ["APPEND", "OVERWRITE"]:
+            result = validate_test_steps_mode(mode)
+            assert result.is_valid, f"Mode '{mode}' should be valid"
+            assert result.data == mode
+
+        # Invalid mode
+        result = validate_test_steps_mode("INVALID")
+        assert not result.is_valid
