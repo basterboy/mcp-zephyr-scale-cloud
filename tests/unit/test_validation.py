@@ -5,6 +5,8 @@ from src.mcp_zephyr_scale_cloud.utils.validation import (
     ValidationResult,
     sanitize_input,
     validate_api_response,
+    validate_folder_data,
+    validate_folder_type,
     validate_pagination_params,
     validate_priority_data,
     validate_project_key,
