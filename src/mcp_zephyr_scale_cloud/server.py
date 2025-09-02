@@ -672,7 +672,7 @@ async def create_folder(
     name: str,
     project_key: str,
     folder_type: str,
-    parent_id: int | None = None,
+    parent_id: str | None = None,
 ) -> str:
     """Create a new folder in Zephyr Scale Cloud.
 
@@ -680,11 +680,29 @@ async def create_folder(
         name: Folder name (1-255 characters)
         project_key: Jira project key
         folder_type: Folder type (TEST_CASE, TEST_PLAN, TEST_CYCLE)
-        parent_id: Optional parent folder ID (null for root folders)
+        parent_id: Optional parent folder ID as string (null for root folders)
 
     Returns:
         Success message with created folder ID or error message
     """
+    # Convert and validate parent_id if provided
+    parsed_parent_id = None
+    if parent_id is not None:
+        try:
+            parsed_parent_id = int(parent_id)
+            if parsed_parent_id <= 0:
+                return format_error_message(
+                    "Create Folder",
+                    "Invalid parent folder ID",
+                    "Parent folder ID must be a positive integer",
+                )
+        except (ValueError, TypeError):
+            return format_error_message(
+                "Create Folder",
+                "Invalid parent folder ID",
+                f"Parent folder ID must be a valid integer, got: {parent_id}",
+            )
+
     if not zephyr_client:
         return format_error_message(
             "Create Folder", "Client not initialized", _CONFIG_ERROR_MSG
@@ -697,8 +715,8 @@ async def create_folder(
         "folderType": folder_type,
     }
 
-    if parent_id is not None:
-        request_data["parentId"] = parent_id
+    if parsed_parent_id is not None:
+        request_data["parentId"] = parsed_parent_id
 
     # Validate folder data
     validation_result = validate_folder_data(request_data)
@@ -720,7 +738,7 @@ async def create_folder(
             name=name,
             project_key=project_key,
             folder_type=folder_type,
-            parent_id=parent_id,
+            parent_id=parsed_parent_id,
         )
     else:
         return format_error_message(
