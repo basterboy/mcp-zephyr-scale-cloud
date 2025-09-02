@@ -306,3 +306,48 @@ def validate_test_case_key(test_case_key: str) -> "ValidationResult[str]":
         )
 
     return ValidationResult(True, data=test_case_key)
+
+
+def validate_test_steps_input(test_steps_input_data: dict) -> "ValidationResult":
+    """
+    Validate test steps input data.
+
+    Args:
+        test_steps_input_data: Dictionary containing test steps input data
+
+    Returns:
+        ValidationResult with validated TestStepsInput or error messages
+    """
+    from ..schemas.test_step import TestStepsInput
+
+    try:
+        validated_input = TestStepsInput(**test_steps_input_data)
+        return ValidationResult(True, data=validated_input)
+    except ValueError as e:
+        return ValidationResult(False, [f"Invalid test steps input: {str(e)}"])
+
+
+def validate_test_steps_mode(mode: str) -> "ValidationResult[str]":
+    """
+    Validate test steps mode.
+
+    Args:
+        mode: Mode string to validate
+
+    Returns:
+        ValidationResult with validated mode or error messages
+    """
+    from ..schemas.test_step import TestStepsMode
+
+    try:
+        validated_mode = TestStepsMode(mode)
+        return ValidationResult(True, data=validated_mode.value)
+    except ValueError:
+        valid_modes = [mode.value for mode in TestStepsMode]
+        return ValidationResult(
+            False,
+            [
+                f"Invalid test steps mode '{mode}'. "
+                f"Valid modes: {', '.join(valid_modes)}"
+            ],
+        )
