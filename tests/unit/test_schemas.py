@@ -359,7 +359,10 @@ class TestFolderSchemas:
             )
 
         errors = exc_info.value.errors()
-        assert any("String should have at most 255 characters" in str(error) for error in errors)
+        assert any(
+            "String should have at most 255 characters" in str(error)
+            for error in errors
+        )
 
     def test_create_folder_request_empty_name(self):
         """Test CreateFolderRequest with empty name."""
@@ -367,7 +370,9 @@ class TestFolderSchemas:
             CreateFolderRequest(projectKey="TEST", name="", folderType="TEST_CASE")
 
         errors = exc_info.value.errors()
-        assert any("String should have at least 1 character" in str(error) for error in errors)
+        assert any(
+            "String should have at least 1 character" in str(error) for error in errors
+        )
 
     def test_folder_schema_valid(self, sample_folder_data):
         """Test creating a valid Folder from API response."""
