@@ -84,7 +84,7 @@ class TestMCPServerIntegration:
             mock_result = AsyncMock()
             mock_result.is_valid = True
             mock_result.data = {"status": "UP"}
-            mock_client.healthcheck.return_value = mock_result
+            mock_client.healthcheck = AsyncMock(return_value=mock_result)
 
             result = await healthcheck()
 
@@ -110,7 +110,7 @@ class TestMCPServerIntegration:
             mock_result = AsyncMock()
             mock_result.is_valid = True
             mock_result.data = type("MockPriorityList", (), sample_priority_list)()
-            mock_client.get_priorities.return_value = mock_result
+            mock_client.get_priorities = AsyncMock(return_value=mock_result)
 
             with patch(
                 "src.mcp_zephyr_scale_cloud.server.format_priority_list"
@@ -129,7 +129,7 @@ class TestMCPServerIntegration:
             mock_result = AsyncMock()
             mock_result.is_valid = True
             mock_result.data = type("MockPriority", (), sample_priority_data)()
-            mock_client.get_priority.return_value = mock_result
+            mock_client.get_priority = AsyncMock(return_value=mock_result)
 
             with patch(
                 "src.mcp_zephyr_scale_cloud.server.format_priority_details"
@@ -163,7 +163,7 @@ class TestMCPServerIntegration:
                 mock_result.data = type(
                     "MockCreatedResource", (), sample_created_resource
                 )()
-                mock_client.create_priority.return_value = mock_result
+                mock_client.create_priority = AsyncMock(return_value=mock_result)
 
                 with patch(
                     "src.mcp_zephyr_scale_cloud.server.format_success_message"
@@ -192,7 +192,7 @@ class TestMCPServerIntegration:
                 mock_result = AsyncMock()
                 mock_result.is_valid = True
                 mock_result.data = {"success": True, "message": "Updated"}
-                mock_client.update_priority.return_value = mock_result
+                mock_client.update_priority = AsyncMock(return_value=mock_result)
 
                 with patch(
                     "src.mcp_zephyr_scale_cloud.server.format_success_message"
@@ -210,7 +210,7 @@ class TestMCPServerIntegration:
             mock_result = AsyncMock()
             mock_result.is_valid = True
             mock_result.data = type("MockStatusList", (), sample_status_list)()
-            mock_client.get_statuses.return_value = mock_result
+            mock_client.get_statuses = AsyncMock(return_value=mock_result)
 
             with patch(
                 "src.mcp_zephyr_scale_cloud.server.format_status_list"
@@ -231,7 +231,7 @@ class TestMCPServerIntegration:
             mock_result = AsyncMock()
             mock_result.is_valid = True
             mock_result.data = type("MockStatusList", (), sample_status_list)()
-            mock_client.get_statuses.return_value = mock_result
+            mock_client.get_statuses = AsyncMock(return_value=mock_result)
 
             with patch(
                 "src.mcp_zephyr_scale_cloud.server.format_status_list"
@@ -252,7 +252,7 @@ class TestMCPServerIntegration:
             mock_result = AsyncMock()
             mock_result.is_valid = True
             mock_result.data = type("MockStatus", (), sample_status_data)()
-            mock_client.get_status.return_value = mock_result
+            mock_client.get_status = AsyncMock(return_value=mock_result)
 
             with patch(
                 "src.mcp_zephyr_scale_cloud.server.format_status_details"
@@ -286,7 +286,7 @@ class TestMCPServerIntegration:
                 mock_result.data = type(
                     "MockCreatedResource", (), sample_created_resource
                 )()
-                mock_client.create_status.return_value = mock_result
+                mock_client.create_status = AsyncMock(return_value=mock_result)
 
                 with patch(
                     "src.mcp_zephyr_scale_cloud.server.format_success_message"
@@ -317,7 +317,7 @@ class TestMCPServerIntegration:
                 mock_result = AsyncMock()
                 mock_result.is_valid = True
                 mock_result.data = {"success": True, "message": "Updated"}
-                mock_client.update_status.return_value = mock_result
+                mock_client.update_status = AsyncMock(return_value=mock_result)
 
                 with patch(
                     "src.mcp_zephyr_scale_cloud.server.format_success_message"
@@ -344,7 +344,7 @@ class TestMCPServerIntegration:
             mock_result = AsyncMock()
             mock_result.is_valid = True
             mock_result.data = {"status": "UP"}
-            mock_client.healthcheck.return_value = mock_result
+            mock_client.healthcheck = AsyncMock(return_value=mock_result)
 
             # Call tool through MCP interface
             result = await mcp.call_tool("healthcheck", {})
@@ -364,7 +364,7 @@ class TestFolderMCPTools:
             mock_result = AsyncMock()
             mock_result.is_valid = True
             mock_result.data = type("MockFolderList", (), sample_folder_list)()
-            mock_client.get_folders.return_value = mock_result
+            mock_client.get_folders = AsyncMock(return_value=mock_result)
 
             with patch(
                 "src.mcp_zephyr_scale_cloud.server.format_folder_list"
@@ -404,7 +404,7 @@ class TestFolderMCPTools:
                     mock_result = AsyncMock()
                     mock_result.is_valid = True
                     mock_result.data = type("MockFolderList", (), sample_folder_list)()
-                    mock_client.get_folders.return_value = mock_result
+                    mock_client.get_folders = AsyncMock(return_value=mock_result)
 
                     with patch(
                         "src.mcp_zephyr_scale_cloud.server.format_folder_list"
@@ -428,7 +428,7 @@ class TestFolderMCPTools:
             mock_result = AsyncMock()
             mock_result.is_valid = True
             mock_result.data = type("MockFolder", (), sample_folder_data)()
-            mock_client.get_folder.return_value = mock_result
+            mock_client.get_folder = AsyncMock(return_value=mock_result)
 
             with patch(
                 "src.mcp_zephyr_scale_cloud.server.format_folder_details"
@@ -462,7 +462,7 @@ class TestFolderMCPTools:
                 mock_result.data = type(
                     "MockCreatedResource", (), sample_created_resource
                 )()
-                mock_client.create_folder.return_value = mock_result
+                mock_client.create_folder = AsyncMock(return_value=mock_result)
 
                 with patch(
                     "src.mcp_zephyr_scale_cloud.server.format_success_message"
@@ -481,7 +481,7 @@ class TestFolderMCPTools:
             mock_result = AsyncMock()
             mock_result.is_valid = False
             mock_result.errors = ["API error"]
-            mock_client.get_folders.return_value = mock_result
+            mock_client.get_folders = AsyncMock(return_value=mock_result)
 
             with patch(
                 "src.mcp_zephyr_scale_cloud.server.format_error_message"

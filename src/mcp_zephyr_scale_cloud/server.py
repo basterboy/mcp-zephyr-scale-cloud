@@ -622,7 +622,7 @@ async def get_folders(
         max_results=max_results,
     )
 
-    if result:
+    if result.is_valid:
         return format_folder_list(result.data, project_key, folder_type)
     else:
         return format_error_message(
@@ -657,7 +657,7 @@ async def get_folder(folder_id: int) -> str:
     # Get folder from API
     result = await zephyr_client.get_folder(folder_id)
 
-    if result:
+    if result.is_valid:
         return format_folder_details(result.data)
     else:
         return format_error_message(
@@ -712,7 +712,7 @@ async def create_folder(
     # Create folder via API
     result = await zephyr_client.create_folder(validation_result.data)
 
-    if result:
+    if result.is_valid:
         return format_success_message(
             "Created",
             "Folder",
