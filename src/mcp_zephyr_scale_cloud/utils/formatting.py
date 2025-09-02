@@ -382,19 +382,30 @@ def format_folder_details(folder: Folder) -> str:
 
 
 def format_test_step_display(step: TestStep, step_number: int) -> str:
-    """Format a single test step for compact display."""
+    """Format a single test step with complete information."""
 
     if step.inline:
-        description = (
-            step.inline.description[:80] + "..."
-            if len(step.inline.description) > 80
-            else step.inline.description
-        )
-        step_type = "📝 Inline"
-        return f"**Step {step_number}:** {step_type} - {description}"
+        output = f"**Step {step_number}:** 📝 Inline Step\n"
+        output += f"📄 **Description:** {step.inline.description}\n"
+
+        if step.inline.test_data:
+            output += f"📊 **Test Data:** {step.inline.test_data}\n"
+
+        if step.inline.expected_result:
+            output += f"✅ **Expected Result:** {step.inline.expected_result}\n"
+
+        return output.rstrip()
+
     elif step.test_case:
-        step_type = "🔗 Test Case"
-        return f"**Step {step_number}:** {step_type} - {step.test_case.test_case_key}"
+        output = f"**Step {step_number}:** 🔗 Test Case Delegation\n"
+        output += f"🔗 **Test Case Key:** {step.test_case.test_case_key}\n"
+
+        if step.test_case.parameters:
+            output += "⚙️ **Parameters:**\n"
+            for param in step.test_case.parameters:
+                output += f"  • {param.name} ({param.type}): {param.value}\n"
+
+        return output.rstrip()
     else:
         return f"**Step {step_number}:** ❓ Unknown step type"
 
@@ -436,7 +447,7 @@ def format_test_steps_list(
             f"{start_num}-{end_num} of {test_steps_list.total}"
         )
 
-    return header + "\n".join(steps_output) + footer
+    return header + "\n\n".join(steps_output) + footer
 
 
 def format_test_step_details(step: TestStep, step_number: int | None = None) -> str:
