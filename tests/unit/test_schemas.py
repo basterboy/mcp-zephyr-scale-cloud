@@ -5,17 +5,17 @@ from pydantic import ValidationError
 
 from src.mcp_zephyr_scale_cloud.schemas.base import CreatedResource, PagedResponse
 from src.mcp_zephyr_scale_cloud.schemas.common import ProjectLink
-from src.mcp_zephyr_scale_cloud.schemas.priority import (
-    CreatePriorityRequest,
-    Priority,
-    PriorityList,
-    UpdatePriorityRequest,
-)
 from src.mcp_zephyr_scale_cloud.schemas.folder import (
     CreateFolderRequest,
     Folder,
     FolderList,
     FolderType,
+)
+from src.mcp_zephyr_scale_cloud.schemas.priority import (
+    CreatePriorityRequest,
+    Priority,
+    PriorityList,
+    UpdatePriorityRequest,
 )
 from src.mcp_zephyr_scale_cloud.schemas.status import (
     CreateStatusRequest,
