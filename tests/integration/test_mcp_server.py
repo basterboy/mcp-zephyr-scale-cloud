@@ -44,7 +44,7 @@ class TestMCPServerIntegration:
                 assert result["config_valid"] is True
                 assert result["api_accessible"] is True
                 assert result["startup_errors"] == []
-                assert result["tools_count"] == 22
+                assert result["tools_count"] == 23
 
     @pytest.mark.asyncio
     async def test_server_lifespan_config_error(self):
@@ -82,6 +82,7 @@ class TestMCPServerIntegration:
             "get_links",
             "create_issue_link",
             "create_web_link",
+            "create_test_case",
         ]
 
         for tool_name in expected_tools:
@@ -719,3 +720,57 @@ class TestFolderMCPTools:
         assert "Atlassian/Jira MCP tool" in response
         # Should not call the API
         mock_client.create_test_case_issue_link.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_create_test_case_success(self, mock_client):
+        """Test successful create_test_case tool call."""
+        from src.mcp_zephyr_scale_cloud.schemas.base import CreatedResource
+        from src.mcp_zephyr_scale_cloud.server import create_test_case
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response
+        mock_created = CreatedResource(
+            id=98765,
+            self="https://api.example.com/testcases/PROJ-T123",
+            key="PROJ-T123",
+        )
+        mock_result = ValidationResult(True, data=mock_created)
+        mock_client.create_test_case = AsyncMock(return_value=mock_result)
+
+        response = await create_test_case(
+            project_key="PROJ",
+            name="Test user login functionality",
+            objective="Verify user can log in with valid credentials",
+            priority_name="High",
+            labels=["automation", "login"],
+        )
+
+        assert "Test Case Created Successfully!" in response
+        assert "PROJ-T123" in response
+        assert "Resource ID:** 98765" in response
+        assert "Project:** PROJ" in response
+        assert "create_test_steps" in response
+        mock_client.create_test_case.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_create_test_case_validation_error(self, mock_client):
+        """Test create_test_case with validation errors."""
+        from src.mcp_zephyr_scale_cloud.server import create_test_case
+
+        # Test with invalid project key
+        response = await create_test_case(project_key="invalid-key", name="Test case")
+
+        assert "❌ ERROR: Invalid project key" in response
+        assert "uppercase letters" in response
+        # Should not call the API
+        mock_client.create_test_case.assert_not_called()
+
+        # Test with empty name
+        response = await create_test_case(project_key="PROJ", name="")
+
+        assert "❌ ERROR: Invalid test case name" in response
+        assert "empty" in response
+        # Should not call the API
+        mock_client.create_test_case.assert_not_called()

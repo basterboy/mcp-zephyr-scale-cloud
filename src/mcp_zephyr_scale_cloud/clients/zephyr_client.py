@@ -23,7 +23,13 @@ from ..schemas.status import (
     StatusType,
     UpdateStatusRequest,
 )
-from ..schemas.test_case import IssueLinkInput, TestCase, TestCaseLinkList, WebLinkInput
+from ..schemas.test_case import (
+    IssueLinkInput,
+    TestCase,
+    TestCaseInput,
+    TestCaseLinkList,
+    WebLinkInput,
+)
 from ..schemas.test_script import TestScript, TestScriptInput
 from ..schemas.test_step import TestStepsInput, TestStepsList
 from ..schemas.version import TestCaseVersionList
@@ -921,4 +927,40 @@ class ZephyrClient:
                     f"Failed to create web link for test case "
                     f"{test_case_key}: {str(e)}"
                 ],
+            )
+
+    async def create_test_case(
+        self, test_case_input: TestCaseInput
+    ) -> "ValidationResult[CreatedResource]":
+        """
+        Create a new test case.
+
+        Args:
+            test_case_input: Test case input data
+
+        Returns:
+            ValidationResult with CreatedResource data or error messages
+        """
+        try:
+            # Convert to dict for API request
+            request_data = test_case_input.model_dump(by_alias=True, exclude_none=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/testcases",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CreatedResource)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [f"Failed to create test case: {str(e)}"],
             )

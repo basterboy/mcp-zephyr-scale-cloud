@@ -21,6 +21,7 @@ from .utils.formatting import (
     format_status_details,
     format_status_list,
     format_success_message,
+    format_test_case_creation_success,
     format_test_case_display,
     format_test_case_links_display,
     format_test_case_versions_list,
@@ -29,7 +30,10 @@ from .utils.formatting import (
     format_validation_errors,
 )
 from .utils.validation import (
+    validate_component_id,
+    validate_estimated_time,
     validate_folder_data,
+    validate_folder_id,
     validate_folder_type,
     validate_issue_id,
     validate_issue_link_input,
@@ -37,7 +41,9 @@ from .utils.validation import (
     validate_project_key,
     validate_status_data,
     validate_status_type,
+    validate_test_case_input,
     validate_test_case_key,
+    validate_test_case_name,
     validate_test_script_input,
     validate_test_script_type,
     validate_test_steps_input,
@@ -134,7 +140,7 @@ async def zephyr_server_lifespan(server):
         "config_valid": config is not None,
         "api_accessible": zephyr_client is not None and not startup_errors,
         "startup_errors": startup_errors,
-        "tools_count": 22,
+        "tools_count": 23,
         "base_url": config.base_url if config else None,
     }
 
@@ -1308,6 +1314,145 @@ async def create_web_link(test_case_key: str, url: str, description: str = None)
         return format_error_message(
             "Create Web Link",
             f"Failed to create web link for test case {test_case_key}",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def create_test_case(
+    project_key: str,
+    name: str,
+    objective: str = None,
+    precondition: str = None,
+    estimated_time: int = None,
+    component_id: int = None,
+    priority_name: str = None,
+    status_name: str = None,
+    folder_id: int = None,
+    owner_id: str = None,
+    labels: list[str] = None,
+    custom_fields: dict = None,
+) -> str:
+    """Create a new test case in Zephyr Scale Cloud.
+
+    Args:
+        project_key: Jira project key (e.g., 'PROJ')
+        name: Test case name
+        objective: Test case objective (optional)
+        precondition: Test case preconditions (optional)
+        estimated_time: Estimated duration in milliseconds (optional)
+        component_id: Jira component ID (optional)
+        priority_name: Priority name, defaults to 'Normal' (optional)
+        status_name: Status name, defaults to 'Draft' (optional)
+        folder_id: Folder ID to place the test case (optional)
+        owner_id: Jira user account ID for owner (optional)
+        labels: List of labels for the test case (optional)
+        custom_fields: Custom fields dictionary (optional)
+
+    Returns:
+        Success message with created test case details or error message
+    """
+    if not zephyr_client:
+        return format_error_message(
+            "Create Test Case", "Client not initialized", _CONFIG_ERROR_MSG
+        )
+
+    # Validate project key
+    project_validation = validate_project_key(project_key)
+    if not project_validation.is_valid:
+        return format_error_message(
+            "Create Test Case",
+            "Invalid project key",
+            "; ".join(project_validation.errors),
+        )
+
+    # Validate test case name
+    name_validation = validate_test_case_name(name)
+    if not name_validation.is_valid:
+        return format_error_message(
+            "Create Test Case",
+            "Invalid test case name",
+            "; ".join(name_validation.errors),
+        )
+
+    # Build test case data
+    test_case_data = {
+        "projectKey": project_key,
+        "name": name_validation.data,
+    }
+
+    # Add optional fields with validation
+    if objective is not None:
+        test_case_data["objective"] = objective
+
+    if precondition is not None:
+        test_case_data["precondition"] = precondition
+
+    if estimated_time is not None:
+        time_validation = validate_estimated_time(estimated_time)
+        if not time_validation.is_valid:
+            return format_error_message(
+                "Create Test Case",
+                "Invalid estimated time",
+                "; ".join(time_validation.errors),
+            )
+        test_case_data["estimatedTime"] = time_validation.data
+
+    if component_id is not None:
+        component_validation = validate_component_id(component_id)
+        if not component_validation.is_valid:
+            return format_error_message(
+                "Create Test Case",
+                "Invalid component ID",
+                "; ".join(component_validation.errors),
+            )
+        test_case_data["componentId"] = component_validation.data
+
+    if priority_name is not None:
+        test_case_data["priorityName"] = priority_name
+
+    if status_name is not None:
+        test_case_data["statusName"] = status_name
+
+    if folder_id is not None:
+        folder_validation = validate_folder_id(folder_id)
+        if not folder_validation.is_valid:
+            return format_error_message(
+                "Create Test Case",
+                "Invalid folder ID",
+                "; ".join(folder_validation.errors),
+            )
+        test_case_data["folderId"] = folder_validation.data
+
+    if owner_id is not None:
+        test_case_data["ownerId"] = owner_id
+
+    if labels is not None:
+        test_case_data["labels"] = labels
+
+    if custom_fields is not None:
+        test_case_data["customFields"] = custom_fields
+
+    # Validate complete test case input
+    validation_result = validate_test_case_input(test_case_data)
+    if not validation_result.is_valid:
+        return format_error_message(
+            "Create Test Case",
+            "Invalid test case data",
+            "; ".join(validation_result.errors),
+        )
+
+    # Create test case via API
+    result = await zephyr_client.create_test_case(
+        test_case_input=validation_result.data
+    )
+
+    if result.is_valid:
+        return format_test_case_creation_success(result.data, project_key)
+    else:
+        return format_error_message(
+            "Create Test Case",
+            f"Failed to create test case in project {project_key}",
             "; ".join(result.errors),
         )
 

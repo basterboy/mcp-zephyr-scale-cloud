@@ -779,3 +779,89 @@ class TestEnvironmentConfiguration:
 
         result = validate_web_link_input({})  # Missing required url
         assert not result.is_valid
+
+    def test_test_case_input_schema_creation(self):
+        """Test TestCaseInput schema creation and basic functionality."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import TestCaseInput
+
+        # Test minimal required fields
+        minimal_test_case = TestCaseInput(projectKey="PROJ", name="Test case name")
+        assert minimal_test_case.project_key == "PROJ"
+        assert minimal_test_case.name == "Test case name"
+
+        # Test with all fields
+        full_test_case = TestCaseInput(
+            projectKey="TEST",
+            name="Full test case",
+            objective="Test objective",
+            precondition="Test precondition",
+            estimatedTime=120000,
+            componentId=10001,
+            priorityName="High",
+            statusName="Draft",
+            folderId=12345,
+            ownerId="712020:b231ae42-7619-42b4-9cd8-a83e0cdc00ad",
+            labels=["automation", "smoke"],
+            customFields={"Priority": "High"},
+        )
+        assert full_test_case.project_key == "TEST"
+        assert full_test_case.estimated_time == 120000
+        assert full_test_case.labels == ["automation", "smoke"]
+
+    def test_test_case_validation_functions(self):
+        """Test test case validation functions."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_component_id,
+            validate_estimated_time,
+            validate_folder_id,
+            validate_test_case_input,
+            validate_test_case_name,
+        )
+
+        # Test test case name validation
+        result = validate_test_case_name("Valid test case name")
+        assert result.is_valid
+        assert result.data == "Valid test case name"
+
+        result = validate_test_case_name("")
+        assert not result.is_valid
+        assert "empty" in str(result.errors)
+
+        result = validate_test_case_name("   ")
+        assert not result.is_valid
+        assert "empty" in str(result.errors)
+
+        # Test estimated time validation
+        result = validate_estimated_time(120000)
+        assert result.is_valid
+        assert result.data == 120000
+
+        result = validate_estimated_time(-1)
+        assert not result.is_valid
+        assert "non-negative" in str(result.errors)
+
+        # Test folder ID validation
+        result = validate_folder_id(12345)
+        assert result.is_valid
+        assert result.data == 12345
+
+        result = validate_folder_id(0)
+        assert not result.is_valid
+        assert "positive" in str(result.errors)
+
+        # Test component ID validation
+        result = validate_component_id(10001)
+        assert result.is_valid
+        assert result.data == 10001
+
+        result = validate_component_id(-1)
+        assert not result.is_valid
+        assert "non-negative" in str(result.errors)
+
+        # Test test case input validation
+        result = validate_test_case_input({"projectKey": "PROJ", "name": "Test case"})
+        assert result.is_valid
+        assert result.data.project_key == "PROJ"
+
+        result = validate_test_case_input({})  # Missing required fields
+        assert not result.is_valid
