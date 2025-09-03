@@ -23,6 +23,7 @@ from ..schemas.status import (
     StatusType,
     UpdateStatusRequest,
 )
+from ..schemas.test_case import TestCase
 from ..schemas.test_script import TestScript, TestScriptInput
 from ..schemas.test_step import TestStepsInput, TestStepsList
 from ..utils.validation import (
@@ -693,4 +694,34 @@ class ZephyrClient:
                     f"Failed to create test script for test case "
                     f"{test_case_key}: {str(e)}"
                 ],
+            )
+
+    async def get_test_case(self, test_case_key: str) -> "ValidationResult[TestCase]":
+        """
+        Get detailed information for a specific test case.
+
+        Args:
+            test_case_key: The key of the test case (format: [A-Z]+-T[0-9]+)
+
+        Returns:
+            ValidationResult with TestCase data or error messages
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.config.base_url}/testcases/{test_case_key}",
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, TestCase)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [f"Failed to get test case {test_case_key}: {str(e)}"],
             )

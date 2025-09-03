@@ -5,6 +5,7 @@ from typing import Any
 from ..schemas.folder import Folder, FolderList
 from ..schemas.priority import Priority, PriorityList
 from ..schemas.status import Status, StatusList
+from ..schemas.test_case import TestCase
 from ..schemas.test_script import TestScript
 from ..schemas.test_step import TestStep, TestStepsList
 
@@ -543,5 +544,116 @@ def format_test_script_details(test_script: TestScript) -> str:
                 "\n💡 **Note:** This BDD script can be executed remotely "
                 "via build system integration."
             )
+
+    return output
+
+
+def format_test_case_display(test_case: TestCase) -> str:
+    """Format a test case for display."""
+
+    output = f"📋 **Test Case: {test_case.key}**\n"
+    output += f"📝 **Name:** {test_case.name}\n\n"
+
+    # Basic information
+    output += f"🆔 **ID:** {test_case.id}\n"
+    output += f"🏗️ **Project:** {test_case.project.id}\n"
+
+    # Priority and Status
+    output += f"⭐ **Priority:** {test_case.priority.id}\n"
+    output += f"📊 **Status:** {test_case.status.id}\n"
+
+    # Optional fields
+    if test_case.objective:
+        output += f"\n🎯 **Objective:**\n{test_case.objective}\n"
+
+    if test_case.precondition:
+        output += f"\n⚠️ **Preconditions:**\n{test_case.precondition}\n"
+
+    if test_case.estimated_time:
+        # Convert milliseconds to more readable format
+        seconds = test_case.estimated_time / 1000
+        if seconds >= 60:
+            minutes = int(seconds // 60)
+            remaining_seconds = int(seconds % 60)
+            time_str = f"{minutes}m {remaining_seconds}s"
+        else:
+            time_str = f"{int(seconds)}s"
+        output += f"\n⏱️ **Estimated Time:** {time_str}\n"
+
+    if test_case.labels and len(test_case.labels) > 0:
+        labels_str = ", ".join(test_case.labels)
+        output += f"\n🏷️ **Labels:** {labels_str}\n"
+
+    if test_case.component:
+        output += f"\n🔧 **Component:** {test_case.component.id}\n"
+
+    if test_case.folder:
+        output += f"\n📁 **Folder:** {test_case.folder.id}\n"
+
+    if test_case.owner:
+        output += f"\n👤 **Owner:** {test_case.owner.account_id}\n"
+
+    if test_case.test_script:
+        output += "\n📄 **Script:** Available\n"
+
+    if test_case.created_on:
+        created_str = test_case.created_on.strftime("%Y-%m-%d %H:%M:%S")
+        output += f"\n📅 **Created:** {created_str}\n"
+
+    return output.strip()
+
+
+def format_test_case_details(test_case: TestCase) -> str:
+    """Format detailed view of a test case."""
+
+    output = "📋 **Test Case Details**\n\n"
+    output += f"**Key:** {test_case.key}\n"
+    output += f"**Name:** {test_case.name}\n"
+    output += f"**ID:** {test_case.id}\n\n"
+
+    # Project and organizational info
+    output += "🏗️ **Project Information:**\n"
+    output += f"  • Project ID: {test_case.project.id}\n"
+    if hasattr(test_case.project, "self"):
+        output += f"  • Project URL: {test_case.project.self}\n"
+
+    if test_case.folder:
+        output += f"\n📁 **Folder:** {test_case.folder.id}\n"
+
+    # Status and priority
+    output += "\n📊 **Status & Priority:**\n"
+    output += f"  • Status: {test_case.status.id}\n"
+    output += f"  • Priority: {test_case.priority.id}\n"
+
+    # Test content
+    if test_case.objective:
+        output += f"\n🎯 **Test Objective:**\n{test_case.objective}\n"
+
+    if test_case.precondition:
+        output += f"\n⚠️ **Preconditions:**\n{test_case.precondition}\n"
+
+    # Metadata
+    if test_case.estimated_time:
+        minutes = test_case.estimated_time / (1000 * 60)
+        output += f"\n⏱️ **Estimated Time:** {minutes:.1f} minutes\n"
+
+    if test_case.labels and len(test_case.labels) > 0:
+        output += "\n🏷️ **Labels:**\n"
+        for label in test_case.labels:
+            output += f"  • {label}\n"
+
+    # Technical details
+    if test_case.component:
+        output += f"\n🔧 **Component:** {test_case.component.id}\n"
+
+    if test_case.owner:
+        output += f"\n👤 **Owner:** {test_case.owner.account_id}\n"
+
+    if test_case.test_script:
+        output += "\n📄 **Test Script:** Available (use get_test_script tool)\n"
+
+    if test_case.created_on:
+        created_str = test_case.created_on.strftime("%Y-%m-%d %H:%M:%S UTC")
+        output += f"\n📅 **Created:** {created_str}\n"
 
     return output
