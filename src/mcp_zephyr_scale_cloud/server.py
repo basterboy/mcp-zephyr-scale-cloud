@@ -1193,7 +1193,8 @@ async def create_issue_link(test_case_key: str, issue_id: int) -> str:
 
     Args:
         test_case_key: The key of the test case (format: [PROJECT]-T[NUMBER])
-        issue_id: The Jira issue ID to link to
+        issue_id: The numeric Jira issue ID to link to (NOT the issue key)
+                  Use the Atlassian/Jira MCP tool to get the issue ID from a key
 
     Returns:
         Success message with created link ID or error message

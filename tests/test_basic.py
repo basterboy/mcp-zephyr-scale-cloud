@@ -746,6 +746,18 @@ class TestEnvironmentConfiguration:
         assert not result.is_valid
         assert "positive integer" in str(result.errors)
 
+        # Test issue key detection (common mistake)
+        result = validate_issue_id("PROJ-1234")  # type: ignore
+        assert not result.is_valid
+        assert "issue key" in str(result.errors)
+        assert "PROJ-1234" in str(result.errors)
+        assert "Atlassian/Jira MCP tool" in str(result.errors)
+
+        # Test other invalid types
+        result = validate_issue_id("not-a-number")  # type: ignore
+        assert not result.is_valid
+        assert "Atlassian/Jira MCP tool" in str(result.errors)
+
         # Test issue link input validation
         result = validate_issue_link_input({"issueId": 12345})
         assert result.is_valid
