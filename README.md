@@ -249,7 +249,7 @@ Tests run automatically on:
 
 ## MCP Tools
 
-This server provides **14 MCP tools** for Zephyr Scale Cloud integration:
+This server provides **16 MCP tools** for Zephyr Scale Cloud integration:
 
 | **Category** | **Tools** | **Description** |
 |--------------|-----------|-----------------|
@@ -258,7 +258,8 @@ This server provides **14 MCP tools** for Zephyr Scale Cloud integration:
 | **Statuses** | 4 tools | Full CRUD operations for status management |
 | **Folders** | 3 tools | Folder management and organization |
 | **Test Steps** | 2 tools | Test step retrieval and creation |
-| **Total** | **14 tools** | **Production-ready MCP server** |
+| **Test Scripts** | 2 tools | Test script retrieval and creation |
+| **Total** | **16 tools** | **Production-ready MCP server** |
 
 ### Currently Available:
 
@@ -285,6 +286,10 @@ This server provides **14 MCP tools** for Zephyr Scale Cloud integration:
 #### **📝 Test Step Management**
 - `get_test_steps` - Retrieve test steps for a specific test case with pagination support
 - `create_test_steps` - Create test steps for a test case with APPEND/OVERWRITE modes
+
+#### **📄 Test Script Management**
+- `get_test_script` - Retrieve test script for a specific test case
+- `create_test_script` - Create or update test script with plain text or BDD format
 
 ## 📊 Status Operations Guide
 

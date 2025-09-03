@@ -5,6 +5,7 @@ from typing import Any
 from ..schemas.folder import Folder, FolderList
 from ..schemas.priority import Priority, PriorityList
 from ..schemas.status import Status, StatusList
+from ..schemas.test_script import TestScript
 from ..schemas.test_step import TestStep, TestStepsList
 
 
@@ -481,3 +482,50 @@ def format_test_step_details(step: TestStep, step_number: int | None = None) -> 
         output += "❓ **Type:** Unknown step type\n"
 
     return output.strip()
+
+
+def format_test_script_display(test_script: TestScript) -> str:
+    """Format a test script for display."""
+
+    output = f"📝 **Test Script (ID: {test_script.id})**\n"
+
+    # Add script type with emoji
+    type_emoji = "📄" if test_script.type == "plain" else "🔧"
+    output += f"{type_emoji} **Type:** {test_script.type.upper()}\n\n"
+
+    # Add script content with proper formatting
+    output += f"📋 **Content:**\n```\n{test_script.text}\n```"
+
+    return output
+
+
+def format_test_script_details(test_script: TestScript) -> str:
+    """Format detailed view of a test script."""
+
+    output = "📝 **Test Script Details**\n\n"
+    output += f"🆔 **Script ID:** {test_script.id}\n"
+
+    # Format type with description
+    if test_script.type == "plain":
+        output += "📄 **Type:** Plain Text\n"
+        output += "💡 **Description:** Traditional test script format\n"
+    elif test_script.type == "bdd":
+        output += "🔧 **Type:** BDD (Behavior-Driven Development)\n"
+        output += "💡 **Description:** Supports remote execution via API plugin\n"
+
+    output += "\n📋 **Script Content:**\n"
+    output += f"```\n{test_script.text}\n```\n"
+
+    # Add usage notes
+    if test_script.type == "plain":
+        output += (
+            "\n💡 **Note:** You can convert this to step-by-step format "
+            "using the test steps endpoint."
+        )
+    elif test_script.type == "bdd":
+        output += (
+            "\n💡 **Note:** This BDD script can be executed remotely "
+            "via build system integration."
+        )
+
+    return output
