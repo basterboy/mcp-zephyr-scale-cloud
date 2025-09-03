@@ -600,6 +600,37 @@ def format_test_case_display(test_case: TestCase) -> str:
         created_str = test_case.created_on.strftime("%Y-%m-%d %H:%M:%S")
         output += f"\n📅 **Created:** {created_str}\n"
 
+    # Custom fields
+    if test_case.custom_fields:
+        output += "\n🔧 **Custom Fields:**\n"
+        custom_fields_dict = test_case.custom_fields.model_dump()
+        for field_name, field_value in custom_fields_dict.items():
+            if field_value is not None:
+                if isinstance(field_value, list):
+                    if field_value:  # Only show non-empty lists
+                        value_str = ", ".join(str(v) for v in field_value)
+                        output += f"  • {field_name}: {value_str}\n"
+                else:
+                    output += f"  • {field_name}: {field_value}\n"
+
+    # Links
+    if test_case.links:
+        if test_case.links.issues or test_case.links.web_links:
+            output += "\n🔗 **Links:**\n"
+
+            # Issue links
+            if test_case.links.issues:
+                output += f"  📋 **Issues ({len(test_case.links.issues)}):**\n"
+                for issue in test_case.links.issues:
+                    output += f"    • {issue.type}: Issue {issue.issue_id}\n"
+
+            # Web links
+            if test_case.links.web_links:
+                output += f"  🌐 **Web Links ({len(test_case.links.web_links)}):**\n"
+                for link in test_case.links.web_links:
+                    desc = f" ({link.description})" if link.description else ""
+                    output += f"    • {link.type}: {link.url}{desc}\n"
+
     return output.strip()
 
 
@@ -655,5 +686,50 @@ def format_test_case_details(test_case: TestCase) -> str:
     if test_case.created_on:
         created_str = test_case.created_on.strftime("%Y-%m-%d %H:%M:%S UTC")
         output += f"\n📅 **Created:** {created_str}\n"
+
+    # Custom fields (detailed view)
+    if test_case.custom_fields:
+        output += "\n🔧 **Custom Fields:**\n"
+        custom_fields_dict = test_case.custom_fields.model_dump()
+        for field_name, field_value in custom_fields_dict.items():
+            if field_value is not None:
+                if isinstance(field_value, list):
+                    if field_value:  # Only show non-empty lists
+                        output += f"  • **{field_name}:**\n"
+                        for item in field_value:
+                            output += f"    - {item}\n"
+                    else:
+                        output += f"  • **{field_name}:** (empty list)\n"
+                else:
+                    output += f"  • **{field_name}:** {field_value}\n"
+            else:
+                output += f"  • **{field_name}:** (not set)\n"
+
+    # Links (detailed view)
+    if test_case.links:
+        output += "\n🔗 **Links and Connections:**\n"
+
+        # Issue links
+        if test_case.links.issues:
+            output += f"\n  📋 **Jira Issues ({len(test_case.links.issues)}):**\n"
+            for issue in test_case.links.issues:
+                output += f"    • **{issue.type}**: Issue #{issue.issue_id}\n"
+                output += f"      - Link ID: {issue.id}\n"
+                output += f"      - Target: {issue.target}\n"
+        else:
+            output += "\n  📋 **Jira Issues:** None linked\n"
+
+        # Web links
+        if test_case.links.web_links:
+            output += f"\n  🌐 **Web Links ({len(test_case.links.web_links)}):**\n"
+            for link in test_case.links.web_links:
+                output += f"    • **{link.type}**: {link.url}\n"
+                if link.description:
+                    output += f"      - Description: {link.description}\n"
+                output += f"      - Link ID: {link.id}\n"
+        else:
+            output += "\n  🌐 **Web Links:** None configured\n"
+    else:
+        output += "\n🔗 **Links:** No links configured\n"
 
     return output

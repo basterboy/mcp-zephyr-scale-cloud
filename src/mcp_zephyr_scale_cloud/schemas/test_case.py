@@ -15,6 +15,57 @@ EntityId = int
 Labels = list[str]
 
 
+class IssueLink(Link):
+    """Issue link for test case."""
+
+    id: int = Field(..., description="Link ID", ge=1)
+    issue_id: int = Field(..., alias="issueId", description="The Jira issue ID", ge=1)
+    target: str = Field(
+        ...,
+        description="Jira Cloud REST API endpoint for the issue",
+        example="https://jira.atlassian.net/rest/api/2/issue/10000",
+    )
+    type: str = Field(
+        ...,
+        description="The link type",
+        pattern="^(COVERAGE|BLOCKS|RELATED)$",
+        example="COVERAGE",
+    )
+
+
+class WebLink(Link):
+    """Web link for test case."""
+
+    id: int = Field(..., description="Link ID", ge=1)
+    description: str | None = Field(
+        None, description="The link description", example="A link to atlassian.com"
+    )
+    url: str = Field(
+        ...,
+        description="The web link URL",
+        example="https://atlassian.com",
+    )
+    type: str = Field(
+        ...,
+        description="The link type",
+        pattern="^(COVERAGE|BLOCKS|RELATED)$",
+        example="COVERAGE",
+    )
+
+
+class TestCaseLinkList(Link):
+    """Test case links container."""
+
+    issues: list[IssueLink] = Field(
+        default_factory=list, description="Jira issues linked to this test case"
+    )
+    web_links: list[WebLink] = Field(
+        default_factory=list,
+        alias="webLinks",
+        description="Web links for this test case",
+    )
+
+
 class JiraComponent(BaseModel):
     """Jira component information."""
 
@@ -93,6 +144,9 @@ class TestCase(BaseModel):
     )
     custom_fields: CustomFields | None = Field(
         None, alias="customFields", description="Custom field values"
+    )
+    links: TestCaseLinkList | None = Field(
+        None, description="Test case links (issues and web links)"
     )
 
     model_config = {"populate_by_name": True}

@@ -580,3 +580,79 @@ class TestEnvironmentConfiguration:
         # Test JiraUserLink
         user = JiraUserLink(accountId="user123")
         assert user.account_id == "user123"
+
+    def test_test_case_with_links_and_custom_fields(self):
+        """Test test case with links and custom fields."""
+        from src.mcp_zephyr_scale_cloud.schemas.common import ProjectLink
+        from src.mcp_zephyr_scale_cloud.schemas.priority import PriorityLink
+        from src.mcp_zephyr_scale_cloud.schemas.status import StatusLink
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import (
+            IssueLink,
+            TestCase,
+            TestCaseLinkList,
+            WebLink,
+        )
+        from src.mcp_zephyr_scale_cloud.utils.formatting import format_test_case_display
+
+        # Test case with full links and custom fields
+        test_case = TestCase(
+            id=123,
+            key="PROJ-T456",
+            name="Test with links",
+            project=ProjectLink(
+                id=10001, self="https://api.example.com/projects/10001"
+            ),
+            priority=PriorityLink(id=2, self="https://api.example.com/priorities/2"),
+            status=StatusLink(id=1, self="https://api.example.com/statuses/1"),
+            customFields={
+                "Components": ["PPO initiative"],
+                "Version": None,
+                "Priority": "High",
+                "Tags": ["UI", "Backend"],
+            },
+            links=TestCaseLinkList(
+                self="https://api.example.com/testcases/PROJ-T456/links",
+                issues=[
+                    IssueLink(
+                        id=1001,
+                        issueId=2051212,
+                        self="https://api.example.com/links/1001",
+                        target="https://jira.example.com/issue/2051212",
+                        type="COVERAGE",
+                    )
+                ],
+                webLinks=[
+                    WebLink(
+                        id=2001,
+                        self="https://api.example.com/weblinks/2001",
+                        description="Related documentation",
+                        url="https://docs.example.com/feature",
+                        type="RELATED",
+                    )
+                ],
+            ),
+        )
+
+        assert test_case.custom_fields is not None
+        custom_fields_dict = test_case.custom_fields.model_dump()
+        assert "Components" in custom_fields_dict
+        assert custom_fields_dict["Components"] == ["PPO initiative"]
+        assert custom_fields_dict["Priority"] == "High"
+
+        assert test_case.links is not None
+        assert len(test_case.links.issues) == 1
+        assert len(test_case.links.web_links) == 1
+        assert test_case.links.issues[0].issue_id == 2051212
+        assert test_case.links.issues[0].type == "COVERAGE"
+        assert test_case.links.web_links[0].url == "https://docs.example.com/feature"
+
+        # Test formatting includes custom fields and links
+        formatted = format_test_case_display(test_case)
+        assert "Custom Fields:" in formatted
+        assert "Components: PPO initiative" in formatted
+        assert "Priority: High" in formatted
+        assert "Links:" in formatted
+        assert "Issues (1):" in formatted
+        assert "COVERAGE: Issue 2051212" in formatted
+        assert "Web Links (1):" in formatted
+        assert "https://docs.example.com/feature" in formatted

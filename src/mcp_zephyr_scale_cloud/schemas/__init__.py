@@ -40,10 +40,13 @@ from .status import (
     UpdateStatusRequest,
 )
 from .test_case import (
+    IssueLink,
     JiraComponent,
     JiraUserLink,
     TestCase,
+    TestCaseLinkList,
     TestCaseTestScriptLink,
+    WebLink,
 )
 from .test_script import (
     TestScript,
@@ -90,10 +93,13 @@ __all__ = [
     "OptionValue",
     "EntityColor",
     "CustomFields",
+    "IssueLink",
     "JiraComponent",
     "JiraUserLink",
     "TestCase",
+    "TestCaseLinkList",
     "TestCaseTestScriptLink",
+    "WebLink",
     "TestScript",
     "TestScriptInput",
     "TestScriptType",
