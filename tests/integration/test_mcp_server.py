@@ -5,8 +5,11 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from src.mcp_zephyr_scale_cloud.server import (
+    create_folder,
     create_priority,
     create_status,
+    get_folder,
+    get_folders,
     get_priorities,
     get_priority,
     get_status,
