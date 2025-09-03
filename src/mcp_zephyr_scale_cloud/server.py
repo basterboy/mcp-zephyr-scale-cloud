@@ -1505,7 +1505,7 @@ async def create_test_case(
                 return format_error_message(
                     "Create Test Case",
                     "Invalid labels format",
-                    "Labels must be a JSON array (e.g., '[\"automation\", \"smoke\"]') "
+                    'Labels must be a JSON array (e.g., \'["automation", "smoke"]\') '
                     "or comma-separated string",
                 )
             # Validate all items are strings
@@ -1534,7 +1534,7 @@ async def create_test_case(
                     "Create Test Case",
                     "Invalid labels format",
                     f"Failed to parse labels: {str(e)}. Use JSON array format "
-                    f"(e.g., '[\"label1\", \"label2\"]') or comma-separated "
+                    f'(e.g., \'["label1", "label2"]\') or comma-separated '
                     f"(e.g., 'label1, label2')",
                 )
 
@@ -1548,14 +1548,14 @@ async def create_test_case(
                     "Create Test Case",
                     "Invalid custom fields format",
                     "Custom fields must be a JSON object "
-                    "(e.g., '{\"Components\": [\"Update\"], \"Version\": \"v1.0.0\"}')",
+                    '(e.g., \'{"Components": ["Update"], "Version": "v1.0.0"}\')',
                 )
         except json.JSONDecodeError as e:
             return format_error_message(
                 "Create Test Case",
                 "Invalid custom fields format",
                 f"Custom fields must be valid JSON: {str(e)}. "
-                f"Example: '{{\"Components\": [\"Update\"], \"Version\": \"v1.0.0\"}}'",
+                f'Example: \'{{"Components": ["Update"], "Version": "v1.0.0"}}\'',
             )
         except Exception as e:
             return format_error_message(
