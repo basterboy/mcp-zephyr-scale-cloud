@@ -31,10 +31,7 @@ from .utils.formatting import (
     format_validation_errors,
 )
 from .utils.validation import (
-    validate_component_id,
-    validate_estimated_time,
     validate_folder_data,
-    validate_folder_id,
     validate_folder_type,
     validate_issue_id,
     validate_issue_link_input,
@@ -1379,11 +1376,11 @@ async def create_test_case(
     project_key: str | None = None,
     objective: str | None = None,
     precondition: str | None = None,
-    estimated_time: int | None = None,
-    component_id: int | None = None,
+    estimated_time: str | None = None,
+    component_id: str | None = None,
     priority_name: str | None = None,
     status_name: str | None = None,
-    folder_id: int | None = None,
+    folder_id: str | None = None,
     owner_id: str | None = None,
     labels: list[str] | None = None,
     custom_fields: dict | None = None,
@@ -1396,11 +1393,11 @@ async def create_test_case(
                      ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided)
         objective: Test case objective (optional)
         precondition: Test case preconditions (optional)
-        estimated_time: Estimated duration in milliseconds (optional)
-        component_id: Jira component ID (optional)
+        estimated_time: Estimated duration in milliseconds as string (optional)
+        component_id: Jira component ID as string (optional)
         priority_name: Priority name, defaults to 'Normal' (optional)
         status_name: Status name, defaults to 'Draft' (optional)
-        folder_id: Folder ID to place the test case (optional)
+        folder_id: Folder ID as string to place the test case (optional)
         owner_id: Jira user account ID for owner (optional)
         labels: List of labels for the test case (optional)
         custom_fields: Custom fields dictionary (optional)
@@ -1445,6 +1442,58 @@ async def create_test_case(
             "; ".join(name_validation.errors),
         )
 
+    # Convert and validate integer parameters
+    parsed_estimated_time = None
+    if estimated_time is not None:
+        try:
+            parsed_estimated_time = int(estimated_time)
+            if parsed_estimated_time < 0:
+                return format_error_message(
+                    "Create Test Case",
+                    "Invalid estimated time",
+                    "Estimated time must be a non-negative integer (milliseconds)",
+                )
+        except (ValueError, TypeError):
+            return format_error_message(
+                "Create Test Case",
+                "Invalid estimated time",
+                f"Estimated time must be a valid integer, got: {estimated_time}",
+            )
+
+    parsed_component_id = None
+    if component_id is not None:
+        try:
+            parsed_component_id = int(component_id)
+            if parsed_component_id <= 0:
+                return format_error_message(
+                    "Create Test Case",
+                    "Invalid component ID",
+                    "Component ID must be a positive integer",
+                )
+        except (ValueError, TypeError):
+            return format_error_message(
+                "Create Test Case",
+                "Invalid component ID",
+                f"Component ID must be a valid integer, got: {component_id}",
+            )
+
+    parsed_folder_id = None
+    if folder_id is not None:
+        try:
+            parsed_folder_id = int(folder_id)
+            if parsed_folder_id <= 0:
+                return format_error_message(
+                    "Create Test Case",
+                    "Invalid folder ID",
+                    "Folder ID must be a positive integer",
+                )
+        except (ValueError, TypeError):
+            return format_error_message(
+                "Create Test Case",
+                "Invalid folder ID",
+                f"Folder ID must be a valid integer, got: {folder_id}",
+            )
+
     # Build test case data
     test_case_data = {
         "projectKey": project_key,
@@ -1458,25 +1507,11 @@ async def create_test_case(
     if precondition is not None:
         test_case_data["precondition"] = precondition
 
-    if estimated_time is not None:
-        time_validation = validate_estimated_time(estimated_time)
-        if not time_validation.is_valid:
-            return format_error_message(
-                "Create Test Case",
-                "Invalid estimated time",
-                "; ".join(time_validation.errors),
-            )
-        test_case_data["estimatedTime"] = time_validation.data
+    if parsed_estimated_time is not None:
+        test_case_data["estimatedTime"] = parsed_estimated_time
 
-    if component_id is not None:
-        component_validation = validate_component_id(component_id)
-        if not component_validation.is_valid:
-            return format_error_message(
-                "Create Test Case",
-                "Invalid component ID",
-                "; ".join(component_validation.errors),
-            )
-        test_case_data["componentId"] = component_validation.data
+    if parsed_component_id is not None:
+        test_case_data["componentId"] = parsed_component_id
 
     if priority_name is not None:
         test_case_data["priorityName"] = priority_name
@@ -1484,15 +1519,8 @@ async def create_test_case(
     if status_name is not None:
         test_case_data["statusName"] = status_name
 
-    if folder_id is not None:
-        folder_validation = validate_folder_id(folder_id)
-        if not folder_validation.is_valid:
-            return format_error_message(
-                "Create Test Case",
-                "Invalid folder ID",
-                "; ".join(folder_validation.errors),
-            )
-        test_case_data["folderId"] = folder_validation.data
+    if parsed_folder_id is not None:
+        test_case_data["folderId"] = parsed_folder_id
 
     if owner_id is not None:
         test_case_data["ownerId"] = owner_id
