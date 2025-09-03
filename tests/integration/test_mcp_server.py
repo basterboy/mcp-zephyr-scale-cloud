@@ -670,7 +670,7 @@ class TestFolderMCPTools:
             "Successfully created issue link between test case PROJ-T1234 "
             "and Jira issue 67890" in response
         )
-        assert "Resource ID: 12345" in response
+        assert "**Resource Id:** 12345" in response
         mock_client.create_test_case_issue_link.assert_called_once()
 
     @pytest.mark.asyncio
@@ -699,5 +699,5 @@ class TestFolderMCPTools:
             "Successfully created web link between test case PROJ-T1234 "
             "and https://docs.example.com (Test documentation)" in response
         )
-        assert "Resource ID: 54321" in response
+        assert "**Resource Id:** 54321" in response
         mock_client.create_test_case_web_link.assert_called_once()

@@ -134,7 +134,7 @@ async def zephyr_server_lifespan(server):
         "config_valid": config is not None,
         "api_accessible": zephyr_client is not None and not startup_errors,
         "startup_errors": startup_errors,
-        "tools_count": 22,  # healthcheck + priorities + statuses + folders + test cases
+        "tools_count": 22,
         "base_url": config.base_url if config else None,
     }
 
