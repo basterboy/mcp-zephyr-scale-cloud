@@ -23,7 +23,7 @@ from ..schemas.status import (
     StatusType,
     UpdateStatusRequest,
 )
-from ..schemas.test_case import TestCase
+from ..schemas.test_case import IssueLinkInput, TestCase, TestCaseLinkList, WebLinkInput
 from ..schemas.test_script import TestScript, TestScriptInput
 from ..schemas.test_step import TestStepsInput, TestStepsList
 from ..schemas.version import TestCaseVersionList
@@ -807,6 +807,118 @@ class ZephyrClient:
                 False,
                 [
                     f"Failed to get version {version} for test case "
+                    f"{test_case_key}: {str(e)}"
+                ],
+            )
+
+    async def get_test_case_links(
+        self, test_case_key: str
+    ) -> "ValidationResult[TestCaseLinkList]":
+        """
+        Get all links (issues + web links) for a test case.
+
+        Args:
+            test_case_key: The key of the test case (format: [A-Z]+-T[0-9]+)
+
+        Returns:
+            ValidationResult with TestCaseLinkList data or error messages
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.config.base_url}/testcases/{test_case_key}/links",
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, TestCaseLinkList)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [f"Failed to get links for test case {test_case_key}: {str(e)}"],
+            )
+
+    async def create_test_case_issue_link(
+        self, test_case_key: str, issue_link_input: IssueLinkInput
+    ) -> "ValidationResult[CreatedResource]":
+        """
+        Create a link between a test case and a Jira issue.
+
+        Args:
+            test_case_key: The key of the test case (format: [A-Z]+-T[0-9]+)
+            issue_link_input: Issue link input data
+
+        Returns:
+            ValidationResult with CreatedResource data or error messages
+        """
+        try:
+            # Convert to dict for API request
+            request_data = issue_link_input.model_dump(by_alias=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/testcases/{test_case_key}/links/issues",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CreatedResource)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [
+                    f"Failed to create issue link for test case "
+                    f"{test_case_key}: {str(e)}"
+                ],
+            )
+
+    async def create_test_case_web_link(
+        self, test_case_key: str, web_link_input: WebLinkInput
+    ) -> "ValidationResult[CreatedResource]":
+        """
+        Create a link between a test case and a web URL.
+
+        Args:
+            test_case_key: The key of the test case (format: [A-Z]+-T[0-9]+)
+            web_link_input: Web link input data
+
+        Returns:
+            ValidationResult with CreatedResource data or error messages
+        """
+        try:
+            # Convert to dict for API request
+            request_data = web_link_input.model_dump(by_alias=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/testcases/{test_case_key}/links/weblinks",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CreatedResource)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [
+                    f"Failed to create web link for test case "
                     f"{test_case_key}: {str(e)}"
                 ],
             )

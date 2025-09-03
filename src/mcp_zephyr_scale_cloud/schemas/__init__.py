@@ -41,12 +41,14 @@ from .status import (
 )
 from .test_case import (
     IssueLink,
+    IssueLinkInput,
     JiraComponent,
     JiraUserLink,
     TestCase,
     TestCaseLinkList,
     TestCaseTestScriptLink,
     WebLink,
+    WebLinkInput,
 )
 from .test_script import (
     TestScript,
@@ -98,12 +100,14 @@ __all__ = [
     "EntityColor",
     "CustomFields",
     "IssueLink",
+    "IssueLinkInput",
     "JiraComponent",
     "JiraUserLink",
     "TestCase",
     "TestCaseLinkList",
     "TestCaseTestScriptLink",
     "WebLink",
+    "WebLinkInput",
     "TestScript",
     "TestScriptInput",
     "TestScriptType",

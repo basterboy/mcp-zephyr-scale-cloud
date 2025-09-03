@@ -15,6 +15,25 @@ EntityId = int
 Labels = list[str]
 
 
+class IssueLinkInput(BaseModel):
+    """Input schema for creating issue links."""
+
+    issue_id: int = Field(..., alias="issueId", description="The Jira issue ID", ge=1)
+
+
+class WebLinkInput(BaseModel):
+    """Input schema for creating web links."""
+
+    url: str = Field(
+        ...,
+        description="The web link URL",
+        example="https://atlassian.com",
+    )
+    description: str | None = Field(
+        None, description="The link description", example="A link to atlassian.com"
+    )
+
+
 class IssueLink(Link):
     """Issue link for test case."""
 
