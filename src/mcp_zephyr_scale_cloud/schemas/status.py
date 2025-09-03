@@ -4,7 +4,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field, field_validator
 
-from .base import PagedResponse
+from .base import EntityWithLink, PagedResponse
 from .common import ProjectLink
 
 
@@ -15,6 +15,12 @@ class StatusType(str, Enum):
     TEST_PLAN = "TEST_PLAN"
     TEST_CYCLE = "TEST_CYCLE"
     TEST_EXECUTION = "TEST_EXECUTION"
+
+
+class StatusLink(EntityWithLink):
+    """Status link reference."""
+
+    pass
 
 
 class Status(BaseModel):

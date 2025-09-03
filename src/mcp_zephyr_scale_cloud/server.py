@@ -21,6 +21,7 @@ from .utils.formatting import (
     format_status_details,
     format_status_list,
     format_success_message,
+    format_test_case_display,
     format_test_script_display,
     format_test_steps_list,
     format_validation_errors,
@@ -127,7 +128,7 @@ async def zephyr_server_lifespan(server):
         "config_valid": config is not None,
         "api_accessible": zephyr_client is not None and not startup_errors,
         "startup_errors": startup_errors,
-        "tools_count": 16,  # healthcheck + priorities + statuses + folders + tests
+        "tools_count": 17,  # healthcheck + priorities + statuses + folders + test cases
         "base_url": config.base_url if config else None,
     }
 
@@ -1008,6 +1009,43 @@ async def create_test_script(
         return format_error_message(
             "Create Test Script",
             f"Failed to create test script for {test_case_key}",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def get_test_case(test_case_key: str) -> str:
+    """Get detailed information for a specific test case in Zephyr Scale Cloud.
+
+    Args:
+        test_case_key: The key of the test case (format: [PROJECT]-T[NUMBER])
+
+    Returns:
+        Formatted test case information or error message
+    """
+    if not zephyr_client:
+        return format_error_message(
+            "Get Test Case", "Client not initialized", _CONFIG_ERROR_MSG
+        )
+
+    # Validate test case key
+    test_case_validation = validate_test_case_key(test_case_key)
+    if not test_case_validation.is_valid:
+        return format_error_message(
+            "Get Test Case",
+            "Invalid test case key",
+            "; ".join(test_case_validation.errors),
+        )
+
+    # Get test case via API
+    result = await zephyr_client.get_test_case(test_case_key=test_case_key)
+
+    if result.is_valid:
+        return format_test_case_display(result.data)
+    else:
+        return format_error_message(
+            "Get Test Case",
+            f"Failed to retrieve test case {test_case_key}",
             "; ".join(result.errors),
         )
 

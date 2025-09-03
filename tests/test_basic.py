@@ -136,6 +136,7 @@ class TestBasicFunctionality:
             "create_test_steps",
             "get_test_script",
             "create_test_script",
+            "get_test_case",
         ]
 
         for tool_name in expected_tools:
@@ -526,3 +527,56 @@ class TestEnvironmentConfiguration:
         result = validate_test_script_input(whitespace_data)
         assert not result.is_valid
         assert "cannot be empty" in result.errors[0]
+
+    def test_test_case_schema_creation(self):
+        """Test test case schema creation and basic functionality."""
+        from src.mcp_zephyr_scale_cloud.schemas.common import ProjectLink
+        from src.mcp_zephyr_scale_cloud.schemas.priority import PriorityLink
+        from src.mcp_zephyr_scale_cloud.schemas.status import StatusLink
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import (
+            JiraComponent,
+            JiraUserLink,
+            TestCase,
+        )
+
+        # Test basic test case creation
+        test_case = TestCase(
+            id=123,
+            key="PROJ-T456",
+            name="Test login functionality",
+            project=ProjectLink(
+                id=10001, self="https://api.example.com/projects/10001"
+            ),
+            priority=PriorityLink(id=2, self="https://api.example.com/priorities/2"),
+            status=StatusLink(id=1, self="https://api.example.com/statuses/1"),
+            objective="Verify that users can log in successfully",
+            precondition="User account exists and is active",
+            estimatedTime=300000,  # Use camelCase for API compatibility
+            labels=["Regression", "Authentication"],
+        )
+
+        assert test_case.id == 123
+        assert test_case.key == "PROJ-T456"
+        assert test_case.name == "Test login functionality"
+        assert test_case.project.id == 10001
+        assert test_case.priority.id == 2
+        assert test_case.status.id == 1
+        assert test_case.objective == "Verify that users can log in successfully"
+        assert test_case.estimated_time == 300000
+        assert test_case.labels == ["Regression", "Authentication"]
+
+        # Test model dump with aliases
+        dumped = test_case.model_dump(by_alias=True, exclude_none=True)
+        assert "estimatedTime" in dumped
+        assert "estimated_time" not in dumped
+        assert dumped["estimatedTime"] == 300000
+
+        # Test JiraComponent
+        component = JiraComponent(
+            id=10001, self="https://jira.example.com/component/10001"
+        )
+        assert component.id == 10001
+
+        # Test JiraUserLink
+        user = JiraUserLink(accountId="user123")
+        assert user.account_id == "user123"

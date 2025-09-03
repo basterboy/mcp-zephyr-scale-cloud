@@ -44,7 +44,7 @@ class TestMCPServerIntegration:
                 assert result["config_valid"] is True
                 assert result["api_accessible"] is True
                 assert result["startup_errors"] == []
-                assert result["tools_count"] == 16
+                assert result["tools_count"] == 17
 
     @pytest.mark.asyncio
     async def test_server_lifespan_config_error(self):
@@ -76,6 +76,7 @@ class TestMCPServerIntegration:
             "create_test_steps",
             "get_test_script",
             "create_test_script",
+            "get_test_case",
         ]
 
         for tool_name in expected_tools:

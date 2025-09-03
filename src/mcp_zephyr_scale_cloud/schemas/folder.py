@@ -4,7 +4,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from .base import PagedResponse
+from .base import Link, PagedResponse
 from .common import ProjectLink
 
 
@@ -14,6 +14,12 @@ class FolderType(str, Enum):
     TEST_CASE = "TEST_CASE"
     TEST_PLAN = "TEST_PLAN"
     TEST_CYCLE = "TEST_CYCLE"
+
+
+class FolderLink(Link):
+    """Folder link reference."""
+
+    id: int = Field(..., description="Folder ID", ge=1)
 
 
 class Folder(BaseModel):

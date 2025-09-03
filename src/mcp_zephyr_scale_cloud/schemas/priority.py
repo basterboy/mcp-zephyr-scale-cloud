@@ -2,8 +2,14 @@
 
 from pydantic import Field, field_validator
 
-from .base import BaseEntity, PagedResponse
+from .base import BaseEntity, EntityWithLink, PagedResponse
 from .common import OptionValue, ProjectLink
+
+
+class PriorityLink(EntityWithLink):
+    """Priority link reference."""
+
+    pass
 
 
 class Priority(OptionValue):
