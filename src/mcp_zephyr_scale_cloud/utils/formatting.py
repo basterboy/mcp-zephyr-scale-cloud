@@ -8,6 +8,7 @@ from ..schemas.status import Status, StatusList
 from ..schemas.test_case import TestCase
 from ..schemas.test_script import TestScript
 from ..schemas.test_step import TestStep, TestStepsList
+from ..schemas.version import TestCaseVersionLink, TestCaseVersionList
 
 
 def format_priority_display(priority: Priority) -> str:
@@ -733,3 +734,52 @@ def format_test_case_details(test_case: TestCase) -> str:
         output += "\n🔗 **Links:** No links configured\n"
 
     return output
+
+
+def format_test_case_version_display(version: TestCaseVersionLink) -> str:
+    """Format a single test case version for display."""
+    output = f"🔢 **Version {version.id}**\n"
+    output += f"  🔗 **Link:** {version.self}\n"
+    return output
+
+
+def format_test_case_versions_list(
+    versions: TestCaseVersionList, test_case_key: str
+) -> str:
+    """Format paginated list of test case versions for display."""
+    if not versions.values:
+        return f"📝 **No versions found for test case {test_case_key}**"
+
+    count = len(versions.values)
+    total_str = (
+        f" (showing {count}"
+        + (
+            f" of {versions.total}"
+            if hasattr(versions, "total") and versions.total
+            else ""
+        )
+        + ")"
+    )
+
+    output = (
+        f"📝 **Found {count} version{'s' if count != 1 else ''} for test case "
+        f"{test_case_key}**{total_str}\n\n"
+    )
+
+    for i, version in enumerate(versions.values, 1):
+        output += f"**Version {i}:** ID {version.id}\n"
+        output += f"  🔗 **API Link:** {version.self}\n\n"
+
+    # Pagination info
+    if versions.isLast is False:
+        output += (
+            f"\n📄 **Pagination:** Page {versions.startAt // versions.maxResults + 1}"
+        )
+        if hasattr(versions, "total") and versions.total:
+            total_pages = (
+                versions.total + versions.maxResults - 1
+            ) // versions.maxResults
+            output += f" of {total_pages}"
+        output += f" (max results: {versions.maxResults})\n"
+
+    return output.strip()

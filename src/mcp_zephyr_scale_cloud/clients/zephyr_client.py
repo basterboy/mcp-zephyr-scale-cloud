@@ -26,6 +26,7 @@ from ..schemas.status import (
 from ..schemas.test_case import TestCase
 from ..schemas.test_script import TestScript, TestScriptInput
 from ..schemas.test_step import TestStepsInput, TestStepsList
+from ..schemas.version import TestCaseVersionList
 from ..utils.validation import (
     ValidationResult,
     validate_api_response,
@@ -724,4 +725,88 @@ class ZephyrClient:
             return ValidationResult(
                 False,
                 [f"Failed to get test case {test_case_key}: {str(e)}"],
+            )
+
+    async def get_test_case_versions(
+        self,
+        test_case_key: str,
+        max_results: int = 10,
+        start_at: int = 0,
+    ) -> "ValidationResult[TestCaseVersionList]":
+        """
+        Get all versions for a test case.
+
+        Args:
+            test_case_key: The key of the test case (format: [A-Z]+-T[0-9]+)
+            max_results: Maximum number of results to return (default: 10, max: 1000)
+            start_at: Zero-indexed starting position (default: 0)
+
+        Returns:
+            ValidationResult with TestCaseVersionList data or error messages
+        """
+        try:
+            # Validate pagination parameters
+            validation_result = validate_pagination_params(max_results, start_at)
+            if not validation_result.is_valid:
+                return ValidationResult(False, validation_result.errors)
+
+            params = {
+                "maxResults": max_results,
+                "startAt": start_at,
+            }
+
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.config.base_url}/testcases/{test_case_key}/versions",
+                    headers=self.headers,
+                    params=params,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, TestCaseVersionList)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [f"Failed to get versions for test case {test_case_key}: {str(e)}"],
+            )
+
+    async def get_test_case_version(
+        self, test_case_key: str, version: int
+    ) -> "ValidationResult[TestCase]":
+        """
+        Get a specific version of a test case.
+
+        Args:
+            test_case_key: The key of the test case (format: [A-Z]+-T[0-9]+)
+            version: Version number to retrieve
+
+        Returns:
+            ValidationResult with TestCase data or error messages
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.config.base_url}/testcases/{test_case_key}/versions/{version}",
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, TestCase)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [
+                    f"Failed to get version {version} for test case "
+                    f"{test_case_key}: {str(e)}"
+                ],
             )
