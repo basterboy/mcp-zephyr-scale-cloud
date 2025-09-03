@@ -493,8 +493,16 @@ def format_test_script_display(test_script: TestScript) -> str:
     type_emoji = "📄" if test_script.type == "plain" else "🔧"
     output += f"{type_emoji} **Type:** {test_script.type.upper()}\n\n"
 
-    # Add script content with proper formatting
-    output += f"📋 **Content:**\n```\n{test_script.text}\n```"
+    # Handle empty script content
+    if not test_script.text or test_script.text.strip() == "":
+        output += "📋 **Content:** *(No script content yet)*\n"
+        output += (
+            "💡 **Note:** This test case doesn't have a script yet. "
+            "Use `create_test_script` to add one."
+        )
+    else:
+        # Add script content with proper formatting
+        output += f"📋 **Content:**\n```\n{test_script.text}\n```"
 
     return output
 
@@ -513,19 +521,27 @@ def format_test_script_details(test_script: TestScript) -> str:
         output += "🔧 **Type:** BDD (Behavior-Driven Development)\n"
         output += "💡 **Description:** Supports remote execution via API plugin\n"
 
-    output += "\n📋 **Script Content:**\n"
-    output += f"```\n{test_script.text}\n```\n"
+    # Handle script content
+    if not test_script.text or test_script.text.strip() == "":
+        output += "\n📋 **Script Content:** *(No script content yet)*\n"
+        output += (
+            "\n💡 **Note:** This test case doesn't have a script yet. "
+            "Use `create_test_script` to add one."
+        )
+    else:
+        output += "\n📋 **Script Content:**\n"
+        output += f"```\n{test_script.text}\n```\n"
 
-    # Add usage notes
-    if test_script.type == "plain":
-        output += (
-            "\n💡 **Note:** You can convert this to step-by-step format "
-            "using the test steps endpoint."
-        )
-    elif test_script.type == "bdd":
-        output += (
-            "\n💡 **Note:** This BDD script can be executed remotely "
-            "via build system integration."
-        )
+        # Add usage notes for existing scripts
+        if test_script.type == "plain":
+            output += (
+                "\n💡 **Note:** You can convert this to step-by-step format "
+                "using the test steps endpoint."
+            )
+        elif test_script.type == "bdd":
+            output += (
+                "\n💡 **Note:** This BDD script can be executed remotely "
+                "via build system integration."
+            )
 
     return output
