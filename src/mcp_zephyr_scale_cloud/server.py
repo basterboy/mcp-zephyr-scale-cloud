@@ -22,6 +22,7 @@ from .utils.formatting import (
     format_status_list,
     format_success_message,
     format_test_case_display,
+    format_test_case_versions_list,
     format_test_script_display,
     format_test_steps_list,
     format_validation_errors,
@@ -38,6 +39,7 @@ from .utils.validation import (
     validate_test_script_type,
     validate_test_steps_input,
     validate_test_steps_mode,
+    validate_version_number,
 )
 
 # Load environment variables
@@ -128,7 +130,7 @@ async def zephyr_server_lifespan(server):
         "config_valid": config is not None,
         "api_accessible": zephyr_client is not None and not startup_errors,
         "startup_errors": startup_errors,
-        "tools_count": 17,  # healthcheck + priorities + statuses + folders + test cases
+        "tools_count": 19,  # healthcheck + priorities + statuses + folders + test cases
         "base_url": config.base_url if config else None,
     }
 
@@ -1046,6 +1048,100 @@ async def get_test_case(test_case_key: str) -> str:
         return format_error_message(
             "Get Test Case",
             f"Failed to retrieve test case {test_case_key}",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def get_test_case_versions(
+    test_case_key: str, max_results: int = 10, start_at: int = 0
+) -> str:
+    """Get all versions for a test case in Zephyr Scale Cloud.
+
+    Args:
+        test_case_key: The key of the test case (format: [PROJECT]-T[NUMBER])
+        max_results: Maximum number of results to return (default: 10, max: 1000)
+        start_at: Zero-indexed starting position (default: 0)
+
+    Returns:
+        Formatted list of test case versions or error message
+    """
+    if not zephyr_client:
+        return format_error_message(
+            "Get Test Case Versions", "Client not initialized", _CONFIG_ERROR_MSG
+        )
+
+    # Validate test case key
+    test_case_validation = validate_test_case_key(test_case_key)
+    if not test_case_validation.is_valid:
+        return format_error_message(
+            "Get Test Case Versions",
+            "Invalid test case key",
+            "; ".join(test_case_validation.errors),
+        )
+
+    # Get versions via API
+    result = await zephyr_client.get_test_case_versions(
+        test_case_key=test_case_key, max_results=max_results, start_at=start_at
+    )
+
+    if result.is_valid:
+        return format_test_case_versions_list(result.data, test_case_key)
+    else:
+        return format_error_message(
+            "Get Test Case Versions",
+            f"Failed to retrieve versions for test case {test_case_key}",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def get_test_case_version(test_case_key: str, version: int) -> str:
+    """Get a specific version of a test case in Zephyr Scale Cloud.
+
+    Args:
+        test_case_key: The key of the test case (format: [PROJECT]-T[NUMBER])
+        version: Version number to retrieve
+
+    Returns:
+        Formatted test case information for the specific version or error message
+    """
+    if not zephyr_client:
+        return format_error_message(
+            "Get Test Case Version", "Client not initialized", _CONFIG_ERROR_MSG
+        )
+
+    # Validate test case key
+    test_case_validation = validate_test_case_key(test_case_key)
+    if not test_case_validation.is_valid:
+        return format_error_message(
+            "Get Test Case Version",
+            "Invalid test case key",
+            "; ".join(test_case_validation.errors),
+        )
+
+    # Validate version number
+    version_validation = validate_version_number(version)
+    if not version_validation.is_valid:
+        return format_error_message(
+            "Get Test Case Version",
+            "Invalid version number",
+            "; ".join(version_validation.errors),
+        )
+
+    # Get specific version via API
+    result = await zephyr_client.get_test_case_version(
+        test_case_key=test_case_key, version=version
+    )
+
+    if result.is_valid:
+        # Add version info to the display
+        version_note = f"📋 **Test Case Version {version}** for {test_case_key}\n\n"
+        return version_note + format_test_case_display(result.data)
+    else:
+        return format_error_message(
+            "Get Test Case Version",
+            f"Failed to retrieve version {version} for test case {test_case_key}",
             "; ".join(result.errors),
         )
 

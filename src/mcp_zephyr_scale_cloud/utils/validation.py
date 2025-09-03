@@ -405,3 +405,21 @@ def validate_test_script_type(script_type: str) -> "ValidationResult[str]":
                 f"Valid types: {', '.join(valid_types)}"
             ],
         )
+
+
+def validate_version_number(version: int) -> "ValidationResult[int]":
+    """
+    Validate version number.
+
+    Args:
+        version: Version number to validate
+
+    Returns:
+        ValidationResult with validated version or error messages
+    """
+    if not isinstance(version, int) or version < 1:
+        return ValidationResult(
+            False,
+            ["Version must be a positive integer (1 or greater)"],
+        )
+    return ValidationResult(True, data=version)

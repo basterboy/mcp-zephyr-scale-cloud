@@ -44,7 +44,7 @@ class TestMCPServerIntegration:
                 assert result["config_valid"] is True
                 assert result["api_accessible"] is True
                 assert result["startup_errors"] == []
-                assert result["tools_count"] == 17
+                assert result["tools_count"] == 19
 
     @pytest.mark.asyncio
     async def test_server_lifespan_config_error(self):
@@ -77,6 +77,8 @@ class TestMCPServerIntegration:
             "get_test_script",
             "create_test_script",
             "get_test_case",
+            "get_test_case_versions",
+            "get_test_case_version",
         ]
 
         for tool_name in expected_tools:
@@ -527,3 +529,74 @@ class TestFolderMCPTools:
         result = await create_folder("Test", "PROJ", "TEST_CASE", "0")
         assert "Invalid parent folder ID" in result
         assert "must be a positive integer" in result
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_get_test_case_versions_success(self, mock_client):
+        """Test successful get_test_case_versions tool call."""
+        from src.mcp_zephyr_scale_cloud.schemas.version import (
+            TestCaseVersionLink,
+            TestCaseVersionList,
+        )
+        from src.mcp_zephyr_scale_cloud.server import get_test_case_versions
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response
+        mock_version_link = TestCaseVersionLink(
+            id=1, self="https://api.example.com/testcases/RGM-T1657/versions/1"
+        )
+        mock_version_list = TestCaseVersionList(
+            values=[mock_version_link],
+            startAt=0,
+            maxResults=10,
+            total=1,
+            isLast=True,
+        )
+        mock_result = ValidationResult(True, data=mock_version_list)
+        mock_client.get_test_case_versions = AsyncMock(return_value=mock_result)
+
+        response = await get_test_case_versions(test_case_key="RGM-T1657")
+
+        assert "Found 1 version for test case RGM-T1657" in response
+        assert "**Version 1:** ID 1" in response
+        mock_client.get_test_case_versions.assert_called_once_with(
+            test_case_key="RGM-T1657", max_results=10, start_at=0
+        )
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_get_test_case_version_success(self, mock_client):
+        """Test successful get_test_case_version tool call."""
+        from src.mcp_zephyr_scale_cloud.schemas.common import ProjectLink
+        from src.mcp_zephyr_scale_cloud.schemas.priority import PriorityLink
+        from src.mcp_zephyr_scale_cloud.schemas.status import StatusLink
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import TestCase
+        from src.mcp_zephyr_scale_cloud.server import get_test_case_version
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response
+        mock_test_case = TestCase(
+            id=176838742,
+            key="RGM-T1657",
+            name="Test case version 2",
+            project=ProjectLink(
+                id=394834, self="https://api.example.com/projects/394834"
+            ),
+            priority=PriorityLink(
+                id=7143276, self="https://api.example.com/priorities/7143276"
+            ),
+            status=StatusLink(
+                id=9716661, self="https://api.example.com/statuses/9716661"
+            ),
+        )
+        mock_result = ValidationResult(True, data=mock_test_case)
+        mock_client.get_test_case_version = AsyncMock(return_value=mock_result)
+
+        response = await get_test_case_version(test_case_key="RGM-T1657", version=2)
+
+        assert "**Test Case Version 2** for RGM-T1657" in response
+        assert "**Test Case: RGM-T1657**" in response
+        assert "**Name:** Test case version 2" in response
+        mock_client.get_test_case_version.assert_called_once_with(
+            test_case_key="RGM-T1657", version=2
+        )

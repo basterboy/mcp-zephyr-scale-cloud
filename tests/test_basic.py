@@ -656,3 +656,52 @@ class TestEnvironmentConfiguration:
         assert "COVERAGE: Issue 2051212" in formatted
         assert "Web Links (1):" in formatted
         assert "https://docs.example.com/feature" in formatted
+
+    def test_version_schema_creation(self):
+        """Test version schema creation and basic functionality."""
+        from src.mcp_zephyr_scale_cloud.schemas.version import (
+            TestCaseVersionLink,
+            TestCaseVersionList,
+        )
+
+        # Test TestCaseVersionLink
+        version_link = TestCaseVersionLink(
+            id=123, self="https://api.example.com/testcases/PROJ-T1/versions/1"
+        )
+        assert version_link.id == 123
+        assert (
+            version_link.self == "https://api.example.com/testcases/PROJ-T1/versions/1"
+        )
+
+        # Test TestCaseVersionList
+        version_list = TestCaseVersionList(
+            values=[version_link],
+            startAt=0,
+            maxResults=10,
+            total=1,
+            isLast=True,
+        )
+        assert len(version_list.values) == 1
+        assert version_list.values[0].id == 123
+
+    def test_version_number_validation(self):
+        """Test version number validation."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import validate_version_number
+
+        # Valid version numbers
+        result = validate_version_number(1)
+        assert result.is_valid
+        assert result.data == 1
+
+        result = validate_version_number(100)
+        assert result.is_valid
+        assert result.data == 100
+
+        # Invalid version numbers
+        result = validate_version_number(0)
+        assert not result.is_valid
+        assert "positive integer" in str(result.errors)
+
+        result = validate_version_number(-1)
+        assert not result.is_valid
+        assert "positive integer" in str(result.errors)

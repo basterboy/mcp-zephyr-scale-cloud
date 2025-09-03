@@ -62,6 +62,10 @@ from .test_step import (
     TestStepTestCase,
     TestStepTestCaseParameters,
 )
+from .version import (
+    TestCaseVersionLink,
+    TestCaseVersionList,
+)
 
 __all__ = [
     "BaseEntity",
@@ -110,4 +114,6 @@ __all__ = [
     "TestStepsMode",
     "TestStepTestCase",
     "TestStepTestCaseParameters",
+    "TestCaseVersionLink",
+    "TestCaseVersionList",
 ]
