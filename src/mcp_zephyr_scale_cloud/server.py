@@ -5,6 +5,7 @@ using Pydantic schemas for validation and type safety.
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
@@ -67,6 +68,25 @@ _CONFIG_ERROR_MSG = (
 # Global variables for configuration and client
 config = None
 zephyr_client = None
+
+
+def get_project_key_with_default(provided_key: str | None = None) -> str | None:
+    """
+    Get project key using provided value or default from environment.
+
+    Args:
+        provided_key: Project key provided by user (optional)
+
+    Returns:
+        Project key to use, or None if neither provided nor default available
+    """
+    if provided_key:
+        return provided_key
+
+    # Try to get default from environment
+    default_key = os.getenv("ZEPHYR_SCALE_DEFAULT_PROJECT_KEY")
+
+    return default_key
 
 
 @asynccontextmanager
@@ -256,8 +276,8 @@ async def get_priority(priority_id: int) -> str:
 
 @mcp.tool()
 async def create_priority(
-    project_key: str,
     name: str,
+    project_key: str = None,
     description: str | None = None,
     color: str | None = None,
 ) -> str:
@@ -265,8 +285,9 @@ async def create_priority(
     Create a new priority in Zephyr Scale Cloud.
 
     Args:
-        project_key: Jira project key where the priority will be created (e.g., 'PROJ')
         name: Name of the priority (max 255 characters)
+        project_key: Jira project key (optional, uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY
+                     if not provided)
         description: Optional description of the priority (max 255 characters)
         color: Optional color code for the priority (e.g., '#FF0000')
 
@@ -275,6 +296,15 @@ async def create_priority(
     """
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
+
+    # Get project key with default fallback
+    project_key = get_project_key_with_default(project_key)
+    if not project_key:
+        return format_error_message(
+            "Create Priority",
+            "No project key provided",
+            "Please provide project_key parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
+        )
 
     # Validate input data using Pydantic schema
     request_data = {
@@ -462,9 +492,9 @@ async def get_status(status_id: int) -> str:
 
 @mcp.tool()
 async def create_status(
-    project_key: str,
     name: str,
     status_type: str,
+    project_key: str = None,
     description: str | None = None,
     color: str | None = None,
 ) -> str:
@@ -472,10 +502,9 @@ async def create_status(
     Create a new status in Zephyr Scale Cloud.
 
     Args:
-        project_key: Jira project key where the status will be created (e.g., 'PROJ')
         name: Name of the status (max 255 characters)
-        status_type: Status type ('TEST_CASE', 'TEST_PLAN', 'TEST_CYCLE',
-                     'TEST_EXECUTION')
+        status_type: Status type ('TEST_CASE', 'TEST_PLAN', 'TEST_CYCLE', 'TEST_EXECUTION')
+        project_key: Jira project key (optional, uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided)
         description: Optional description of the status (max 255 characters)
         color: Optional color code for the status (e.g., '#FF0000')
 
@@ -484,6 +513,15 @@ async def create_status(
     """
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
+
+    # Get project key with default fallback
+    project_key = get_project_key_with_default(project_key)
+    if not project_key:
+        return format_error_message(
+            "Create Status",
+            "No project key provided",
+            "Please provide project_key parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
+        )
 
     # Validate input data using Pydantic schema
     request_data = {
@@ -690,16 +728,16 @@ async def get_folder(folder_id: int) -> str:
 @mcp.tool()
 async def create_folder(
     name: str,
-    project_key: str,
     folder_type: str,
+    project_key: str = None,
     parent_id: str | None = None,
 ) -> str:
     """Create a new folder in Zephyr Scale Cloud.
 
     Args:
         name: Folder name (1-255 characters)
-        project_key: Jira project key
         folder_type: Folder type (TEST_CASE, TEST_PLAN, TEST_CYCLE)
+        project_key: Jira project key (optional, uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided)
         parent_id: Optional parent folder ID as string (null for root folders)
 
     Returns:
@@ -726,6 +764,15 @@ async def create_folder(
     if not zephyr_client:
         return format_error_message(
             "Create Folder", "Client not initialized", _CONFIG_ERROR_MSG
+        )
+
+    # Get project key with default fallback
+    project_key = get_project_key_with_default(project_key)
+    if not project_key:
+        return format_error_message(
+            "Create Folder",
+            "No project key provided",
+            "Please provide project_key parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
         )
 
     # Build request data
@@ -1320,8 +1367,8 @@ async def create_web_link(test_case_key: str, url: str, description: str = None)
 
 @mcp.tool()
 async def create_test_case(
-    project_key: str,
     name: str,
+    project_key: str = None,
     objective: str = None,
     precondition: str = None,
     estimated_time: int = None,
@@ -1336,8 +1383,8 @@ async def create_test_case(
     """Create a new test case in Zephyr Scale Cloud.
 
     Args:
-        project_key: Jira project key (e.g., 'PROJ')
         name: Test case name
+        project_key: Jira project key (optional, uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided)
         objective: Test case objective (optional)
         precondition: Test case preconditions (optional)
         estimated_time: Estimated duration in milliseconds (optional)
@@ -1356,6 +1403,19 @@ async def create_test_case(
         return format_error_message(
             "Create Test Case", "Client not initialized", _CONFIG_ERROR_MSG
         )
+
+    # Use default project key if not provided
+    if project_key is None:
+        default_project_key = os.getenv("ZEPHYR_SCALE_DEFAULT_PROJECT_KEY")
+        if default_project_key:
+            project_key = default_project_key
+            logger.info(f"Using default project key: {project_key}")
+        else:
+            return format_error_message(
+                "Create Test Case",
+                "No project key provided",
+                "Please provide a project_key parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
+            )
 
     # Validate project key
     project_validation = validate_project_key(project_key)
