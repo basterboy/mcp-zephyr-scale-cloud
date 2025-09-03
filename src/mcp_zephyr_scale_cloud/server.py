@@ -4,6 +4,7 @@ This file contains the Model Context Protocol (MCP) SERVER implementation
 using Pydantic schemas for validation and type safety.
 """
 
+import json
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -909,8 +910,6 @@ async def create_test_steps(
 
     # Parse and validate steps JSON
     try:
-        import json
-
         steps_data = json.loads(steps)
         if not isinstance(steps_data, list):
             return format_error_message(
@@ -1382,8 +1381,8 @@ async def create_test_case(
     status_name: str | None = None,
     folder_id: str | None = None,
     owner_id: str | None = None,
-    labels: list[str] | None = None,
-    custom_fields: dict | None = None,
+    labels: str | None = None,
+    custom_fields: str | None = None,
 ) -> str:
     """Create a new test case in Zephyr Scale Cloud.
 
@@ -1399,8 +1398,10 @@ async def create_test_case(
         status_name: Status name, defaults to 'Draft' (optional)
         folder_id: Folder ID as string to place the test case (optional)
         owner_id: Jira user account ID for owner (optional)
-        labels: List of labels for the test case (optional)
-        custom_fields: Custom fields dictionary (optional)
+        labels: Labels as JSON array string (e.g., '["automation", "smoke"]') or
+                comma-separated (e.g., "automation, smoke") (optional)
+        custom_fields: Custom fields as JSON string (e.g.,
+                      '{"Components": ["Update"], "Version": "v1.0.0"}') (optional)
 
     Returns:
         Success message with created test case details or error message
@@ -1494,6 +1495,75 @@ async def create_test_case(
                 f"Folder ID must be a valid integer, got: {folder_id}",
             )
 
+    # Convert and validate labels
+    parsed_labels = None
+    if labels is not None:
+        try:
+            # Try JSON array format first
+            parsed_labels = json.loads(labels)
+            if not isinstance(parsed_labels, list):
+                return format_error_message(
+                    "Create Test Case",
+                    "Invalid labels format",
+                    "Labels must be a JSON array (e.g., '[\"automation\", \"smoke\"]') "
+                    "or comma-separated string",
+                )
+            # Validate all items are strings
+            for item in parsed_labels:
+                if not isinstance(item, str):
+                    return format_error_message(
+                        "Create Test Case",
+                        "Invalid labels format",
+                        "All labels must be strings",
+                    )
+        except json.JSONDecodeError:
+            # Fall back to comma-separated format
+            try:
+                parsed_labels = [
+                    label.strip() for label in labels.split(",") if label.strip()
+                ]
+                if not parsed_labels:
+                    return format_error_message(
+                        "Create Test Case",
+                        "Invalid labels format",
+                        "Labels cannot be empty. Use JSON array format "
+                        "or comma-separated values",
+                    )
+            except Exception as e:
+                return format_error_message(
+                    "Create Test Case",
+                    "Invalid labels format",
+                    f"Failed to parse labels: {str(e)}. Use JSON array format "
+                    f"(e.g., '[\"label1\", \"label2\"]') or comma-separated "
+                    f"(e.g., 'label1, label2')",
+                )
+
+    # Convert and validate custom fields
+    parsed_custom_fields = None
+    if custom_fields is not None:
+        try:
+            parsed_custom_fields = json.loads(custom_fields)
+            if not isinstance(parsed_custom_fields, dict):
+                return format_error_message(
+                    "Create Test Case",
+                    "Invalid custom fields format",
+                    "Custom fields must be a JSON object "
+                    "(e.g., '{\"Components\": [\"Update\"], \"Version\": \"v1.0.0\"}')",
+                )
+        except json.JSONDecodeError as e:
+            return format_error_message(
+                "Create Test Case",
+                "Invalid custom fields format",
+                f"Custom fields must be valid JSON: {str(e)}. "
+                f"Example: '{{\"Components\": [\"Update\"], \"Version\": \"v1.0.0\"}}'",
+            )
+        except Exception as e:
+            return format_error_message(
+                "Create Test Case",
+                "Invalid custom fields format",
+                f"Failed to parse custom fields: {str(e)}",
+            )
+
     # Build test case data
     test_case_data = {
         "projectKey": project_key,
@@ -1525,11 +1595,11 @@ async def create_test_case(
     if owner_id is not None:
         test_case_data["ownerId"] = owner_id
 
-    if labels is not None:
-        test_case_data["labels"] = labels
+    if parsed_labels is not None:
+        test_case_data["labels"] = parsed_labels
 
-    if custom_fields is not None:
-        test_case_data["customFields"] = custom_fields
+    if parsed_custom_fields is not None:
+        test_case_data["customFields"] = parsed_custom_fields
 
     # Validate complete test case input
     validation_result = validate_test_case_input(test_case_data)
