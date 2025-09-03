@@ -517,3 +517,120 @@ def validate_issue_id(issue_id: int) -> "ValidationResult[int]":
         return ValidationResult(False, errors)
 
     return ValidationResult(True, data=issue_id)
+
+
+def validate_test_case_input(test_case_data: dict) -> "ValidationResult":
+    """
+    Validate test case input data.
+
+    Args:
+        test_case_data: Dictionary containing test case input data
+
+    Returns:
+        ValidationResult with validated TestCaseInput or error messages
+    """
+    from ..schemas.test_case import TestCaseInput
+
+    try:
+        validated_input = TestCaseInput(**test_case_data)
+        return ValidationResult(True, data=validated_input)
+
+    except ValidationError as e:
+        errors = []
+        for error in e.errors():
+            field = ".".join(str(loc) for loc in error["loc"])
+            message = error["msg"]
+            errors.append(f"Field '{field}': {message}")
+
+        return ValidationResult(False, errors)
+
+    except Exception as e:
+        return ValidationResult(False, [f"Unexpected validation error: {str(e)}"])
+
+
+def validate_test_case_name(name: str) -> "ValidationResult[str]":
+    """
+    Validate test case name.
+
+    Args:
+        name: Test case name to validate
+
+    Returns:
+        ValidationResult with validated name or error messages
+    """
+    if not isinstance(name, str):
+        return ValidationResult(
+            False,
+            [f"Name must be a string, got {type(name).__name__}"],
+        )
+
+    # Remove leading/trailing whitespace
+    name = name.strip()
+
+    if not name:
+        return ValidationResult(
+            False,
+            ["Test case name cannot be empty or only whitespace"],
+        )
+
+    if len(name) > 255:
+        return ValidationResult(
+            False,
+            [f"Test case name too long: {len(name)} characters (max 255)"],
+        )
+
+    return ValidationResult(True, data=name)
+
+
+def validate_estimated_time(estimated_time: int) -> "ValidationResult[int]":
+    """
+    Validate estimated time in milliseconds.
+
+    Args:
+        estimated_time: Estimated time to validate
+
+    Returns:
+        ValidationResult with validated time or error messages
+    """
+    if not isinstance(estimated_time, int) or estimated_time < 0:
+        return ValidationResult(
+            False,
+            ["Estimated time must be a non-negative integer (milliseconds)"],
+        )
+    return ValidationResult(True, data=estimated_time)
+
+
+def validate_folder_id(folder_id: int) -> "ValidationResult[int]":
+    """
+    Validate folder ID.
+
+    Args:
+        folder_id: Folder ID to validate
+
+    Returns:
+        ValidationResult with validated folder ID or error messages
+    """
+    if not isinstance(folder_id, int) or folder_id < 1:
+        return ValidationResult(
+            False,
+            ["Folder ID must be a positive integer (1 or greater)"],
+        )
+    return ValidationResult(True, data=folder_id)
+
+
+def validate_component_id(component_id: int) -> "ValidationResult[int]":
+    """
+    Validate Jira component ID.
+
+    Args:
+        component_id: Component ID to validate
+
+    Returns:
+        ValidationResult with validated component ID or error messages
+    """
+    if not isinstance(component_id, int) or component_id < 0:
+        return ValidationResult(
+            False,
+            ["Component ID must be a non-negative integer"],
+        )
+    return ValidationResult(True, data=component_id)

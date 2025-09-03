@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from ..schemas.base import CreatedResource
 from ..schemas.folder import Folder, FolderList
 from ..schemas.priority import Priority, PriorityList
 from ..schemas.status import Status, StatusList
@@ -814,5 +815,31 @@ def format_test_case_links_display(links: TestCaseLinkList, test_case_key: str) 
             output += f"    🔗 **Link ID:** {link.id}\n\n"
     else:
         output += "🌐 **Web Links:** None configured\n\n"
+
+    return output.strip()
+
+
+def format_test_case_creation_success(
+    created_resource: CreatedResource, project_key: str
+) -> str:
+    """Format test case creation success message."""
+
+    output = "✅ **Test Case Created Successfully!**\n\n"
+
+    # Show the key if available (test cases should have it)
+    if hasattr(created_resource, "key") and created_resource.key:
+        output += f"🆔 **Test Case Key:** {created_resource.key}\n"
+
+    output += f"📋 **Resource ID:** {created_resource.id}\n"
+
+    if created_resource.self:
+        output += f"🔗 **API URL:** {created_resource.self}\n"
+
+    output += f"📁 **Project:** {project_key}\n\n"
+    output += "The test case has been created and is ready for use. You can now:\n"
+    output += "• Add test steps using the `create_test_steps` tool\n"
+    output += "• Create a test script using the `create_test_script` tool\n"
+    output += "• Link to Jira issues using the `create_issue_link` tool\n"
+    output += "• Add web links using the `create_web_link` tool\n"
 
     return output.strip()
