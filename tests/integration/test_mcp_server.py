@@ -743,7 +743,7 @@ class TestFolderMCPTools:
             name="Test user login functionality",
             objective="Verify user can log in with valid credentials",
             priority_name="High",
-            labels=["automation", "login"],
+            labels='["automation", "login"]',
         )
 
         assert "Test Case Created Successfully!" in response
