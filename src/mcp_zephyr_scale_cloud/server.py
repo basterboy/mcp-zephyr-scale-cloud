@@ -277,7 +277,7 @@ async def get_priority(priority_id: int) -> str:
 @mcp.tool()
 async def create_priority(
     name: str,
-    project_key: str = None,
+    project_key: str | None = None,
     description: str | None = None,
     color: str | None = None,
 ) -> str:
@@ -303,7 +303,8 @@ async def create_priority(
         return format_error_message(
             "Create Priority",
             "No project key provided",
-            "Please provide project_key parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
+            "Please provide project_key parameter or set "
+            "ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
         )
 
     # Validate input data using Pydantic schema
@@ -494,7 +495,7 @@ async def get_status(status_id: int) -> str:
 async def create_status(
     name: str,
     status_type: str,
-    project_key: str = None,
+    project_key: str | None = None,
     description: str | None = None,
     color: str | None = None,
 ) -> str:
@@ -503,8 +504,10 @@ async def create_status(
 
     Args:
         name: Name of the status (max 255 characters)
-        status_type: Status type ('TEST_CASE', 'TEST_PLAN', 'TEST_CYCLE', 'TEST_EXECUTION')
-        project_key: Jira project key (optional, uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided)
+        status_type: Status type ('TEST_CASE', 'TEST_PLAN', 'TEST_CYCLE',
+                             'TEST_EXECUTION')
+        project_key: Jira project key (optional, uses
+                     ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided)
         description: Optional description of the status (max 255 characters)
         color: Optional color code for the status (e.g., '#FF0000')
 
@@ -520,7 +523,8 @@ async def create_status(
         return format_error_message(
             "Create Status",
             "No project key provided",
-            "Please provide project_key parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
+            "Please provide project_key parameter or set "
+            "ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
         )
 
     # Validate input data using Pydantic schema
@@ -729,7 +733,7 @@ async def get_folder(folder_id: int) -> str:
 async def create_folder(
     name: str,
     folder_type: str,
-    project_key: str = None,
+    project_key: str | None = None,
     parent_id: str | None = None,
 ) -> str:
     """Create a new folder in Zephyr Scale Cloud.
@@ -737,7 +741,8 @@ async def create_folder(
     Args:
         name: Folder name (1-255 characters)
         folder_type: Folder type (TEST_CASE, TEST_PLAN, TEST_CYCLE)
-        project_key: Jira project key (optional, uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided)
+        project_key: Jira project key (optional, uses
+                     ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided)
         parent_id: Optional parent folder ID as string (null for root folders)
 
     Returns:
@@ -772,7 +777,8 @@ async def create_folder(
         return format_error_message(
             "Create Folder",
             "No project key provided",
-            "Please provide project_key parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
+            "Please provide project_key parameter or set "
+            "ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
         )
 
     # Build request data
@@ -1306,7 +1312,9 @@ async def create_issue_link(test_case_key: str, issue_id: int) -> str:
 
 
 @mcp.tool()
-async def create_web_link(test_case_key: str, url: str, description: str = None) -> str:
+async def create_web_link(
+    test_case_key: str, url: str, description: str | None = None
+) -> str:
     """Create a link between a test case and a web URL in Zephyr Scale Cloud.
 
     Args:
@@ -1368,23 +1376,24 @@ async def create_web_link(test_case_key: str, url: str, description: str = None)
 @mcp.tool()
 async def create_test_case(
     name: str,
-    project_key: str = None,
-    objective: str = None,
-    precondition: str = None,
-    estimated_time: int = None,
-    component_id: int = None,
-    priority_name: str = None,
-    status_name: str = None,
-    folder_id: int = None,
-    owner_id: str = None,
-    labels: list[str] = None,
-    custom_fields: dict = None,
+    project_key: str | None = None,
+    objective: str | None = None,
+    precondition: str | None = None,
+    estimated_time: int | None = None,
+    component_id: int | None = None,
+    priority_name: str | None = None,
+    status_name: str | None = None,
+    folder_id: int | None = None,
+    owner_id: str | None = None,
+    labels: list[str] | None = None,
+    custom_fields: dict | None = None,
 ) -> str:
     """Create a new test case in Zephyr Scale Cloud.
 
     Args:
         name: Test case name
-        project_key: Jira project key (optional, uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided)
+        project_key: Jira project key (optional, uses
+                     ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided)
         objective: Test case objective (optional)
         precondition: Test case preconditions (optional)
         estimated_time: Estimated duration in milliseconds (optional)
@@ -1414,7 +1423,8 @@ async def create_test_case(
             return format_error_message(
                 "Create Test Case",
                 "No project key provided",
-                "Please provide a project_key parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
+                "Please provide a project_key parameter or set "
+                "ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
             )
 
     # Validate project key
