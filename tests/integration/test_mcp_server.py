@@ -44,7 +44,7 @@ class TestMCPServerIntegration:
                 assert result["config_valid"] is True
                 assert result["api_accessible"] is True
                 assert result["startup_errors"] == []
-                assert result["tools_count"] == 19
+                assert result["tools_count"] == 22
 
     @pytest.mark.asyncio
     async def test_server_lifespan_config_error(self):
@@ -79,6 +79,9 @@ class TestMCPServerIntegration:
             "get_test_case",
             "get_test_case_versions",
             "get_test_case_version",
+            "get_links",
+            "create_issue_link",
+            "create_web_link",
         ]
 
         for tool_name in expected_tools:
@@ -543,7 +546,7 @@ class TestFolderMCPTools:
 
         # Mock successful API response
         mock_version_link = TestCaseVersionLink(
-            id=1, self="https://api.example.com/testcases/RGM-T1657/versions/1"
+            id=1, self="https://api.example.com/testcases/PROJ-T1234/versions/1"
         )
         mock_version_list = TestCaseVersionList(
             values=[mock_version_link],
@@ -555,12 +558,12 @@ class TestFolderMCPTools:
         mock_result = ValidationResult(True, data=mock_version_list)
         mock_client.get_test_case_versions = AsyncMock(return_value=mock_result)
 
-        response = await get_test_case_versions(test_case_key="RGM-T1657")
+        response = await get_test_case_versions(test_case_key="PROJ-T1234")
 
-        assert "Found 1 version for test case RGM-T1657" in response
+        assert "Found 1 version for test case PROJ-T1234" in response
         assert "**Version 1:** ID 1" in response
         mock_client.get_test_case_versions.assert_called_once_with(
-            test_case_key="RGM-T1657", max_results=10, start_at=0
+            test_case_key="PROJ-T1234", max_results=10, start_at=0
         )
 
     @pytest.mark.asyncio
@@ -576,27 +579,125 @@ class TestFolderMCPTools:
 
         # Mock successful API response
         mock_test_case = TestCase(
-            id=176838742,
-            key="RGM-T1657",
+            id=12345,
+            key="PROJ-T1234",
             name="Test case version 2",
             project=ProjectLink(
-                id=394834, self="https://api.example.com/projects/394834"
+                id=10001, self="https://api.example.com/projects/10001"
             ),
             priority=PriorityLink(
-                id=7143276, self="https://api.example.com/priorities/7143276"
+                id=10002, self="https://api.example.com/priorities/10002"
             ),
-            status=StatusLink(
-                id=9716661, self="https://api.example.com/statuses/9716661"
-            ),
+            status=StatusLink(id=10003, self="https://api.example.com/statuses/10003"),
         )
         mock_result = ValidationResult(True, data=mock_test_case)
         mock_client.get_test_case_version = AsyncMock(return_value=mock_result)
 
-        response = await get_test_case_version(test_case_key="RGM-T1657", version=2)
+        response = await get_test_case_version(test_case_key="PROJ-T1234", version=2)
 
-        assert "**Test Case Version 2** for RGM-T1657" in response
-        assert "**Test Case: RGM-T1657**" in response
+        assert "**Test Case Version 2** for PROJ-T1234" in response
+        assert "**Test Case: PROJ-T1234**" in response
         assert "**Name:** Test case version 2" in response
         mock_client.get_test_case_version.assert_called_once_with(
-            test_case_key="RGM-T1657", version=2
+            test_case_key="PROJ-T1234", version=2
         )
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_get_links_success(self, mock_client):
+        """Test successful get_links tool call."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import (
+            IssueLink,
+            TestCaseLinkList,
+            WebLink,
+        )
+        from src.mcp_zephyr_scale_cloud.server import get_links
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response
+        mock_issue = IssueLink(
+            id=1,
+            issueId=12345,
+            self="https://api.example.com/links/1",
+            target="https://jira.example.com/issue/12345",
+            type="COVERAGE",
+        )
+        mock_web_link = WebLink(
+            id=2,
+            url="https://example.com",
+            description="Example link",
+            self="https://api.example.com/weblinks/2",
+            type="RELATED",
+        )
+        mock_links = TestCaseLinkList(
+            self="https://api.example.com/testcases/PROJ-T1234/links",
+            issues=[mock_issue],
+            webLinks=[mock_web_link],
+        )
+        mock_result = ValidationResult(True, data=mock_links)
+        mock_client.get_test_case_links = AsyncMock(return_value=mock_result)
+
+        response = await get_links(test_case_key="PROJ-T1234")
+
+        assert "Links for test case PROJ-T1234" in response
+        assert "Jira Issues (1):" in response
+        assert "COVERAGE: Issue #12345" in response
+        assert "Web Links (1):" in response
+        assert "https://example.com" in response
+        mock_client.get_test_case_links.assert_called_once_with(
+            test_case_key="PROJ-T1234"
+        )
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_create_issue_link_success(self, mock_client):
+        """Test successful create_issue_link tool call."""
+        from src.mcp_zephyr_scale_cloud.schemas.base import CreatedResource
+        from src.mcp_zephyr_scale_cloud.server import create_issue_link
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response
+        mock_created = CreatedResource(
+            id=12345, self="https://api.example.com/links/12345"
+        )
+        mock_result = ValidationResult(True, data=mock_created)
+        mock_client.create_test_case_issue_link = AsyncMock(return_value=mock_result)
+
+        response = await create_issue_link(test_case_key="PROJ-T1234", issue_id=67890)
+
+        assert "Issue Link Created" in response
+        assert (
+            "Successfully created issue link between test case PROJ-T1234 "
+            "and Jira issue 67890" in response
+        )
+        assert "Resource ID: 12345" in response
+        mock_client.create_test_case_issue_link.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_create_web_link_success(self, mock_client):
+        """Test successful create_web_link tool call."""
+        from src.mcp_zephyr_scale_cloud.schemas.base import CreatedResource
+        from src.mcp_zephyr_scale_cloud.server import create_web_link
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response
+        mock_created = CreatedResource(
+            id=54321, self="https://api.example.com/weblinks/54321"
+        )
+        mock_result = ValidationResult(True, data=mock_created)
+        mock_client.create_test_case_web_link = AsyncMock(return_value=mock_result)
+
+        response = await create_web_link(
+            test_case_key="PROJ-T1234",
+            url="https://docs.example.com",
+            description="Test documentation",
+        )
+
+        assert "Web Link Created" in response
+        assert (
+            "Successfully created web link between test case PROJ-T1234 "
+            "and https://docs.example.com (Test documentation)" in response
+        )
+        assert "Resource ID: 54321" in response
+        mock_client.create_test_case_web_link.assert_called_once()

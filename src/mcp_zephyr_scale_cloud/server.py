@@ -22,6 +22,7 @@ from .utils.formatting import (
     format_status_list,
     format_success_message,
     format_test_case_display,
+    format_test_case_links_display,
     format_test_case_versions_list,
     format_test_script_display,
     format_test_steps_list,
@@ -30,6 +31,8 @@ from .utils.formatting import (
 from .utils.validation import (
     validate_folder_data,
     validate_folder_type,
+    validate_issue_id,
+    validate_issue_link_input,
     validate_priority_data,
     validate_project_key,
     validate_status_data,
@@ -40,6 +43,7 @@ from .utils.validation import (
     validate_test_steps_input,
     validate_test_steps_mode,
     validate_version_number,
+    validate_web_link_input,
 )
 
 # Load environment variables
@@ -130,7 +134,7 @@ async def zephyr_server_lifespan(server):
         "config_valid": config is not None,
         "api_accessible": zephyr_client is not None and not startup_errors,
         "startup_errors": startup_errors,
-        "tools_count": 19,  # healthcheck + priorities + statuses + folders + test cases
+        "tools_count": 22,  # healthcheck + priorities + statuses + folders + test cases
         "base_url": config.base_url if config else None,
     }
 
@@ -1142,6 +1146,167 @@ async def get_test_case_version(test_case_key: str, version: int) -> str:
         return format_error_message(
             "Get Test Case Version",
             f"Failed to retrieve version {version} for test case {test_case_key}",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def get_links(test_case_key: str) -> str:
+    """Get all links (issues + web links) for a test case in Zephyr Scale Cloud.
+
+    Args:
+        test_case_key: The key of the test case (format: [PROJECT]-T[NUMBER])
+
+    Returns:
+        Formatted list of links or error message
+    """
+    if not zephyr_client:
+        return format_error_message(
+            "Get Links", "Client not initialized", _CONFIG_ERROR_MSG
+        )
+
+    # Validate test case key
+    test_case_validation = validate_test_case_key(test_case_key)
+    if not test_case_validation.is_valid:
+        return format_error_message(
+            "Get Links",
+            "Invalid test case key",
+            "; ".join(test_case_validation.errors),
+        )
+
+    # Get links via API
+    result = await zephyr_client.get_test_case_links(test_case_key=test_case_key)
+
+    if result.is_valid:
+        return format_test_case_links_display(result.data, test_case_key)
+    else:
+        return format_error_message(
+            "Get Links",
+            f"Failed to retrieve links for test case {test_case_key}",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def create_issue_link(test_case_key: str, issue_id: int) -> str:
+    """Create a link between a test case and a Jira issue in Zephyr Scale Cloud.
+
+    Args:
+        test_case_key: The key of the test case (format: [PROJECT]-T[NUMBER])
+        issue_id: The Jira issue ID to link to
+
+    Returns:
+        Success message with created link ID or error message
+    """
+    if not zephyr_client:
+        return format_error_message(
+            "Create Issue Link", "Client not initialized", _CONFIG_ERROR_MSG
+        )
+
+    # Validate test case key
+    test_case_validation = validate_test_case_key(test_case_key)
+    if not test_case_validation.is_valid:
+        return format_error_message(
+            "Create Issue Link",
+            "Invalid test case key",
+            "; ".join(test_case_validation.errors),
+        )
+
+    # Validate issue ID
+    issue_id_validation = validate_issue_id(issue_id)
+    if not issue_id_validation.is_valid:
+        return format_error_message(
+            "Create Issue Link",
+            "Invalid issue ID",
+            "; ".join(issue_id_validation.errors),
+        )
+
+    # Validate issue link input
+    issue_link_data = {"issueId": issue_id}
+    validation_result = validate_issue_link_input(issue_link_data)
+    if not validation_result.is_valid:
+        return format_error_message(
+            "Create Issue Link",
+            "Invalid issue link data",
+            "; ".join(validation_result.errors),
+        )
+
+    # Create issue link via API
+    result = await zephyr_client.create_test_case_issue_link(
+        test_case_key=test_case_key, issue_link_input=validation_result.data
+    )
+
+    if result.is_valid:
+        return format_success_message(
+            "Issue Link Created",
+            f"Successfully created issue link between test case {test_case_key} "
+            f"and Jira issue {issue_id}",
+            resource_id=result.data.id,
+        )
+    else:
+        return format_error_message(
+            "Create Issue Link",
+            f"Failed to create issue link for test case {test_case_key}",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def create_web_link(test_case_key: str, url: str, description: str = None) -> str:
+    """Create a link between a test case and a web URL in Zephyr Scale Cloud.
+
+    Args:
+        test_case_key: The key of the test case (format: [PROJECT]-T[NUMBER])
+        url: The web URL to link to
+        description: Optional description for the link
+
+    Returns:
+        Success message with created link ID or error message
+    """
+    if not zephyr_client:
+        return format_error_message(
+            "Create Web Link", "Client not initialized", _CONFIG_ERROR_MSG
+        )
+
+    # Validate test case key
+    test_case_validation = validate_test_case_key(test_case_key)
+    if not test_case_validation.is_valid:
+        return format_error_message(
+            "Create Web Link",
+            "Invalid test case key",
+            "; ".join(test_case_validation.errors),
+        )
+
+    # Validate web link input
+    web_link_data = {"url": url}
+    if description is not None:
+        web_link_data["description"] = description
+
+    validation_result = validate_web_link_input(web_link_data)
+    if not validation_result.is_valid:
+        return format_error_message(
+            "Create Web Link",
+            "Invalid web link data",
+            "; ".join(validation_result.errors),
+        )
+
+    # Create web link via API
+    result = await zephyr_client.create_test_case_web_link(
+        test_case_key=test_case_key, web_link_input=validation_result.data
+    )
+
+    if result.is_valid:
+        desc_text = f" ({description})" if description else ""
+        return format_success_message(
+            "Web Link Created",
+            f"Successfully created web link between test case {test_case_key} "
+            f"and {url}{desc_text}",
+            resource_id=result.data.id,
+        )
+    else:
+        return format_error_message(
+            "Create Web Link",
+            f"Failed to create web link for test case {test_case_key}",
             "; ".join(result.errors),
         )
 

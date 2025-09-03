@@ -423,3 +423,79 @@ def validate_version_number(version: int) -> "ValidationResult[int]":
             ["Version must be a positive integer (1 or greater)"],
         )
     return ValidationResult(True, data=version)
+
+
+def validate_issue_link_input(issue_link_data: dict) -> "ValidationResult":
+    """
+    Validate issue link input data.
+
+    Args:
+        issue_link_data: Dictionary containing issue link input data
+
+    Returns:
+        ValidationResult with validated IssueLinkInput or error messages
+    """
+    from ..schemas.test_case import IssueLinkInput
+
+    try:
+        validated_input = IssueLinkInput(**issue_link_data)
+        return ValidationResult(True, data=validated_input)
+
+    except ValidationError as e:
+        errors = []
+        for error in e.errors():
+            field = ".".join(str(loc) for loc in error["loc"])
+            message = error["msg"]
+            errors.append(f"Field '{field}': {message}")
+
+        return ValidationResult(False, errors)
+
+    except Exception as e:
+        return ValidationResult(False, [f"Unexpected validation error: {str(e)}"])
+
+
+def validate_web_link_input(web_link_data: dict) -> "ValidationResult":
+    """
+    Validate web link input data.
+
+    Args:
+        web_link_data: Dictionary containing web link input data
+
+    Returns:
+        ValidationResult with validated WebLinkInput or error messages
+    """
+    from ..schemas.test_case import WebLinkInput
+
+    try:
+        validated_input = WebLinkInput(**web_link_data)
+        return ValidationResult(True, data=validated_input)
+
+    except ValidationError as e:
+        errors = []
+        for error in e.errors():
+            field = ".".join(str(loc) for loc in error["loc"])
+            message = error["msg"]
+            errors.append(f"Field '{field}': {message}")
+
+        return ValidationResult(False, errors)
+
+    except Exception as e:
+        return ValidationResult(False, [f"Unexpected validation error: {str(e)}"])
+
+
+def validate_issue_id(issue_id: int) -> "ValidationResult[int]":
+    """
+    Validate Jira issue ID.
+
+    Args:
+        issue_id: Issue ID to validate
+
+    Returns:
+        ValidationResult with validated issue ID or error messages
+    """
+    if not isinstance(issue_id, int) or issue_id < 1:
+        return ValidationResult(
+            False,
+            ["Issue ID must be a positive integer (1 or greater)"],
+        )
+    return ValidationResult(True, data=issue_id)

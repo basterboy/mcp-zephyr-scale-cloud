@@ -5,7 +5,7 @@ from typing import Any
 from ..schemas.folder import Folder, FolderList
 from ..schemas.priority import Priority, PriorityList
 from ..schemas.status import Status, StatusList
-from ..schemas.test_case import TestCase
+from ..schemas.test_case import TestCase, TestCaseLinkList
 from ..schemas.test_script import TestScript
 from ..schemas.test_step import TestStep, TestStepsList
 from ..schemas.version import TestCaseVersionLink, TestCaseVersionList
@@ -781,5 +781,38 @@ def format_test_case_versions_list(
             ) // versions.maxResults
             output += f" of {total_pages}"
         output += f" (max results: {versions.maxResults})\n"
+
+    return output.strip()
+
+
+def format_test_case_links_display(links: TestCaseLinkList, test_case_key: str) -> str:
+    """Format test case links for display."""
+    if not links.issues and not links.web_links:
+        return f"🔗 **No links found for test case {test_case_key}**"
+
+    output = f"🔗 **Links for test case {test_case_key}**\n\n"
+
+    # Issue links
+    if links.issues:
+        count = len(links.issues)
+        output += f"📋 **Jira Issues ({count}):**\n"
+        for i, issue in enumerate(links.issues, 1):
+            output += f"  **{i}.** {issue.type}: Issue #{issue.issue_id}\n"
+            output += f"    🔗 **Link ID:** {issue.id}\n"
+            output += f"    🎯 **Target:** {issue.target}\n\n"
+    else:
+        output += "📋 **Jira Issues:** None linked\n\n"
+
+    # Web links
+    if links.web_links:
+        count = len(links.web_links)
+        output += f"🌐 **Web Links ({count}):**\n"
+        for i, link in enumerate(links.web_links, 1):
+            output += f"  **{i}.** {link.type}: {link.url}\n"
+            if link.description:
+                output += f"    📝 **Description:** {link.description}\n"
+            output += f"    🔗 **Link ID:** {link.id}\n\n"
+    else:
+        output += "🌐 **Web Links:** None configured\n\n"
 
     return output.strip()

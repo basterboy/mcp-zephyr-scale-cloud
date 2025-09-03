@@ -705,3 +705,65 @@ class TestEnvironmentConfiguration:
         result = validate_version_number(-1)
         assert not result.is_valid
         assert "positive integer" in str(result.errors)
+
+    def test_link_schemas_creation(self):
+        """Test link input schema creation and basic functionality."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import (
+            IssueLinkInput,
+            WebLinkInput,
+        )
+
+        # Test IssueLinkInput
+        issue_link = IssueLinkInput(issueId=12345)
+        assert issue_link.issue_id == 12345
+
+        # Test WebLinkInput
+        web_link = WebLinkInput(
+            url="https://example.com", description="Example website"
+        )
+        assert web_link.url == "https://example.com"
+        assert web_link.description == "Example website"
+
+        # Test WebLinkInput without description
+        web_link_no_desc = WebLinkInput(url="https://test.com")
+        assert web_link_no_desc.url == "https://test.com"
+        assert web_link_no_desc.description is None
+
+    def test_link_validation_functions(self):
+        """Test link validation functions."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_issue_id,
+            validate_issue_link_input,
+            validate_web_link_input,
+        )
+
+        # Test issue ID validation
+        result = validate_issue_id(12345)
+        assert result.is_valid
+        assert result.data == 12345
+
+        result = validate_issue_id(0)
+        assert not result.is_valid
+        assert "positive integer" in str(result.errors)
+
+        # Test issue link input validation
+        result = validate_issue_link_input({"issueId": 12345})
+        assert result.is_valid
+        assert result.data.issue_id == 12345
+
+        result = validate_issue_link_input({"issueId": -1})
+        assert not result.is_valid
+
+        # Test web link input validation
+        result = validate_web_link_input({"url": "https://example.com"})
+        assert result.is_valid
+        assert result.data.url == "https://example.com"
+
+        result = validate_web_link_input(
+            {"url": "https://example.com", "description": "Test site"}
+        )
+        assert result.is_valid
+        assert result.data.description == "Test site"
+
+        result = validate_web_link_input({})  # Missing required url
+        assert not result.is_valid
