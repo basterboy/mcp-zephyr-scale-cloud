@@ -23,6 +23,7 @@ from ..schemas.status import (
     StatusType,
     UpdateStatusRequest,
 )
+from ..schemas.test_script import TestScript, TestScriptInput
 from ..schemas.test_step import TestStepsInput, TestStepsList
 from ..utils.validation import (
     ValidationResult,
@@ -614,6 +615,82 @@ class ZephyrClient:
                 False,
                 [
                     f"Failed to create test steps for test case "
+                    f"{test_case_key}: {str(e)}"
+                ],
+            )
+
+    async def get_test_script(
+        self, test_case_key: str
+    ) -> "ValidationResult[TestScript]":
+        """
+        Get test script for a specific test case.
+
+        Args:
+            test_case_key: The key of the test case (format: [A-Z]+-T[0-9]+)
+
+        Returns:
+            ValidationResult with TestScript data or error messages
+        """
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.config.base_url}/testcases/{test_case_key}/testscript",
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, TestScript)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [f"Failed to get test script for test case {test_case_key}: {str(e)}"],
+            )
+
+    async def create_test_script(
+        self,
+        test_case_key: str,
+        test_script_input: TestScriptInput,
+    ) -> "ValidationResult[CreatedResource]":
+        """
+        Create or update test script for a specific test case.
+
+        Args:
+            test_case_key: The key of the test case (format: [A-Z]+-T[0-9]+)
+            test_script_input: TestScriptInput with type and text
+
+        Returns:
+            ValidationResult with CreatedResource data or error messages
+        """
+        try:
+            # Convert to dict for API call, using aliases for camelCase
+            request_data = test_script_input.model_dump(
+                exclude_none=True, by_alias=True
+            )
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/testcases/{test_case_key}/testscript",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CreatedResource)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [
+                    f"Failed to create test script for test case "
                     f"{test_case_key}: {str(e)}"
                 ],
             )

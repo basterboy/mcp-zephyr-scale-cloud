@@ -29,6 +29,11 @@ from .priority import (
     PriorityList,
     UpdatePriorityRequest,
 )
+from .test_script import (
+    TestScript,
+    TestScriptInput,
+    TestScriptType,
+)
 from .test_step import (
     TestStep,
     TestStepInline,
@@ -61,6 +66,9 @@ __all__ = [
     "OptionValue",
     "EntityColor",
     "CustomFields",
+    "TestScript",
+    "TestScriptInput",
+    "TestScriptType",
     "TestStep",
     "TestStepInline",
     "TestStepsInput",

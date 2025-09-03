@@ -351,3 +351,48 @@ def validate_test_steps_mode(mode: str) -> "ValidationResult[str]":
                 f"Valid modes: {', '.join(valid_modes)}"
             ],
         )
+
+
+def validate_test_script_input(test_script_input_data: dict) -> "ValidationResult":
+    """
+    Validate test script input data.
+
+    Args:
+        test_script_input_data: Dictionary containing test script input data
+
+    Returns:
+        ValidationResult with validated TestScriptInput or error messages
+    """
+    from ..schemas.test_script import TestScriptInput
+
+    try:
+        validated_input = TestScriptInput(**test_script_input_data)
+        return ValidationResult(True, data=validated_input)
+    except ValueError as e:
+        return ValidationResult(False, [f"Invalid test script input: {str(e)}"])
+
+
+def validate_test_script_type(script_type: str) -> "ValidationResult[str]":
+    """
+    Validate test script type.
+
+    Args:
+        script_type: Script type string to validate
+
+    Returns:
+        ValidationResult with validated type or error messages
+    """
+    from ..schemas.test_script import TestScriptType
+
+    try:
+        validated_type = TestScriptType(script_type)
+        return ValidationResult(True, data=validated_type.value)
+    except ValueError:
+        valid_types = [t.value for t in TestScriptType]
+        return ValidationResult(
+            False,
+            [
+                f"Invalid test script type '{script_type}'. "
+                f"Valid types: {', '.join(valid_types)}"
+            ],
+        )

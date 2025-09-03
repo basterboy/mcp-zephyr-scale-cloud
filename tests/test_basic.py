@@ -134,6 +134,8 @@ class TestBasicFunctionality:
             "create_folder",
             "get_test_steps",
             "create_test_steps",
+            "get_test_script",
+            "create_test_script",
         ]
 
         for tool_name in expected_tools:
@@ -435,4 +437,58 @@ class TestEnvironmentConfiguration:
 
         # Invalid mode
         result = validate_test_steps_mode("INVALID")
+        assert not result.is_valid
+
+    def test_test_script_schema_creation(self):
+        """Test test script schema creation and validation."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_script import (
+            TestScript,
+            TestScriptInput,
+            TestScriptType,
+        )
+
+        # Create test script input
+        script_input = TestScriptInput(
+            type=TestScriptType.PLAIN,
+            text="This is a plain text test script for login functionality",
+        )
+
+        assert script_input.type == TestScriptType.PLAIN
+        assert "login functionality" in script_input.text
+
+        # Create test script
+        script = TestScript(
+            id=123,
+            type=TestScriptType.BDD,
+            text=(
+                "Given user is on login page\n"
+                "When user enters credentials\n"
+                "Then user is logged in"
+            ),
+        )
+
+        assert script.id == 123
+        assert script.type == TestScriptType.BDD
+        assert "Given user is on login page" in script.text
+
+        # Test model dump with aliases
+        dumped = script_input.model_dump(by_alias=True, exclude_none=True)
+        assert "type" in dumped
+        assert dumped["type"] == "plain"
+        assert "text" in dumped
+
+    def test_test_script_type_validation(self):
+        """Test test script type validation."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_script_type,
+        )
+
+        # Valid types
+        for script_type in ["plain", "bdd"]:
+            result = validate_test_script_type(script_type)
+            assert result.is_valid, f"Type '{script_type}' should be valid"
+            assert result.data == script_type
+
+        # Invalid type
+        result = validate_test_script_type("invalid")
         assert not result.is_valid

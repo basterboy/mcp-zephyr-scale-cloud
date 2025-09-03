@@ -21,6 +21,7 @@ from .utils.formatting import (
     format_status_details,
     format_status_list,
     format_success_message,
+    format_test_script_display,
     format_test_steps_list,
     format_validation_errors,
 )
@@ -32,6 +33,8 @@ from .utils.validation import (
     validate_status_data,
     validate_status_type,
     validate_test_case_key,
+    validate_test_script_input,
+    validate_test_script_type,
     validate_test_steps_input,
     validate_test_steps_mode,
 )
@@ -124,7 +127,7 @@ async def zephyr_server_lifespan(server):
         "config_valid": config is not None,
         "api_accessible": zephyr_client is not None and not startup_errors,
         "startup_errors": startup_errors,
-        "tools_count": 14,  # healthcheck + priorities + statuses + folders + test steps
+        "tools_count": 16,  # healthcheck + priorities + statuses + folders + tests
         "base_url": config.base_url if config else None,
     }
 
@@ -892,6 +895,119 @@ async def create_test_steps(
         return format_error_message(
             "Create Test Steps",
             f"Failed to create test steps for {test_case_key}",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def get_test_script(test_case_key: str) -> str:
+    """Get test script for a specific test case in Zephyr Scale Cloud.
+
+    Args:
+        test_case_key: The key of the test case (format: [PROJECT]-T[NUMBER])
+
+    Returns:
+        Formatted test script information or error message
+    """
+    if not zephyr_client:
+        return format_error_message(
+            "Get Test Script", "Client not initialized", _CONFIG_ERROR_MSG
+        )
+
+    # Validate test case key
+    test_case_validation = validate_test_case_key(test_case_key)
+    if not test_case_validation.is_valid:
+        return format_error_message(
+            "Get Test Script",
+            "Invalid test case key",
+            "; ".join(test_case_validation.errors),
+        )
+
+    # Get test script via API
+    result = await zephyr_client.get_test_script(test_case_key=test_case_key)
+
+    if result.is_valid:
+        return format_test_script_display(result.data)
+    else:
+        return format_error_message(
+            "Get Test Script",
+            f"Failed to retrieve test script for {test_case_key}",
+            "; ".join(result.errors),
+        )
+
+
+@mcp.tool()
+async def create_test_script(
+    test_case_key: str,
+    script_type: str,
+    text: str,
+) -> str:
+    """Create or update test script for a specific test case in Zephyr Scale Cloud.
+
+    Args:
+        test_case_key: The key of the test case (format: [PROJECT]-T[NUMBER])
+        script_type: Script type - "plain" for plain text or "bdd" for BDD format
+        text: The test script content (minimum 1 character)
+
+    Returns:
+        Success message with created test script or error message
+    """
+    if not zephyr_client:
+        return format_error_message(
+            "Create Test Script", "Client not initialized", _CONFIG_ERROR_MSG
+        )
+
+    # Validate test case key
+    test_case_validation = validate_test_case_key(test_case_key)
+    if not test_case_validation.is_valid:
+        return format_error_message(
+            "Create Test Script",
+            "Invalid test case key",
+            "; ".join(test_case_validation.errors),
+        )
+
+    # Validate script type
+    type_validation = validate_test_script_type(script_type)
+    if not type_validation.is_valid:
+        return format_error_message(
+            "Create Test Script",
+            "Invalid script type",
+            "; ".join(type_validation.errors),
+        )
+
+    # Build and validate test script input
+    test_script_input_data = {
+        "type": type_validation.data,
+        "text": text,
+    }
+
+    validation_result = validate_test_script_input(test_script_input_data)
+    if not validation_result.is_valid:
+        return format_error_message(
+            "Create Test Script",
+            "Invalid test script data",
+            "; ".join(validation_result.errors),
+        )
+
+    # Create test script via API
+    result = await zephyr_client.create_test_script(
+        test_case_key=test_case_key,
+        test_script_input=validation_result.data,
+    )
+
+    if result.is_valid:
+        return format_success_message(
+            "Created",
+            "Test Script",
+            "Successfully created test script",
+            test_case_key=test_case_key,
+            script_type=script_type,
+            resource_id=result.data.id,
+        )
+    else:
+        return format_error_message(
+            "Create Test Script",
+            f"Failed to create test script for {test_case_key}",
             "; ".join(result.errors),
         )
 
