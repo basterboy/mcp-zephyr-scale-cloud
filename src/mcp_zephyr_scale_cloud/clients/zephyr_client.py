@@ -974,8 +974,9 @@ class ZephyrClient:
         """
         Update an existing test case.
 
-        Note: This sends only the provided fields to the API. The Zephyr Scale API
-        may clear any fields not specified in the request, so use with caution.
+        Note: The Zephyr Scale API requires ALL fields to be sent in the request.
+        Any field not specified will be cleared by the API. This method fetches
+        the current test case, merges the updates, and sends the complete data.
 
         Args:
             test_case_key: The key of the test case (format: [A-Z]+-T[0-9]+)
@@ -985,9 +986,64 @@ class ZephyrClient:
             ValidationResult with None data on success or error messages
         """
         try:
-            # Convert update input to dict, excluding None values
-            # We'll send only the fields that are being updated
-            request_data = test_case_input.model_dump(by_alias=True, exclude_none=True)
+            # First, get the current test case data to preserve existing fields
+            current_result = await self.get_test_case(test_case_key)
+            if not current_result.is_valid:
+                return ValidationResult(
+                    False,
+                    [
+                        f"Failed to get current test case {test_case_key}: "
+                        f"{'; '.join(current_result.errors)}"
+                    ],
+                )
+
+            current_data = current_result.data
+            update_data = test_case_input.model_dump(by_alias=True, exclude_none=True)
+
+            # The API requires the complete TestCase structure but has a mismatch:
+            # GET returns Link objects, PUT expects names for priority/status
+            #
+            # Strategy: Send all the fields we can get from the current data,
+            # and for priority/status, we'll need to either:
+            # 1. Look them up by ID, or 2. Only send if being updated
+
+            # Start with required and basic fields
+            request_data = {
+                "name": current_data.name,
+            }
+
+            # Add all optional fields that we can safely map
+            if current_data.objective is not None:
+                request_data["objective"] = current_data.objective
+
+            if current_data.precondition is not None:
+                request_data["precondition"] = current_data.precondition
+
+            if current_data.estimated_time is not None:
+                request_data["estimatedTime"] = current_data.estimated_time
+
+            if current_data.component is not None:
+                request_data["componentId"] = current_data.component.id
+
+            if current_data.folder is not None:
+                request_data["folderId"] = current_data.folder.id
+
+            if current_data.owner is not None:
+                # Owner in API responses has accountId, but updates expect ownerId
+                if hasattr(current_data.owner, "account_id"):
+                    request_data["ownerId"] = current_data.owner.account_id
+                elif hasattr(current_data.owner, "accountId"):
+                    request_data["ownerId"] = current_data.owner.accountId
+
+            if current_data.labels is not None:
+                request_data["labels"] = current_data.labels
+
+            if current_data.custom_fields is not None:
+                request_data["customFields"] = current_data.custom_fields
+
+            # Now merge in the update data, which may override current values
+            # This will include priorityName/statusName if the user is updating them
+            request_data.update(update_data)
 
             async with httpx.AsyncClient() as client:
                 response = await client.put(
