@@ -1438,7 +1438,7 @@ async def create_test_case(
     folder_id: str | None = None,
     owner_id: str | None = None,
     labels: str | None = None,
-    custom_fields: str | None = None,
+    custom_fields: str | dict | None = None,
 ) -> str:
     """Create a new test case in Zephyr Scale Cloud.
 
@@ -1456,8 +1456,9 @@ async def create_test_case(
         owner_id: Jira user account ID for owner (optional)
         labels: Labels as JSON array string (e.g., '["automation", "smoke"]') or
                 comma-separated (e.g., "automation, smoke") (optional)
-        custom_fields: Custom fields as JSON string (e.g.,
-                      '{"Components": ["Update"], "Version": "v1.0.0"}') (optional)
+        custom_fields: Custom fields as JSON string or dict (e.g.,
+                      '{"Components": ["Update"], "Version": "v1.0.0"}' or 
+                      {"Components": ["Update"], "Version": "v1.0.0"}) (optional)
 
     Returns:
         Success message with created test case details or error message
@@ -1597,31 +1598,45 @@ async def create_test_case(
     # Convert and validate custom fields
     parsed_custom_fields = None
     if custom_fields is not None:
-        try:
-            parsed_custom_fields = json.loads(custom_fields)
-            if not isinstance(parsed_custom_fields, dict):
+        if isinstance(custom_fields, dict):
+            # Already a dictionary (parsed by MCP framework)
+            parsed_custom_fields = custom_fields
+        elif isinstance(custom_fields, str):
+            # String input - parse as JSON
+            try:
+                parsed_custom_fields = json.loads(custom_fields)
+                if not isinstance(parsed_custom_fields, dict):
+                    return json.dumps(
+                        {
+                            "errorCode": 400,
+                            "message": "Custom fields must be a JSON object (e.g., "
+                            '\'{"Components": ["Update"], "Version": "v1.0.0"}\')',
+                        },
+                        indent=2,
+                    )
+            except json.JSONDecodeError as e:
                 return json.dumps(
                     {
                         "errorCode": 400,
-                        "message": "Custom fields must be a JSON object (e.g., "
-                        '\'{"Components": ["Update"], "Version": "v1.0.0"}\')',
+                        "message": f"Custom fields must be valid JSON: {str(e)}. "
+                        'Example: \'{"Components": ["Update"], "Version": "v1.0.0"}\'',
                     },
                     indent=2,
                 )
-        except json.JSONDecodeError as e:
+            except Exception as e:
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": f"Failed to parse custom fields: {str(e)}",
+                    },
+                    indent=2,
+                )
+        else:
             return json.dumps(
                 {
                     "errorCode": 400,
-                    "message": f"Custom fields must be valid JSON: {str(e)}. "
+                    "message": "Custom fields must be a JSON object or JSON string. "
                     'Example: \'{"Components": ["Update"], "Version": "v1.0.0"}\'',
-                },
-                indent=2,
-            )
-        except Exception as e:
-            return json.dumps(
-                {
-                    "errorCode": 400,
-                    "message": f"Failed to parse custom fields: {str(e)}",
                 },
                 indent=2,
             )
