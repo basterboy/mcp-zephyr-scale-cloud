@@ -271,8 +271,8 @@ async def get_priority(priority_id: int) -> str:
         return json.dumps(
             {
                 "errorCode": 404,
-                "message": f"Priority '{priority_id}' does not exist or you do not have "
-                f"access to it",
+                "message": f"Priority '{priority_id}' does not exist or you do not "
+                f"have access to it",
             },
             indent=2,
         )
@@ -809,7 +809,8 @@ async def create_folder(
             return json.dumps(
                 {
                     "errorCode": 400,
-                    "message": f"Parent folder ID must be a valid integer, got: {parent_id}",
+                    "message": f"Parent folder ID must be a valid integer, "
+                    f"got: {parent_id}",
                 },
                 indent=2,
             )
@@ -1246,7 +1247,8 @@ async def get_test_case_version(test_case_key: str, version: int) -> str:
         return json.dumps(
             {
                 "errorCode": 404,
-                "message": f"Test case '{test_case_key}' version {version} does not exist or you do not have access to it",
+                "message": f"Test case '{test_case_key}' version {version} does not "
+                f"exist or you do not have access to it",
             },
             indent=2,
         )
@@ -1498,7 +1500,8 @@ async def create_test_case(
             return json.dumps(
                 {
                     "errorCode": 400,
-                    "message": f"Estimated time must be a valid integer, got: {estimated_time}",
+                    "message": f"Estimated time must be a valid integer, "
+                    f"got: {estimated_time}",
                 },
                 indent=2,
             )
@@ -1518,7 +1521,8 @@ async def create_test_case(
             return json.dumps(
                 {
                     "errorCode": 400,
-                    "message": f"Component ID must be a valid integer, got: {component_id}",
+                    "message": f"Component ID must be a valid integer, "
+                    f"got: {component_id}",
                 },
                 indent=2,
             )
@@ -1553,7 +1557,8 @@ async def create_test_case(
                 return json.dumps(
                     {
                         "errorCode": 400,
-                        "message": 'Labels must be a JSON array (e.g., \'["automation", "smoke"]\') or comma-separated string',
+                        "message": "Labels must be a JSON array (e.g., "
+                        '\'["automation", "smoke"]\') or comma-separated string',
                     },
                     indent=2,
                 )
@@ -1574,7 +1579,8 @@ async def create_test_case(
                     return json.dumps(
                         {
                             "errorCode": 400,
-                            "message": "Labels cannot be empty. Use JSON array format or comma-separated values",
+                            "message": "Labels cannot be empty. Use JSON array "
+                            "format or comma-separated values",
                         },
                         indent=2,
                     )
@@ -1582,7 +1588,9 @@ async def create_test_case(
                 return json.dumps(
                     {
                         "errorCode": 400,
-                        "message": f"Failed to parse labels: {str(e)}. Use JSON array format (e.g., '[\"label1\", \"label2\"]') or comma-separated (e.g., 'label1, label2')",
+                        "message": f"Failed to parse labels: {str(e)}. Use JSON array "
+                        'format (e.g., \'["label1", "label2"]\') or comma-separated '
+                        "(e.g., 'label1, label2')",
                     },
                     indent=2,
                 )
@@ -1596,7 +1604,8 @@ async def create_test_case(
                 return json.dumps(
                     {
                         "errorCode": 400,
-                        "message": 'Custom fields must be a JSON object (e.g., \'{"Components": ["Update"], "Version": "v1.0.0"}\')',
+                        "message": "Custom fields must be a JSON object (e.g., "
+                        '\'{"Components": ["Update"], "Version": "v1.0.0"}\')',
                     },
                     indent=2,
                 )
@@ -1604,7 +1613,8 @@ async def create_test_case(
             return json.dumps(
                 {
                     "errorCode": 400,
-                    "message": f'Custom fields must be valid JSON: {str(e)}. Example: \'{{"Components": ["Update"], "Version": "v1.0.0"}}\'',
+                    "message": f"Custom fields must be valid JSON: {str(e)}. "
+                    'Example: \'{"Components": ["Update"], "Version": "v1.0.0"}\'',
                 },
                 indent=2,
             )
