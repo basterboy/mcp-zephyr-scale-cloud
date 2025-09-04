@@ -14,25 +14,11 @@ from mcp.server import FastMCP
 
 from .clients.zephyr_client import ZephyrClient
 from .config import ZephyrConfig
-from .utils.formatting import (
-    format_error_message,
-    format_folder_details,
-    format_folder_list,
-    format_priority_details,
-    format_priority_list,
-    format_status_details,
-    format_status_list,
-    format_success_message,
-    format_test_case_creation_success,
-    format_test_case_display,
-    format_test_case_links_display,
-    format_test_case_versions_list,
-    format_test_script_display,
-    format_test_steps_list,
-    format_validation_errors,
-)
 from .utils.validation import (
+    validate_component_id,
+    validate_estimated_time,
     validate_folder_data,
+    validate_folder_id,
     validate_folder_type,
     validate_issue_id,
     validate_issue_link_input,
@@ -198,18 +184,18 @@ async def healthcheck() -> str:
 
     result = await zephyr_client.healthcheck()
 
-    if result.is_valid and result.data.get("status") == "UP":
-        return (
-            f"✅ SUCCESS: Zephyr Scale Cloud API is healthy\n"
-            f"📍 Base URL: {config.base_url}\n"
-            f"🔑 Authentication: Valid\n"
-            f"📊 Status: {result.data.get('status', 'Unknown')}"
-        )
+    if result.is_valid:
+        # Healthcheck endpoint returns 200 OK with no content according to API spec
+        return json.dumps({"status": "UP"}, indent=2)
     else:
-        return format_error_message(
-            "Health Check",
-            "Zephyr Scale Cloud API health check failed",
-            "; ".join(result.errors) if result.errors else "Unknown error",
+        return json.dumps(
+            {
+                "errorCode": 500,
+                "message": (
+                    "; ".join(result.errors) if result.errors else "Health check failed"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -231,18 +217,32 @@ async def get_priorities(project_key: str | None = None, max_results: int = 50) 
     # Validate project key if provided
     if project_key:
         project_validation = validate_project_key(project_key)
-        if not project_validation:
-            return format_validation_errors(project_validation.errors)
+        if not project_validation.is_valid:
+            return json.dumps(
+                {"errorCode": 400, "message": "; ".join(project_validation.errors)},
+                indent=2,
+            )
 
     result = await zephyr_client.get_priorities(
         project_key=project_key, max_results=max_results
     )
 
     if result.is_valid:
-        return format_priority_list(result.data, project_key)
+        # Returns PriorityList schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Get Priorities", "Failed to retrieve priorities", "; ".join(result.errors)
+        return json.dumps(
+            {
+                "errorCode": 500,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else "Failed to retrieve priorities"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -263,12 +263,18 @@ async def get_priority(priority_id: int) -> str:
     result = await zephyr_client.get_priority(priority_id)
 
     if result.is_valid:
-        return format_priority_details(result.data)
+        # Returns Priority schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Get Priority",
-            f"Failed to retrieve priority {priority_id}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": f"Priority '{priority_id}' does not exist or you do not have "
+                f"access to it",
+            },
+            indent=2,
         )
 
 
@@ -298,11 +304,13 @@ async def create_priority(
     # Get project key with default fallback
     project_key = get_project_key_with_default(project_key)
     if not project_key:
-        return format_error_message(
-            "Create Priority",
-            "No project key provided",
-            "Please provide project_key parameter or set "
-            "ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": "No project key provided. Please provide project_key "
+                "parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY env variable",
+            },
+            indent=2,
         )
 
     # Validate input data using Pydantic schema
@@ -315,26 +323,29 @@ async def create_priority(
 
     validation_result = validate_priority_data(request_data, is_update=False)
     if not validation_result:
-        return format_validation_errors(validation_result.errors)
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(validation_result.errors)}, indent=2
+        )
 
     # Create priority using validated schema
     result = await zephyr_client.create_priority(validation_result.data)
 
     if result.is_valid:
-        created_resource = result.data
-        return format_success_message(
-            "Created",
-            "Priority",
-            created_resource.id,
-            name=name,
-            project_key=project_key,
-            description=description,
-            color=color,
-            url=created_resource.self,
+        # Returns CreatedResource schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
         )
     else:
-        return format_error_message(
-            "Create Priority", "Failed to create priority", "; ".join(result.errors)
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else "Failed to create priority"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -379,28 +390,27 @@ async def update_priority(
 
     validation_result = validate_priority_data(request_data, is_update=True)
     if not validation_result:
-        return format_validation_errors(validation_result.errors)
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(validation_result.errors)}, indent=2
+        )
 
     # Update priority using validated schema
     result = await zephyr_client.update_priority(priority_id, validation_result.data)
 
     if result.is_valid:
-        return format_success_message(
-            "Updated",
-            "Priority",
-            priority_id,
-            name=name,
-            project_id=project_id,
-            index=index,
-            default=default,
-            description=description,
-            color=color,
-        )
+        # Update operations return 200 OK with no content according to API spec
+        return json.dumps({"status": "updated"}, indent=2)
     else:
-        return format_error_message(
-            "Update Priority",
-            f"Failed to update priority {priority_id}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to update priority {priority_id}"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -433,7 +443,10 @@ async def get_statuses(
     if status_type:
         type_validation = validate_status_type(status_type)
         if not type_validation.is_valid:
-            return format_validation_errors(type_validation.errors)
+            return json.dumps(
+                {"errorCode": 400, "message": "; ".join(type_validation.errors)},
+                indent=2,
+            )
 
         # Import here to avoid circular imports
         from .schemas.status import StatusType
@@ -444,7 +457,10 @@ async def get_statuses(
     if project_key:
         project_validation = validate_project_key(project_key)
         if not project_validation.is_valid:
-            return format_validation_errors(project_validation.errors)
+            return json.dumps(
+                {"errorCode": 400, "message": "; ".join(project_validation.errors)},
+                indent=2,
+            )
 
     result = await zephyr_client.get_statuses(
         project_key=project_key,
@@ -453,10 +469,21 @@ async def get_statuses(
     )
 
     if result.is_valid:
-        return format_status_list(result.data, project_key, status_type)
+        # Returns StatusList schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Get Statuses", "Failed to retrieve statuses", "; ".join(result.errors)
+        return json.dumps(
+            {
+                "errorCode": 500,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else "Failed to retrieve statuses"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -475,17 +502,26 @@ async def get_status(status_id: int) -> str:
         return _CONFIG_ERROR_MSG
 
     if status_id < 1:
-        return format_validation_errors(["Status ID must be a positive integer"])
+        return json.dumps(
+            {"errorCode": 400, "message": "Status ID must be a positive integer"},
+            indent=2,
+        )
 
     result = await zephyr_client.get_status(status_id)
 
     if result.is_valid:
-        return format_status_details(result.data)
+        # Returns Status schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Get Status",
-            f"Failed to retrieve status {status_id}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": f"Status '{status_id}' does not exist or you do not have "
+                f"access to it",
+            },
+            indent=2,
         )
 
 
@@ -518,11 +554,13 @@ async def create_status(
     # Get project key with default fallback
     project_key = get_project_key_with_default(project_key)
     if not project_key:
-        return format_error_message(
-            "Create Status",
-            "No project key provided",
-            "Please provide project_key parameter or set "
-            "ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": "No project key provided. Please provide project_key "
+                "parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY env variable",
+            },
+            indent=2,
         )
 
     # Validate input data using Pydantic schema
@@ -536,27 +574,29 @@ async def create_status(
 
     validation_result = validate_status_data(request_data, is_update=False)
     if not validation_result.is_valid:
-        return format_validation_errors(validation_result.errors)
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(validation_result.errors)}, indent=2
+        )
 
     # Create status using validated schema
     result = await zephyr_client.create_status(validation_result.data)
 
     if result.is_valid:
-        created_resource = result.data
-        return format_success_message(
-            "Created",
-            "Status",
-            created_resource.id,
-            name=name,
-            project_key=project_key,
-            description=description,
-            color=color,
-            status_type=status_type,
-            url=created_resource.self,
+        # Returns CreatedResource schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
         )
     else:
-        return format_error_message(
-            "Create Status", "Failed to create status", "; ".join(result.errors)
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else "Failed to create status"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -604,28 +644,27 @@ async def update_status(
 
     validation_result = validate_status_data(request_data, is_update=True)
     if not validation_result.is_valid:
-        return format_validation_errors(validation_result.errors)
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(validation_result.errors)}, indent=2
+        )
 
     # Update status using validated schema
     result = await zephyr_client.update_status(status_id, validation_result.data)
 
     if result.is_valid:
-        return format_success_message(
-            "Updated",
-            "Status",
-            status_id,
-            name=name,
-            index=index,
-            archived=archived,
-            default=default,
-            description=description,
-            color=color,
-        )
+        # Update operations return 200 OK with no content according to API spec
+        return json.dumps({"status": "updated"}, indent=2)
     else:
-        return format_error_message(
-            "Update Status",
-            f"Failed to update status {status_id}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to update status {status_id}"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -649,30 +688,26 @@ async def get_folders(
         Formatted list of folders or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Get Folders", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Validate folder type if provided
     validated_folder_type = None
     if folder_type:
         folder_type_result = validate_folder_type(folder_type)
-        if not folder_type_result:
-            return format_error_message(
-                "Get Folders",
-                "Invalid folder type",
-                folder_type_result.error_message,
+        if not folder_type_result.is_valid:
+            return json.dumps(
+                {"errorCode": 400, "message": "; ".join(folder_type_result.errors)},
+                indent=2,
             )
         validated_folder_type = folder_type_result.data
 
     # Validate project key if provided
     if project_key:
         project_key_result = validate_project_key(project_key)
-        if not project_key_result:
-            return format_error_message(
-                "Get Folders",
-                "Invalid project key",
-                project_key_result.error_message,
+        if not project_key_result.is_valid:
+            return json.dumps(
+                {"errorCode": 400, "message": "; ".join(project_key_result.errors)},
+                indent=2,
             )
 
     # Get folders from API
@@ -683,12 +718,21 @@ async def get_folders(
     )
 
     if result.is_valid:
-        return format_folder_list(result.data, project_key, folder_type)
+        # Returns FolderList schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Get Folders",
-            "Failed to retrieve folders",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 500,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else "Failed to retrieve folders"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -703,27 +747,30 @@ async def get_folder(folder_id: int) -> str:
         Formatted folder details or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Get Folder", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     if folder_id < 1:
-        return format_error_message(
-            "Get Folder",
-            "Invalid folder ID",
-            "❌ Folder ID must be a positive integer",
+        return json.dumps(
+            {"errorCode": 400, "message": "Folder ID must be a positive integer"},
+            indent=2,
         )
 
     # Get folder from API
     result = await zephyr_client.get_folder(folder_id)
 
     if result.is_valid:
-        return format_folder_details(result.data)
+        # Returns Folder schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Get Folder",
-            f"Failed to retrieve folder {folder_id}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": f"Folder '{folder_id}' does not exist or you do not have "
+                f"access to it",
+            },
+            indent=2,
         )
 
 
@@ -751,32 +798,35 @@ async def create_folder(
     if parent_id is not None:
         try:
             parsed_parent_id = int(parent_id)
-            if parsed_parent_id <= 0:
-                return format_error_message(
-                    "Create Folder",
-                    "Invalid parent folder ID",
-                    "Parent folder ID must be a positive integer",
+            # Use validation utility instead of inline validation
+            validation = validate_folder_id(parsed_parent_id)
+            if not validation.is_valid:
+                return json.dumps(
+                    {"errorCode": 400, "message": "; ".join(validation.errors)},
+                    indent=2,
                 )
         except (ValueError, TypeError):
-            return format_error_message(
-                "Create Folder",
-                "Invalid parent folder ID",
-                f"Parent folder ID must be a valid integer, got: {parent_id}",
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Parent folder ID must be a valid integer, got: {parent_id}",
+                },
+                indent=2,
             )
 
     if not zephyr_client:
-        return format_error_message(
-            "Create Folder", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Get project key with default fallback
     project_key = get_project_key_with_default(project_key)
     if not project_key:
-        return format_error_message(
-            "Create Folder",
-            "No project key provided",
-            "Please provide project_key parameter or set "
-            "ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": "No project key provided. Please provide project_key "
+                "parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY env variable",
+            },
+            indent=2,
         )
 
     # Build request data
@@ -792,30 +842,29 @@ async def create_folder(
     # Validate folder data
     validation_result = validate_folder_data(request_data)
     if not validation_result:
-        return format_error_message(
-            "Create Folder",
-            "Invalid folder data",
-            validation_result.error_message,
+        return json.dumps(
+            {"errorCode": 400, "message": validation_result.error_message}, indent=2
         )
 
     # Create folder via API
     result = await zephyr_client.create_folder(validation_result.data)
 
     if result.is_valid:
-        return format_success_message(
-            "Created",
-            "Folder",
-            result.data.id,
-            name=name,
-            project_key=project_key,
-            folder_type=folder_type,
-            parent_id=parsed_parent_id,
+        # Returns CreatedResource schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
         )
     else:
-        return format_error_message(
-            "Create Folder",
-            f"Failed to create folder '{name}'",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to create folder '{name}'"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -836,17 +885,14 @@ async def get_test_steps(
         Formatted list of test steps or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Get Test Steps", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Validate test case key
     test_case_validation = validate_test_case_key(test_case_key)
     if not test_case_validation.is_valid:
-        return format_error_message(
-            "Get Test Steps",
-            "Invalid test case key",
-            "; ".join(test_case_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
+            indent=2,
         )
 
     # Get test steps from API
@@ -857,12 +903,18 @@ async def get_test_steps(
     )
 
     if result.is_valid:
-        return format_test_steps_list(result.data, test_case_key, max_results, start_at)
+        # Returns TestStepsList schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Get Test Steps",
-            f"Failed to retrieve test steps for {test_case_key}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": f"Test case '{test_case_key}' does not exist or you do not "
+                f"have access to it",
+            },
+            indent=2,
         )
 
 
@@ -886,42 +938,34 @@ async def create_test_steps(
         Success message with created test steps or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Create Test Steps", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Validate test case key
     test_case_validation = validate_test_case_key(test_case_key)
     if not test_case_validation.is_valid:
-        return format_error_message(
-            "Create Test Steps",
-            "Invalid test case key",
-            "; ".join(test_case_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
+            indent=2,
         )
 
     # Validate mode
     mode_validation = validate_test_steps_mode(mode)
     if not mode_validation.is_valid:
-        return format_error_message(
-            "Create Test Steps",
-            "Invalid mode",
-            "; ".join(mode_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(mode_validation.errors)}, indent=2
         )
 
     # Parse and validate steps JSON
     try:
         steps_data = json.loads(steps)
         if not isinstance(steps_data, list):
-            return format_error_message(
-                "Create Test Steps",
-                "Invalid steps format",
-                "Steps must be a JSON array",
+            return json.dumps(
+                {"errorCode": 400, "message": "Steps must be a JSON array"}, indent=2
             )
     except json.JSONDecodeError as e:
-        return format_error_message(
-            "Create Test Steps",
-            "Invalid JSON format",
-            f"Failed to parse steps JSON: {str(e)}",
+        return json.dumps(
+            {"errorCode": 400, "message": f"Failed to parse steps JSON: {str(e)}"},
+            indent=2,
         )
 
     # Build and validate test steps input
@@ -932,10 +976,8 @@ async def create_test_steps(
 
     validation_result = validate_test_steps_input(test_steps_input_data)
     if not validation_result.is_valid:
-        return format_error_message(
-            "Create Test Steps",
-            "Invalid test steps data",
-            "; ".join(validation_result.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(validation_result.errors)}, indent=2
         )
 
     # Create test steps via API
@@ -945,19 +987,21 @@ async def create_test_steps(
     )
 
     if result.is_valid:
-        return format_success_message(
-            "Created",
-            "Test Steps",
-            "Successfully created test steps",
-            test_case_key=test_case_key,
-            mode=mode,
-            resource_id=result.data.id,
+        # Returns CreatedResource schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
         )
     else:
-        return format_error_message(
-            "Create Test Steps",
-            f"Failed to create test steps for {test_case_key}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to create test steps for {test_case_key}"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -972,29 +1016,32 @@ async def get_test_script(test_case_key: str) -> str:
         Formatted test script information or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Get Test Script", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Validate test case key
     test_case_validation = validate_test_case_key(test_case_key)
     if not test_case_validation.is_valid:
-        return format_error_message(
-            "Get Test Script",
-            "Invalid test case key",
-            "; ".join(test_case_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
+            indent=2,
         )
 
     # Get test script via API
     result = await zephyr_client.get_test_script(test_case_key=test_case_key)
 
     if result.is_valid:
-        return format_test_script_display(result.data)
+        # Returns TestScript schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Get Test Script",
-            f"Failed to retrieve test script for {test_case_key}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": f"Test case '{test_case_key}' does not exist or you do not "
+                f"have access to it",
+            },
+            indent=2,
         )
 
 
@@ -1015,26 +1062,21 @@ async def create_test_script(
         Success message with created test script or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Create Test Script", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Validate test case key
     test_case_validation = validate_test_case_key(test_case_key)
     if not test_case_validation.is_valid:
-        return format_error_message(
-            "Create Test Script",
-            "Invalid test case key",
-            "; ".join(test_case_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
+            indent=2,
         )
 
     # Validate script type
     type_validation = validate_test_script_type(script_type)
     if not type_validation.is_valid:
-        return format_error_message(
-            "Create Test Script",
-            "Invalid script type",
-            "; ".join(type_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(type_validation.errors)}, indent=2
         )
 
     # Build and validate test script input
@@ -1045,10 +1087,8 @@ async def create_test_script(
 
     validation_result = validate_test_script_input(test_script_input_data)
     if not validation_result.is_valid:
-        return format_error_message(
-            "Create Test Script",
-            "Invalid test script data",
-            "; ".join(validation_result.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(validation_result.errors)}, indent=2
         )
 
     # Create test script via API
@@ -1058,19 +1098,21 @@ async def create_test_script(
     )
 
     if result.is_valid:
-        return format_success_message(
-            "Created",
-            "Test Script",
-            "Successfully created test script",
-            test_case_key=test_case_key,
-            script_type=script_type,
-            resource_id=result.data.id,
+        # Returns CreatedResource schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
         )
     else:
-        return format_error_message(
-            "Create Test Script",
-            f"Failed to create test script for {test_case_key}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to create test script for {test_case_key}"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -1085,29 +1127,32 @@ async def get_test_case(test_case_key: str) -> str:
         Formatted test case information or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Get Test Case", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Validate test case key
     test_case_validation = validate_test_case_key(test_case_key)
     if not test_case_validation.is_valid:
-        return format_error_message(
-            "Get Test Case",
-            "Invalid test case key",
-            "; ".join(test_case_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
+            indent=2,
         )
 
     # Get test case via API
     result = await zephyr_client.get_test_case(test_case_key=test_case_key)
 
     if result.is_valid:
-        return format_test_case_display(result.data)
+        # Returns TestCase schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Get Test Case",
-            f"Failed to retrieve test case {test_case_key}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": f"Test case '{test_case_key}' does not exist or you do not "
+                f"have access to it",
+            },
+            indent=2,
         )
 
 
@@ -1126,17 +1171,14 @@ async def get_test_case_versions(
         Formatted list of test case versions or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Get Test Case Versions", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Validate test case key
     test_case_validation = validate_test_case_key(test_case_key)
     if not test_case_validation.is_valid:
-        return format_error_message(
-            "Get Test Case Versions",
-            "Invalid test case key",
-            "; ".join(test_case_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
+            indent=2,
         )
 
     # Get versions via API
@@ -1145,12 +1187,18 @@ async def get_test_case_versions(
     )
 
     if result.is_valid:
-        return format_test_case_versions_list(result.data, test_case_key)
+        # Returns TestCaseVersionLinkList schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Get Test Case Versions",
-            f"Failed to retrieve versions for test case {test_case_key}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": f"Test case '{test_case_key}' does not exist or you do not "
+                f"have access to it",
+            },
+            indent=2,
         )
 
 
@@ -1166,26 +1214,22 @@ async def get_test_case_version(test_case_key: str, version: int) -> str:
         Formatted test case information for the specific version or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Get Test Case Version", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Validate test case key
     test_case_validation = validate_test_case_key(test_case_key)
     if not test_case_validation.is_valid:
-        return format_error_message(
-            "Get Test Case Version",
-            "Invalid test case key",
-            "; ".join(test_case_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
+            indent=2,
         )
 
     # Validate version number
     version_validation = validate_version_number(version)
     if not version_validation.is_valid:
-        return format_error_message(
-            "Get Test Case Version",
-            "Invalid version number",
-            "; ".join(version_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(version_validation.errors)},
+            indent=2,
         )
 
     # Get specific version via API
@@ -1194,14 +1238,17 @@ async def get_test_case_version(test_case_key: str, version: int) -> str:
     )
 
     if result.is_valid:
-        # Add version info to the display
-        version_note = f"📋 **Test Case Version {version}** for {test_case_key}\n\n"
-        return version_note + format_test_case_display(result.data)
+        # Returns TestCase schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Get Test Case Version",
-            f"Failed to retrieve version {version} for test case {test_case_key}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": f"Test case '{test_case_key}' version {version} does not exist or you do not have access to it",
+            },
+            indent=2,
         )
 
 
@@ -1216,29 +1263,32 @@ async def get_links(test_case_key: str) -> str:
         Formatted list of links or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Get Links", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Validate test case key
     test_case_validation = validate_test_case_key(test_case_key)
     if not test_case_validation.is_valid:
-        return format_error_message(
-            "Get Links",
-            "Invalid test case key",
-            "; ".join(test_case_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
+            indent=2,
         )
 
     # Get links via API
     result = await zephyr_client.get_test_case_links(test_case_key=test_case_key)
 
     if result.is_valid:
-        return format_test_case_links_display(result.data, test_case_key)
+        # Returns TestCaseLinkList schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Get Links",
-            f"Failed to retrieve links for test case {test_case_key}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": f"Test case '{test_case_key}' does not exist or you do not "
+                f"have access to it",
+            },
+            indent=2,
         )
 
 
@@ -1255,36 +1305,30 @@ async def create_issue_link(test_case_key: str, issue_id: int) -> str:
         Success message with created link ID or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Create Issue Link", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Validate test case key
     test_case_validation = validate_test_case_key(test_case_key)
     if not test_case_validation.is_valid:
-        return format_error_message(
-            "Create Issue Link",
-            "Invalid test case key",
-            "; ".join(test_case_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
+            indent=2,
         )
 
     # Validate issue ID
     issue_id_validation = validate_issue_id(issue_id)
     if not issue_id_validation.is_valid:
-        return format_error_message(
-            "Create Issue Link",
-            "Invalid issue ID",
-            "; ".join(issue_id_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(issue_id_validation.errors)},
+            indent=2,
         )
 
     # Validate issue link input
     issue_link_data = {"issueId": issue_id}
     validation_result = validate_issue_link_input(issue_link_data)
     if not validation_result.is_valid:
-        return format_error_message(
-            "Create Issue Link",
-            "Invalid issue link data",
-            "; ".join(validation_result.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(validation_result.errors)}, indent=2
         )
 
     # Create issue link via API
@@ -1293,17 +1337,21 @@ async def create_issue_link(test_case_key: str, issue_id: int) -> str:
     )
 
     if result.is_valid:
-        return format_success_message(
-            "Issue Link Created",
-            f"Successfully created issue link between test case {test_case_key} "
-            f"and Jira issue {issue_id}",
-            resource_id=result.data.id,
+        # Returns CreatedResource schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
         )
     else:
-        return format_error_message(
-            "Create Issue Link",
-            f"Failed to create issue link for test case {test_case_key}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to create issue link for test case {test_case_key}"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -1322,17 +1370,14 @@ async def create_web_link(
         Success message with created link ID or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Create Web Link", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Validate test case key
     test_case_validation = validate_test_case_key(test_case_key)
     if not test_case_validation.is_valid:
-        return format_error_message(
-            "Create Web Link",
-            "Invalid test case key",
-            "; ".join(test_case_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
+            indent=2,
         )
 
     # Validate web link input
@@ -1342,10 +1387,8 @@ async def create_web_link(
 
     validation_result = validate_web_link_input(web_link_data)
     if not validation_result.is_valid:
-        return format_error_message(
-            "Create Web Link",
-            "Invalid web link data",
-            "; ".join(validation_result.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(validation_result.errors)}, indent=2
         )
 
     # Create web link via API
@@ -1354,18 +1397,21 @@ async def create_web_link(
     )
 
     if result.is_valid:
-        desc_text = f" ({description})" if description else ""
-        return format_success_message(
-            "Web Link Created",
-            f"Successfully created web link between test case {test_case_key} "
-            f"and {url}{desc_text}",
-            resource_id=result.data.id,
+        # Returns CreatedResource schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
         )
     else:
-        return format_error_message(
-            "Create Web Link",
-            f"Failed to create web link for test case {test_case_key}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to create web link for test case {test_case_key}"
+                ),
+            },
+            indent=2,
         )
 
 
@@ -1407,40 +1453,33 @@ async def create_test_case(
         Success message with created test case details or error message
     """
     if not zephyr_client:
-        return format_error_message(
-            "Create Test Case", "Client not initialized", _CONFIG_ERROR_MSG
-        )
+        return _CONFIG_ERROR_MSG
 
     # Use default project key if not provided
-    if project_key is None:
-        default_project_key = os.getenv("ZEPHYR_SCALE_DEFAULT_PROJECT_KEY")
-        if default_project_key:
-            project_key = default_project_key
-            logger.info(f"Using default project key: {project_key}")
-        else:
-            return format_error_message(
-                "Create Test Case",
-                "No project key provided",
-                "Please provide a project_key parameter or set "
-                "ZEPHYR_SCALE_DEFAULT_PROJECT_KEY environment variable",
-            )
+    project_key = get_project_key_with_default(project_key)
+    if not project_key:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": "No project key provided. Please provide project_key "
+                "parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY env variable",
+            },
+            indent=2,
+        )
 
     # Validate project key
     project_validation = validate_project_key(project_key)
     if not project_validation.is_valid:
-        return format_error_message(
-            "Create Test Case",
-            "Invalid project key",
-            "; ".join(project_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(project_validation.errors)},
+            indent=2,
         )
 
     # Validate test case name
     name_validation = validate_test_case_name(name)
     if not name_validation.is_valid:
-        return format_error_message(
-            "Create Test Case",
-            "Invalid test case name",
-            "; ".join(name_validation.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(name_validation.errors)}, indent=2
         )
 
     # Convert and validate integer parameters
@@ -1448,51 +1487,60 @@ async def create_test_case(
     if estimated_time is not None:
         try:
             parsed_estimated_time = int(estimated_time)
-            if parsed_estimated_time < 0:
-                return format_error_message(
-                    "Create Test Case",
-                    "Invalid estimated time",
-                    "Estimated time must be a non-negative integer (milliseconds)",
+            # Use validation utility instead of inline validation
+            validation = validate_estimated_time(parsed_estimated_time)
+            if not validation.is_valid:
+                return json.dumps(
+                    {"errorCode": 400, "message": "; ".join(validation.errors)},
+                    indent=2,
                 )
         except (ValueError, TypeError):
-            return format_error_message(
-                "Create Test Case",
-                "Invalid estimated time",
-                f"Estimated time must be a valid integer, got: {estimated_time}",
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Estimated time must be a valid integer, got: {estimated_time}",
+                },
+                indent=2,
             )
 
     parsed_component_id = None
     if component_id is not None:
         try:
             parsed_component_id = int(component_id)
-            if parsed_component_id <= 0:
-                return format_error_message(
-                    "Create Test Case",
-                    "Invalid component ID",
-                    "Component ID must be a positive integer",
+            # Use validation utility instead of inline validation
+            validation = validate_component_id(parsed_component_id)
+            if not validation.is_valid:
+                return json.dumps(
+                    {"errorCode": 400, "message": "; ".join(validation.errors)},
+                    indent=2,
                 )
         except (ValueError, TypeError):
-            return format_error_message(
-                "Create Test Case",
-                "Invalid component ID",
-                f"Component ID must be a valid integer, got: {component_id}",
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Component ID must be a valid integer, got: {component_id}",
+                },
+                indent=2,
             )
 
     parsed_folder_id = None
     if folder_id is not None:
         try:
             parsed_folder_id = int(folder_id)
-            if parsed_folder_id <= 0:
-                return format_error_message(
-                    "Create Test Case",
-                    "Invalid folder ID",
-                    "Folder ID must be a positive integer",
+            # Use validation utility instead of inline validation
+            validation = validate_folder_id(parsed_folder_id)
+            if not validation.is_valid:
+                return json.dumps(
+                    {"errorCode": 400, "message": "; ".join(validation.errors)},
+                    indent=2,
                 )
         except (ValueError, TypeError):
-            return format_error_message(
-                "Create Test Case",
-                "Invalid folder ID",
-                f"Folder ID must be a valid integer, got: {folder_id}",
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Folder ID must be a valid integer, got: {folder_id}",
+                },
+                indent=2,
             )
 
     # Convert and validate labels
@@ -1502,19 +1550,19 @@ async def create_test_case(
             # Try JSON array format first
             parsed_labels = json.loads(labels)
             if not isinstance(parsed_labels, list):
-                return format_error_message(
-                    "Create Test Case",
-                    "Invalid labels format",
-                    'Labels must be a JSON array (e.g., \'["automation", "smoke"]\') '
-                    "or comma-separated string",
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": 'Labels must be a JSON array (e.g., \'["automation", "smoke"]\') or comma-separated string',
+                    },
+                    indent=2,
                 )
             # Validate all items are strings
             for item in parsed_labels:
                 if not isinstance(item, str):
-                    return format_error_message(
-                        "Create Test Case",
-                        "Invalid labels format",
-                        "All labels must be strings",
+                    return json.dumps(
+                        {"errorCode": 400, "message": "All labels must be strings"},
+                        indent=2,
                     )
         except json.JSONDecodeError:
             # Fall back to comma-separated format
@@ -1523,19 +1571,20 @@ async def create_test_case(
                     label.strip() for label in labels.split(",") if label.strip()
                 ]
                 if not parsed_labels:
-                    return format_error_message(
-                        "Create Test Case",
-                        "Invalid labels format",
-                        "Labels cannot be empty. Use JSON array format "
-                        "or comma-separated values",
+                    return json.dumps(
+                        {
+                            "errorCode": 400,
+                            "message": "Labels cannot be empty. Use JSON array format or comma-separated values",
+                        },
+                        indent=2,
                     )
             except Exception as e:
-                return format_error_message(
-                    "Create Test Case",
-                    "Invalid labels format",
-                    f"Failed to parse labels: {str(e)}. Use JSON array format "
-                    f'(e.g., \'["label1", "label2"]\') or comma-separated '
-                    f"(e.g., 'label1, label2')",
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": f"Failed to parse labels: {str(e)}. Use JSON array format (e.g., '[\"label1\", \"label2\"]') or comma-separated (e.g., 'label1, label2')",
+                    },
+                    indent=2,
                 )
 
     # Convert and validate custom fields
@@ -1544,24 +1593,28 @@ async def create_test_case(
         try:
             parsed_custom_fields = json.loads(custom_fields)
             if not isinstance(parsed_custom_fields, dict):
-                return format_error_message(
-                    "Create Test Case",
-                    "Invalid custom fields format",
-                    "Custom fields must be a JSON object "
-                    '(e.g., \'{"Components": ["Update"], "Version": "v1.0.0"}\')',
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": 'Custom fields must be a JSON object (e.g., \'{"Components": ["Update"], "Version": "v1.0.0"}\')',
+                    },
+                    indent=2,
                 )
         except json.JSONDecodeError as e:
-            return format_error_message(
-                "Create Test Case",
-                "Invalid custom fields format",
-                f"Custom fields must be valid JSON: {str(e)}. "
-                f'Example: \'{{"Components": ["Update"], "Version": "v1.0.0"}}\'',
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f'Custom fields must be valid JSON: {str(e)}. Example: \'{{"Components": ["Update"], "Version": "v1.0.0"}}\'',
+                },
+                indent=2,
             )
         except Exception as e:
-            return format_error_message(
-                "Create Test Case",
-                "Invalid custom fields format",
-                f"Failed to parse custom fields: {str(e)}",
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Failed to parse custom fields: {str(e)}",
+                },
+                indent=2,
             )
 
     # Build test case data
@@ -1604,10 +1657,8 @@ async def create_test_case(
     # Validate complete test case input
     validation_result = validate_test_case_input(test_case_data)
     if not validation_result.is_valid:
-        return format_error_message(
-            "Create Test Case",
-            "Invalid test case data",
-            "; ".join(validation_result.errors),
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(validation_result.errors)}, indent=2
         )
 
     # Create test case via API
@@ -1616,12 +1667,21 @@ async def create_test_case(
     )
 
     if result.is_valid:
-        return format_test_case_creation_success(result.data, project_key)
+        # Returns CreatedResource schema according to API spec
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
     else:
-        return format_error_message(
-            "Create Test Case",
-            f"Failed to create test case in project {project_key}",
-            "; ".join(result.errors),
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to create test case in project {project_key}"
+                ),
+            },
+            indent=2,
         )
 
 
