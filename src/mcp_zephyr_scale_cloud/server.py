@@ -29,6 +29,7 @@ from .utils.validation import (
     validate_test_case_input,
     validate_test_case_key,
     validate_test_case_name,
+    validate_test_case_update_input,
     validate_test_script_input,
     validate_test_script_type,
     validate_test_steps_input,
@@ -1703,6 +1704,293 @@ async def create_test_case(
                     "; ".join(result.errors)
                     if result.errors
                     else f"Failed to create test case in project {project_key}"
+                ),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+async def update_test_case(
+    test_case_key: str,
+    name: str | None = None,
+    objective: str | None = None,
+    precondition: str | None = None,
+    estimated_time: str | None = None,
+    component_id: str | None = None,
+    priority_name: str | None = None,
+    status_name: str | None = None,
+    folder_id: str | None = None,
+    owner_id: str | None = None,
+    labels: str | None = None,
+    custom_fields: str | dict | None = None,
+) -> str:
+    """Update an existing test case in Zephyr Scale Cloud.
+
+    Args:
+        test_case_key: The key of the test case to update (format: [PROJECT]-T[NUMBER])
+        name: Test case name (optional)
+        objective: Test case objective (optional)
+        precondition: Test case preconditions (optional)
+        estimated_time: Estimated duration in milliseconds as string (optional)
+        component_id: Jira component ID as string (optional)
+        priority_name: Priority name (optional)
+        status_name: Status name (optional)
+        folder_id: Folder ID as string to place the test case (optional)
+        owner_id: Jira user account ID for owner (optional)
+        labels: Labels as JSON array string (e.g., '["automation", "smoke"]') or
+                comma-separated (e.g., "automation, smoke") (optional)
+        custom_fields: Custom fields as JSON string or dict (e.g.,
+                      '{"Components": ["Update"], "Version": "v1.0.0"}' or 
+                      {"Components": ["Update"], "Version": "v1.0.0"}) (optional)
+
+    Returns:
+        Success message or error message
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate test case key
+    test_case_validation = validate_test_case_key(test_case_key)
+    if not test_case_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
+            indent=2,
+        )
+
+    # Validate test case name if provided
+    if name is not None:
+        name_validation = validate_test_case_name(name)
+        if not name_validation.is_valid:
+            return json.dumps(
+                {"errorCode": 400, "message": "; ".join(name_validation.errors)},
+                indent=2,
+            )
+
+    # Convert and validate integer parameters
+    parsed_estimated_time = None
+    if estimated_time is not None:
+        try:
+            parsed_estimated_time = int(estimated_time)
+            # Use validation utility
+            validation = validate_estimated_time(parsed_estimated_time)
+            if not validation.is_valid:
+                return json.dumps(
+                    {"errorCode": 400, "message": "; ".join(validation.errors)},
+                    indent=2,
+                )
+        except (ValueError, TypeError):
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Estimated time must be a valid integer, "
+                    f"got: {estimated_time}",
+                },
+                indent=2,
+            )
+
+    parsed_component_id = None
+    if component_id is not None:
+        try:
+            parsed_component_id = int(component_id)
+            # Use validation utility
+            validation = validate_component_id(parsed_component_id)
+            if not validation.is_valid:
+                return json.dumps(
+                    {"errorCode": 400, "message": "; ".join(validation.errors)},
+                    indent=2,
+                )
+        except (ValueError, TypeError):
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Component ID must be a valid integer, "
+                    f"got: {component_id}",
+                },
+                indent=2,
+            )
+
+    parsed_folder_id = None
+    if folder_id is not None:
+        try:
+            parsed_folder_id = int(folder_id)
+            # Use validation utility
+            validation = validate_folder_id(parsed_folder_id)
+            if not validation.is_valid:
+                return json.dumps(
+                    {"errorCode": 400, "message": "; ".join(validation.errors)},
+                    indent=2,
+                )
+        except (ValueError, TypeError):
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Folder ID must be a valid integer, got: {folder_id}",
+                },
+                indent=2,
+            )
+
+    # Convert and validate labels
+    parsed_labels = None
+    if labels is not None:
+        try:
+            # Try JSON array format first
+            parsed_labels = json.loads(labels)
+            if not isinstance(parsed_labels, list):
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": "Labels must be a JSON array (e.g., "
+                        '\'["automation", "smoke"]\') or comma-separated string',
+                    },
+                    indent=2,
+                )
+            # Validate all items are strings
+            for item in parsed_labels:
+                if not isinstance(item, str):
+                    return json.dumps(
+                        {"errorCode": 400, "message": "All labels must be strings"},
+                        indent=2,
+                    )
+        except json.JSONDecodeError:
+            # Fall back to comma-separated format
+            try:
+                parsed_labels = [
+                    label.strip() for label in labels.split(",") if label.strip()
+                ]
+                if not parsed_labels:
+                    return json.dumps(
+                        {
+                            "errorCode": 400,
+                            "message": "Labels cannot be empty. Use JSON array "
+                            "format or comma-separated values",
+                        },
+                        indent=2,
+                    )
+            except Exception as e:
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": f"Failed to parse labels: {str(e)}. Use JSON array "
+                        'format (e.g., \'["label1", "label2"]\') or comma-separated '
+                        "(e.g., 'label1, label2')",
+                    },
+                    indent=2,
+                )
+
+    # Convert and validate custom fields
+    parsed_custom_fields = None
+    if custom_fields is not None:
+        if isinstance(custom_fields, dict):
+            # Already a dictionary (parsed by MCP framework)
+            parsed_custom_fields = custom_fields
+        elif isinstance(custom_fields, str):
+            # String input - parse as JSON
+            try:
+                parsed_custom_fields = json.loads(custom_fields)
+                if not isinstance(parsed_custom_fields, dict):
+                    return json.dumps(
+                        {
+                            "errorCode": 400,
+                            "message": "Custom fields must be a JSON object (e.g., "
+                            '\'{"Components": ["Update"], "Version": "v1.0.0"}\')',
+                        },
+                        indent=2,
+                    )
+            except json.JSONDecodeError as e:
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": f"Custom fields must be valid JSON: {str(e)}. "
+                        'Example: \'{"Components": ["Update"], "Version": "v1.0.0"}\'',
+                    },
+                    indent=2,
+                )
+            except Exception as e:
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": f"Failed to parse custom fields: {str(e)}",
+                    },
+                    indent=2,
+                )
+        else:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": "Custom fields must be a JSON object or JSON string. "
+                    'Example: \'{"Components": ["Update"], "Version": "v1.0.0"}\'',
+                },
+                indent=2,
+            )
+
+    # Build test case update data (only include non-None values)
+    test_case_data = {}
+
+    # Add optional fields only if they are provided
+    if name is not None:
+        test_case_data["name"] = name
+
+    if objective is not None:
+        test_case_data["objective"] = objective
+
+    if precondition is not None:
+        test_case_data["precondition"] = precondition
+
+    if parsed_estimated_time is not None:
+        test_case_data["estimatedTime"] = parsed_estimated_time
+
+    if parsed_component_id is not None:
+        test_case_data["componentId"] = parsed_component_id
+
+    if priority_name is not None:
+        test_case_data["priorityName"] = priority_name
+
+    if status_name is not None:
+        test_case_data["statusName"] = status_name
+
+    if parsed_folder_id is not None:
+        test_case_data["folderId"] = parsed_folder_id
+
+    if owner_id is not None:
+        test_case_data["ownerId"] = owner_id
+
+    if parsed_labels is not None:
+        test_case_data["labels"] = parsed_labels
+
+    if parsed_custom_fields is not None:
+        test_case_data["customFields"] = parsed_custom_fields
+
+    # Validate complete test case update input
+    validation_result = validate_test_case_update_input(test_case_data)
+    if not validation_result.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(validation_result.errors)},
+            indent=2,
+        )
+
+    # Update test case via API
+    result = await zephyr_client.update_test_case(
+        test_case_key=test_case_key, test_case_input=validation_result.data
+    )
+
+    if result.is_valid:
+        # PUT returns 200 with no content according to API spec
+        return json.dumps(
+            {
+                "message": f"Test case '{test_case_key}' updated successfully",
+                "testCaseKey": test_case_key,
+            },
+            indent=2,
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to update test case {test_case_key}"
                 ),
             },
             indent=2,
