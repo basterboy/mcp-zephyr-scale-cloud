@@ -306,13 +306,12 @@ async def create_priority(
 
     # Get project key with default fallback
     project_key = get_project_key_with_default(project_key)
-    if not project_key:
+
+    # Validate project key (required for CREATE operations)
+    project_validation = validate_project_key(project_key)
+    if not project_validation.is_valid:
         return json.dumps(
-            {
-                "errorCode": 400,
-                "message": "No project key provided. Please provide project_key "
-                "parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY env variable",
-            },
+            {"errorCode": 400, "message": "; ".join(project_validation.errors)},
             indent=2,
         )
 
@@ -559,13 +558,12 @@ async def create_status(
 
     # Get project key with default fallback
     project_key = get_project_key_with_default(project_key)
-    if not project_key:
+
+    # Validate project key (required for CREATE operations)
+    project_validation = validate_project_key(project_key)
+    if not project_validation.is_valid:
         return json.dumps(
-            {
-                "errorCode": 400,
-                "message": "No project key provided. Please provide project_key "
-                "parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY env variable",
-            },
+            {"errorCode": 400, "message": "; ".join(project_validation.errors)},
             indent=2,
         )
 
@@ -829,13 +827,12 @@ async def create_folder(
 
     # Get project key with default fallback
     project_key = get_project_key_with_default(project_key)
-    if not project_key:
+
+    # Validate project key (required for CREATE operations)
+    project_validation = validate_project_key(project_key)
+    if not project_validation.is_valid:
         return json.dumps(
-            {
-                "errorCode": 400,
-                "message": "No project key provided. Please provide project_key "
-                "parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY env variable",
-            },
+            {"errorCode": 400, "message": "; ".join(project_validation.errors)},
             indent=2,
         )
 
@@ -1466,19 +1463,10 @@ async def create_test_case(
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
 
-    # Use default project key if not provided
+    # Get project key with default fallback
     project_key = get_project_key_with_default(project_key)
-    if not project_key:
-        return json.dumps(
-            {
-                "errorCode": 400,
-                "message": "No project key provided. Please provide project_key "
-                "parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY env variable",
-            },
-            indent=2,
-        )
 
-    # Validate project key
+    # Validate project key (required for CREATE operations)
     project_validation = validate_project_key(project_key)
     if not project_validation.is_valid:
         return json.dumps(
