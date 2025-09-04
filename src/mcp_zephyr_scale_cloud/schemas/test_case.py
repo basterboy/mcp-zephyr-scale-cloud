@@ -77,11 +77,6 @@ class TestCaseInput(BaseModel):
         ge=0,
         example=10001,
     )
-    component: dict[str, Any] | None = Field(
-        None,
-        description="Component object for API (resolved from component_id)",
-        example={"id": 10001},
-    )
     priority_name: str | None = Field(
         None,
         alias="priorityName",
@@ -90,11 +85,6 @@ class TestCaseInput(BaseModel):
         min_length=1,
         example="High",
     )
-    priority: dict[str, Any] | None = Field(
-        None,
-        description="Priority object for API (resolved from priority_name)",
-        example={"id": 123},
-    )
     status_name: str | None = Field(
         None,
         alias="statusName",
@@ -102,11 +92,6 @@ class TestCaseInput(BaseModel):
         max_length=255,
         min_length=1,
         example="Draft",
-    )
-    status: dict[str, Any] | None = Field(
-        None,
-        description="Status object for API (resolved from status_name)",
-        example={"id": 456},
     )
     folder_id: int | None = Field(
         None,
@@ -172,7 +157,10 @@ class TestCaseUpdateInput(BaseModel):
     component: dict[str, Any] | None = Field(
         None,
         description="Component object for API (resolved from component_id)",
-        example={"id": 10001},
+        example={
+            "id": 10001,
+            "self": "https://jira-instance.atlassian.net/rest/api/2/component/10001",
+        },
     )
     priority_name: str | None = Field(
         None,
@@ -182,12 +170,13 @@ class TestCaseUpdateInput(BaseModel):
         min_length=1,
         example="High",
     )
-    priority_id: int | None = Field(
+    priority: dict[str, Any] | None = Field(
         None,
-        alias="priorityId",
-        description="The priority ID (resolved from priority name)",
-        ge=1,
-        example=123,
+        description="Priority object for API (resolved from priority_name)",
+        example={
+            "id": 123,
+            "self": "https://api.zephyrscale.smartbear.com/v2/priorities/123",
+        },
     )
     status_name: str | None = Field(
         None,
@@ -197,12 +186,13 @@ class TestCaseUpdateInput(BaseModel):
         min_length=1,
         example="Draft",
     )
-    status_id: int | None = Field(
+    status: dict[str, Any] | None = Field(
         None,
-        alias="statusId",
-        description="The status ID (resolved from status name)",
-        ge=1,
-        example=456,
+        description="Status object for API (resolved from status_name)",
+        example={
+            "id": 456,
+            "self": "https://api.zephyrscale.smartbear.com/v2/statuses/456",
+        },
     )
     folder_id: int | None = Field(
         None,

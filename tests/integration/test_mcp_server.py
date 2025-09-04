@@ -732,30 +732,8 @@ class TestFolderMCPTools:
     async def test_create_test_case_success(self, mock_client):
         """Test successful create_test_case tool call."""
         from src.mcp_zephyr_scale_cloud.schemas.base import CreatedResource
-        from src.mcp_zephyr_scale_cloud.schemas.common import ProjectLink
-        from src.mcp_zephyr_scale_cloud.schemas.priority import Priority, PriorityList
         from src.mcp_zephyr_scale_cloud.server import create_test_case
         from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
-
-        # Mock priority lookup for priority_name="High"
-        mock_project = ProjectLink(
-            id=1, name="Test Project", self="http://test.com/project/1"
-        )
-        mock_priority = Priority(
-            id=123,
-            name="High",
-            description="High priority",
-            color="#FF0000",
-            index=1,
-            default=False,
-            archived=False,
-            project=mock_project,
-        )
-        mock_priority_list = PriorityList(
-            values=[mock_priority], total=1, maxResults=50, startAt=0, isLast=True
-        )
-        mock_priorities_result = ValidationResult(True, data=mock_priority_list)
-        mock_client.get_priorities = AsyncMock(return_value=mock_priorities_result)
 
         # Mock successful API response
         mock_created = CreatedResource(
