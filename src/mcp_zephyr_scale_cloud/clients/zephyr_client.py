@@ -27,6 +27,7 @@ from ..schemas.test_case import (
     IssueLinkInput,
     TestCase,
     TestCaseInput,
+    TestCaseUpdateInput,
     TestCaseLinkList,
     WebLinkInput,
 )
@@ -963,4 +964,43 @@ class ZephyrClient:
             return ValidationResult(
                 False,
                 [f"Failed to create test case: {str(e)}"],
+            )
+
+    async def update_test_case(
+        self,
+        test_case_key: str,
+        test_case_input: "TestCaseUpdateInput",
+    ) -> "ValidationResult[None]":
+        """
+        Update an existing test case.
+
+        Args:
+            test_case_key: The key of the test case (format: [A-Z]+-T[0-9]+)
+            test_case_input: TestCaseUpdateInput with the update data
+
+        Returns:
+            ValidationResult with None data on success or error messages
+        """
+        try:
+            # Convert to dict and exclude None values
+            request_data = test_case_input.model_dump(
+                by_alias=True, exclude_none=True
+            )
+
+            async with httpx.AsyncClient() as client:
+                response = await client.put(
+                    f"{self.config.base_url}/testcases/{test_case_key}",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                # PUT returns 200 with no content according to API spec
+                return ValidationResult(True, data=None)
+
+        except httpx.HTTPError as e:
+            return ValidationResult(
+                False,
+                [f"Failed to update test case {test_case_key}: {str(e)}"],
             )

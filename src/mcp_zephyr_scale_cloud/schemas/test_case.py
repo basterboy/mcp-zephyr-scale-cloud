@@ -119,6 +119,83 @@ class TestCaseInput(BaseModel):
     )
 
 
+class TestCaseUpdateInput(BaseModel):
+    """Input schema for updating test cases."""
+
+    model_config = {"populate_by_name": True}
+
+    name: str | None = Field(
+        None,
+        description="The test case name",
+        min_length=1,
+        example="Updated test user login functionality",
+    )
+    objective: str | None = Field(
+        None,
+        description="The test case objective",
+        example="Verify that users can successfully log in with valid credentials",
+    )
+    precondition: str | None = Field(
+        None,
+        description="Test case preconditions",
+        example="User account exists and is active",
+    )
+    estimated_time: int | None = Field(
+        None,
+        alias="estimatedTime",
+        description="Estimated duration in milliseconds",
+        ge=0,
+        example=138000,
+    )
+    component_id: int | None = Field(
+        None,
+        alias="componentId",
+        description="ID of a component from Jira",
+        ge=0,
+        example=10001,
+    )
+    priority_name: str | None = Field(
+        None,
+        alias="priorityName",
+        description="The priority name",
+        max_length=255,
+        min_length=1,
+        example="High",
+    )
+    status_name: str | None = Field(
+        None,
+        alias="statusName",
+        description="The status name",
+        max_length=255,
+        min_length=1,
+        example="Draft",
+    )
+    folder_id: int | None = Field(
+        None,
+        alias="folderId",
+        description="ID of a folder to place the test case within",
+        ge=1,
+        example=12345,
+    )
+    owner_id: str | None = Field(
+        None,
+        alias="ownerId",
+        description="Jira user account ID for the test case owner",
+        example="712020:b231ae42-7619-42b4-9cd8-a83e0cdc00ad",
+    )
+    labels: list[str] | None = Field(
+        None,
+        description="List of labels for the test case",
+        example=["automation", "smoke", "login"],
+    )
+    custom_fields: dict[str, Any] | None = Field(
+        None,
+        alias="customFields",
+        description="Custom fields for the test case",
+        example={"Priority": "High", "Component": "Authentication"},
+    )
+
+
 class IssueLink(Link):
     """Issue link for test case."""
 

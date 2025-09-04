@@ -554,6 +554,35 @@ def validate_test_case_input(test_case_data: dict) -> "ValidationResult":
         return ValidationResult(False, [f"Unexpected validation error: {str(e)}"])
 
 
+def validate_test_case_update_input(test_case_data: dict) -> "ValidationResult":
+    """
+    Validate test case update input data.
+
+    Args:
+        test_case_data: Dictionary containing test case update data
+
+    Returns:
+        ValidationResult with validated TestCaseUpdateInput or error messages
+    """
+    from ..schemas.test_case import TestCaseUpdateInput
+
+    try:
+        validated_input = TestCaseUpdateInput(**test_case_data)
+        return ValidationResult(True, data=validated_input)
+
+    except ValidationError as e:
+        errors = []
+        for error in e.errors():
+            field = ".".join(str(loc) for loc in error["loc"])
+            message = error["msg"]
+            errors.append(f"Field '{field}': {message}")
+
+        return ValidationResult(False, errors)
+
+    except Exception as e:
+        return ValidationResult(False, [f"Unexpected validation error: {str(e)}"])
+
+
 def validate_test_case_name(name: str) -> "ValidationResult[str]":
     """
     Validate test case name.
