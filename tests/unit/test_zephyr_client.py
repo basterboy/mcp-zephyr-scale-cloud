@@ -553,7 +553,7 @@ class TestZephyrClientFolder:
             # Check URL
             assert call_args[0][0].endswith("/testcases/PROJ-T123")
 
-            # Check request data
+            # Check request data - should contain only the updated fields
             request_data = call_args[1]["json"]
             assert request_data["name"] == "Updated test case"
             assert request_data["objective"] == "Updated objective"
@@ -588,7 +588,7 @@ class TestZephyrClientFolder:
             mock_client.put.assert_called_once()
             call_args = mock_client.put.call_args
 
-            # Check request data (should only contain non-None fields)
+            # Check request data - should contain only the updated field
             request_data = call_args[1]["json"]
             assert request_data["statusName"] == "Completed"
             # Other fields should not be present in the request

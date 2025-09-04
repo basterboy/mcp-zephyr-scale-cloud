@@ -974,6 +974,9 @@ class ZephyrClient:
         """
         Update an existing test case.
 
+        Note: This sends only the provided fields to the API. The Zephyr Scale API
+        may clear any fields not specified in the request, so use with caution.
+
         Args:
             test_case_key: The key of the test case (format: [A-Z]+-T[0-9]+)
             test_case_input: TestCaseUpdateInput with the update data
@@ -982,7 +985,8 @@ class ZephyrClient:
             ValidationResult with None data on success or error messages
         """
         try:
-            # Convert to dict and exclude None values
+            # Convert update input to dict, excluding None values
+            # We'll send only the fields that are being updated
             request_data = test_case_input.model_dump(by_alias=True, exclude_none=True)
 
             async with httpx.AsyncClient() as client:
