@@ -1150,7 +1150,7 @@ async def get_test_case(test_case_key: str) -> str:
     if result.is_valid:
         # Returns TestCase schema according to API spec
         return json.dumps(
-            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+            result.data.model_dump(by_alias=True, exclude_none=True, mode='json'), indent=2
         )
     else:
         return json.dumps(
@@ -1247,7 +1247,7 @@ async def get_test_case_version(test_case_key: str, version: int) -> str:
     if result.is_valid:
         # Returns TestCase schema according to API spec
         return json.dumps(
-            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+            result.data.model_dump(by_alias=True, exclude_none=True, mode='json'), indent=2
         )
     else:
         return json.dumps(
