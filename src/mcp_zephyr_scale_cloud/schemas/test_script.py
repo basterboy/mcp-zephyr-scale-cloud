@@ -25,8 +25,7 @@ class TestScriptInput(BaseModel):
     )
     text: str = Field(
         ...,
-        min_length=1,
-        description="The test script content",
+        description="The test script content (empty string if no script exists)",
         example="e.g. Attempt to login to the application",
     )
 

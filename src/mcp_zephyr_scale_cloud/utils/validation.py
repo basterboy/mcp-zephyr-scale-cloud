@@ -366,6 +366,15 @@ def validate_test_script_input(test_script_input_data: dict) -> "ValidationResul
     from ..schemas.test_script import TestScriptInput
 
     try:
+        # Validate that text has content when creating (not reading)
+        if (
+            "text" in test_script_input_data
+            and len(test_script_input_data["text"].strip()) == 0
+        ):
+            return ValidationResult(
+                False, ["Test script text cannot be empty when creating a script"]
+            )
+
         validated_input = TestScriptInput(**test_script_input_data)
         return ValidationResult(True, data=validated_input)
     except ValueError as e:

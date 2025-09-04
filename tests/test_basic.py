@@ -471,6 +471,17 @@ class TestEnvironmentConfiguration:
         assert script.type == TestScriptType.BDD
         assert "Given user is on login page" in script.text
 
+        # Test empty script (like API response for new test case)
+        empty_script = TestScript(
+            id=456,
+            type=TestScriptType.PLAIN,
+            text="",
+        )
+
+        assert empty_script.id == 456
+        assert empty_script.type == TestScriptType.PLAIN
+        assert empty_script.text == ""
+
         # Test model dump with aliases
         dumped = script_input.model_dump(by_alias=True, exclude_none=True)
         assert "type" in dumped
@@ -492,3 +503,26 @@ class TestEnvironmentConfiguration:
         # Invalid type
         result = validate_test_script_type("invalid")
         assert not result.is_valid
+
+    def test_test_script_input_validation(self):
+        """Test test script input validation behavior."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_script_input,
+        )
+
+        # Valid script input
+        valid_data = {"type": "plain", "text": "Valid script content"}
+        result = validate_test_script_input(valid_data)
+        assert result.is_valid
+
+        # Empty text should fail for creation
+        empty_data = {"type": "plain", "text": ""}
+        result = validate_test_script_input(empty_data)
+        assert not result.is_valid
+        assert "cannot be empty" in result.errors[0]
+
+        # Whitespace-only text should fail for creation
+        whitespace_data = {"type": "plain", "text": "   "}
+        result = validate_test_script_input(whitespace_data)
+        assert not result.is_valid
+        assert "cannot be empty" in result.errors[0]
