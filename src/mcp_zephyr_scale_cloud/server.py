@@ -214,6 +214,9 @@ async def get_priorities(project_key: str | None = None, max_results: int = 50) 
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
 
+    # Get project key with default fallback
+    project_key = get_project_key_with_default(project_key)
+
     # Validate project key if provided
     if project_key:
         project_validation = validate_project_key(project_key)
@@ -452,6 +455,9 @@ async def get_statuses(
         from .schemas.status import StatusType
 
         parsed_status_type = StatusType(status_type)
+
+    # Get project key with default fallback
+    project_key = get_project_key_with_default(project_key)
 
     # Validate project key if provided
     if project_key:
@@ -700,6 +706,9 @@ async def get_folders(
                 indent=2,
             )
         validated_folder_type = folder_type_result.data
+
+    # Get project key with default fallback
+    project_key = get_project_key_with_default(project_key)
 
     # Validate project key if provided
     if project_key:
