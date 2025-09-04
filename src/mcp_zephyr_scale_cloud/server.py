@@ -1457,7 +1457,7 @@ async def create_test_case(
         labels: Labels as JSON array string (e.g., '["automation", "smoke"]') or
                 comma-separated (e.g., "automation, smoke") (optional)
         custom_fields: Custom fields as JSON string or dict (e.g.,
-                      '{"Components": ["Update"], "Version": "v1.0.0"}' or 
+                      '{"Components": ["Update"], "Version": "v1.0.0"}' or
                       {"Components": ["Update"], "Version": "v1.0.0"}) (optional)
 
     Returns:
