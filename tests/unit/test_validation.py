@@ -138,7 +138,7 @@ class TestProjectKeyValidation:
         result = validate_project_key("")
 
         assert not result.is_valid
-        assert "required" in result.errors[0]
+        assert "No project key provided" in result.errors[0]
 
 
 class TestPaginationValidation:

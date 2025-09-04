@@ -41,7 +41,13 @@ def validate_project_key(project_key: str) -> ValidationResult:
         ValidationResult with validation status and any errors
     """
     if not project_key:
-        return ValidationResult(False, ["Project key is required"])
+        return ValidationResult(
+            False,
+            [
+                "No project key provided. Please provide project_key "
+                "parameter or set ZEPHYR_SCALE_DEFAULT_PROJECT_KEY env variable"
+            ],
+        )
 
     # Jira project keys must be uppercase letters, numbers, and underscores
     # Must start with a letter

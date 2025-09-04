@@ -182,7 +182,7 @@ class TestMCPServerIntegration:
                 mock_result.data = mock_data
                 mock_client.create_priority = AsyncMock(return_value=mock_result)
 
-                result = await create_priority("TEST", "High Priority")
+                result = await create_priority(name="High Priority", project_key="TEST")
 
                 # Parse JSON response
                 response_data = json.loads(result)
@@ -303,7 +303,9 @@ class TestMCPServerIntegration:
                 mock_result.data = mock_data
                 mock_client.create_status = AsyncMock(return_value=mock_result)
 
-                result = await create_status("TEST", "In Progress", "TEST_EXECUTION")
+                result = await create_status(
+                    name="In Progress", status_type="TEST_EXECUTION", project_key="TEST"
+                )
 
                 # Parse JSON response
                 response_data = json.loads(result)
