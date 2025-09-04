@@ -137,6 +137,13 @@ class TestBasicFunctionality:
             "get_test_script",
             "create_test_script",
             "get_test_case",
+            "get_test_case_versions",
+            "get_test_case_version",
+            "get_links",
+            "create_issue_link",
+            "create_web_link",
+            "create_test_case",
+            "update_test_case",
         ]
 
         for tool_name in expected_tools:
@@ -862,3 +869,118 @@ class TestEnvironmentConfiguration:
 
         result = validate_test_case_input({})  # Missing required fields
         assert not result.is_valid
+
+    def test_test_case_update_schema_creation(self):
+        """Test creating TestCaseUpdateInput schema."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import TestCaseUpdateInput
+
+        # Test with all fields
+        update_input = TestCaseUpdateInput(
+            name="Updated test case",
+            objective="Updated objective",
+            precondition="Updated precondition",
+            estimated_time=120000,
+            component_id=123,
+            priority_name="High",
+            status_name="Ready",
+            folder_id=456,
+            owner_id="user123",
+            labels=["automation", "regression"],
+            custom_fields={"Component": "Test", "Version": "v2.0"},
+        )
+
+        assert update_input.name == "Updated test case"
+        assert update_input.objective == "Updated objective"
+        assert update_input.estimated_time == 120000
+        assert update_input.component_id == 123
+        assert update_input.priority_name == "High"
+        assert update_input.status_name == "Ready"
+        assert update_input.folder_id == 456
+        assert update_input.owner_id == "user123"
+        assert update_input.labels == ["automation", "regression"]
+        assert update_input.custom_fields == {"Component": "Test", "Version": "v2.0"}
+
+        # Test with partial fields (all optional)
+        partial_update = TestCaseUpdateInput(
+            name="Updated name only",
+            status_name="Completed",
+        )
+
+        assert partial_update.name == "Updated name only"
+        assert partial_update.status_name == "Completed"
+        assert partial_update.objective is None
+        assert partial_update.estimated_time is None
+
+        # Test with no fields (empty update)
+        empty_update = TestCaseUpdateInput()
+
+        assert empty_update.name is None
+        assert empty_update.objective is None
+        assert empty_update.status_name is None
+
+    def test_test_case_update_schema_validation(self):
+        """Test TestCaseUpdateInput schema validation."""
+        from pydantic import ValidationError
+
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import TestCaseUpdateInput
+
+        # Test invalid estimated_time
+        with pytest.raises(ValidationError):
+            TestCaseUpdateInput(estimated_time=-1)
+
+        # Test invalid component_id
+        with pytest.raises(ValidationError):
+            TestCaseUpdateInput(component_id=-1)
+
+        # Test invalid folder_id
+        with pytest.raises(ValidationError):
+            TestCaseUpdateInput(folder_id=0)  # Should be >= 1
+
+        # Test empty name
+        with pytest.raises(ValidationError):
+            TestCaseUpdateInput(name="")
+
+        # Test too long priority name
+        with pytest.raises(ValidationError):
+            TestCaseUpdateInput(priority_name="x" * 256)
+
+        # Test too long status name
+        with pytest.raises(ValidationError):
+            TestCaseUpdateInput(status_name="x" * 256)
+
+    def test_test_case_update_validation_function(self):
+        """Test test case update validation function."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_case_update_input,
+        )
+
+        # Test valid update with all fields
+        result = validate_test_case_update_input(
+            {
+                "name": "Updated test case",
+                "objective": "Updated objective",
+                "statusName": "Ready",
+                "customFields": {"Component": "Test"},
+            }
+        )
+        assert result.is_valid
+        assert result.data.name == "Updated test case"
+        assert result.data.objective == "Updated objective"
+        assert result.data.status_name == "Ready"
+        assert result.data.custom_fields == {"Component": "Test"}
+
+        # Test valid partial update
+        result = validate_test_case_update_input({"name": "Updated name"})
+        assert result.is_valid
+        assert result.data.name == "Updated name"
+        assert result.data.objective is None
+
+        # Test valid empty update (no changes)
+        result = validate_test_case_update_input({})
+        assert result.is_valid
+        assert result.data.name is None
+
+        # Test invalid update (empty name)
+        result = validate_test_case_update_input({"name": ""})
+        assert not result.is_valid
+        assert "String should have at least 1 character" in " ".join(result.errors)

@@ -450,3 +450,182 @@ class TestFolderTypeValidation:
 
         assert not result.is_valid
         assert "Invalid folder type" in result.errors[0]
+
+
+class TestTestCaseUpdateInputValidation:
+    """Test cases for test case update input validation."""
+
+    def test_validate_test_case_update_input_valid_all_fields(self):
+        """Test valid test case update input with all fields."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_case_update_input,
+        )
+
+        data = {
+            "name": "Updated test case",
+            "objective": "Updated objective",
+            "precondition": "Updated precondition",
+            "estimatedTime": 120000,
+            "componentId": 123,
+            "priorityName": "High",
+            "statusName": "Ready",
+            "folderId": 456,
+            "ownerId": "user123",
+            "labels": ["automation", "regression"],
+            "customFields": {"Component": "Test", "Version": "v2.0"},
+        }
+
+        result = validate_test_case_update_input(data)
+
+        assert result.is_valid
+        assert result.data.name == "Updated test case"
+        assert result.data.objective == "Updated objective"
+        assert result.data.estimated_time == 120000
+        assert result.data.component_id == 123
+        assert result.data.priority_name == "High"
+        assert result.data.status_name == "Ready"
+        assert result.data.folder_id == 456
+        assert result.data.owner_id == "user123"
+        assert result.data.labels == ["automation", "regression"]
+        assert result.data.custom_fields == {"Component": "Test", "Version": "v2.0"}
+
+    def test_validate_test_case_update_input_valid_partial(self):
+        """Test valid test case update input with only some fields."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_case_update_input,
+        )
+
+        data = {
+            "name": "Updated test case",
+            "statusName": "Completed",
+        }
+
+        result = validate_test_case_update_input(data)
+
+        assert result.is_valid
+        assert result.data.name == "Updated test case"
+        assert result.data.status_name == "Completed"
+        assert result.data.objective is None
+        assert result.data.estimated_time is None
+
+    def test_validate_test_case_update_input_empty(self):
+        """Test valid test case update input with empty data (no updates)."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_case_update_input,
+        )
+
+        data = {}
+
+        result = validate_test_case_update_input(data)
+
+        assert result.is_valid
+        assert result.data.name is None
+        assert result.data.objective is None
+        assert result.data.status_name is None
+
+    def test_validate_test_case_update_input_invalid_name_empty(self):
+        """Test invalid test case update input with empty name."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_case_update_input,
+        )
+
+        data = {"name": ""}
+
+        result = validate_test_case_update_input(data)
+
+        assert not result.is_valid
+        assert "String should have at least 1 character" in " ".join(result.errors)
+
+    def test_validate_test_case_update_input_invalid_estimated_time(self):
+        """Test invalid test case update input with negative estimated time."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_case_update_input,
+        )
+
+        data = {"estimatedTime": -100}
+
+        result = validate_test_case_update_input(data)
+
+        assert not result.is_valid
+        assert "greater than or equal to 0" in " ".join(result.errors)
+
+    def test_validate_test_case_update_input_invalid_component_id(self):
+        """Test invalid test case update input with negative component ID."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_case_update_input,
+        )
+
+        data = {"componentId": -1}
+
+        result = validate_test_case_update_input(data)
+
+        assert not result.is_valid
+        assert "greater than or equal to 0" in " ".join(result.errors)
+
+    def test_validate_test_case_update_input_invalid_folder_id(self):
+        """Test invalid test case update input with invalid folder ID."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_case_update_input,
+        )
+
+        data = {"folderId": 0}  # Should be >= 1
+
+        result = validate_test_case_update_input(data)
+
+        assert not result.is_valid
+        assert "greater than or equal to 1" in " ".join(result.errors)
+
+    def test_validate_test_case_update_input_invalid_priority_name_too_long(self):
+        """Test invalid test case update input with too long priority name."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_case_update_input,
+        )
+
+        data = {"priorityName": "x" * 256}  # Max 255 characters
+
+        result = validate_test_case_update_input(data)
+
+        assert not result.is_valid
+        assert "String should have at most 255 characters" in " ".join(result.errors)
+
+    def test_validate_test_case_update_input_invalid_status_name_too_long(self):
+        """Test invalid test case update input with too long status name."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_case_update_input,
+        )
+
+        data = {"statusName": "x" * 256}  # Max 255 characters
+
+        result = validate_test_case_update_input(data)
+
+        assert not result.is_valid
+        assert "String should have at most 255 characters" in " ".join(result.errors)
+
+    def test_validate_test_case_update_input_invalid_type(self):
+        """Test invalid test case update input with wrong field types."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_case_update_input,
+        )
+
+        data = {
+            "name": 123,  # Should be string
+            "estimatedTime": "invalid",  # Should be int
+            "labels": "not_a_list",  # Should be list
+        }
+
+        result = validate_test_case_update_input(data)
+
+        assert not result.is_valid
+        assert len(result.errors) >= 3  # Multiple validation errors
+
+    def test_validate_test_case_update_input_exception_handling(self):
+        """Test test case update input validation exception handling."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_case_update_input,
+        )
+
+        # Pass invalid data type to trigger exception
+        result = validate_test_case_update_input(None)
+
+        assert not result.is_valid
+        assert "Unexpected validation error" in result.errors[0]

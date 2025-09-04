@@ -519,3 +519,103 @@ class TestZephyrClientFolder:
             assert request_data["name"] == "New Folder"
             assert request_data["folderType"] == "TEST_CASE"
             assert request_data["parentId"] == 1
+
+    @pytest.mark.asyncio
+    async def test_update_test_case_success(self, mock_zephyr_client):
+        """Test successful update_test_case."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.raise_for_status.return_value = None
+            mock_client.put.return_value = mock_response
+
+            from src.mcp_zephyr_scale_cloud.schemas.test_case import TestCaseUpdateInput
+
+            update_input = TestCaseUpdateInput(
+                name="Updated test case",
+                objective="Updated objective",
+                status_name="Ready for Review",
+                custom_fields={"Component": "Test", "Version": "v2.0"},
+            )
+
+            result = await mock_zephyr_client.update_test_case(
+                test_case_key="PROJ-T123", test_case_input=update_input
+            )
+
+            assert result.is_valid
+            assert result.data is None  # PUT returns no content
+            mock_client.put.assert_called_once()
+            call_args = mock_client.put.call_args
+
+            # Check URL
+            assert call_args[0][0].endswith("/testcases/PROJ-T123")
+
+            # Check request data
+            request_data = call_args[1]["json"]
+            assert request_data["name"] == "Updated test case"
+            assert request_data["objective"] == "Updated objective"
+            assert request_data["statusName"] == "Ready for Review"
+            assert request_data["customFields"] == {
+                "Component": "Test",
+                "Version": "v2.0",
+            }
+
+    @pytest.mark.asyncio
+    async def test_update_test_case_partial_update(self, mock_zephyr_client):
+        """Test update_test_case with partial update."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.raise_for_status.return_value = None
+            mock_client.put.return_value = mock_response
+
+            from src.mcp_zephyr_scale_cloud.schemas.test_case import TestCaseUpdateInput
+
+            update_input = TestCaseUpdateInput(status_name="Completed")
+
+            result = await mock_zephyr_client.update_test_case(
+                test_case_key="PROJ-T123", test_case_input=update_input
+            )
+
+            assert result.is_valid
+            assert result.data is None
+            mock_client.put.assert_called_once()
+            call_args = mock_client.put.call_args
+
+            # Check request data (should only contain non-None fields)
+            request_data = call_args[1]["json"]
+            assert request_data["statusName"] == "Completed"
+            # Other fields should not be present in the request
+            assert "name" not in request_data
+            assert "objective" not in request_data
+            assert "estimatedTime" not in request_data
+
+    @pytest.mark.asyncio
+    async def test_update_test_case_http_error(self, mock_zephyr_client):
+        """Test update_test_case with HTTP error."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            # Mock HTTP error
+            import httpx
+
+            mock_client.put.side_effect = httpx.HTTPError("Test case not found")
+
+            from src.mcp_zephyr_scale_cloud.schemas.test_case import TestCaseUpdateInput
+
+            update_input = TestCaseUpdateInput(name="Updated test case")
+
+            result = await mock_zephyr_client.update_test_case(
+                test_case_key="PROJ-T999", test_case_input=update_input
+            )
+
+            assert not result.is_valid
+            assert "Failed to update test case PROJ-T999" in result.errors[0]
+            assert "Test case not found" in result.errors[0]

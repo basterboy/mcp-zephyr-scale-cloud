@@ -84,6 +84,7 @@ class TestMCPServerIntegration:
             "create_issue_link",
             "create_web_link",
             "create_test_case",
+            "update_test_case",
         ]
 
         for tool_name in expected_tools:
@@ -784,3 +785,276 @@ class TestFolderMCPTools:
         assert "Test case name cannot be empty" in response_data["message"]
         # Should not call the API
         mock_client.create_test_case.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_update_test_case_success(self, mock_client):
+        """Test successful update_test_case tool call."""
+        from src.mcp_zephyr_scale_cloud.server import update_test_case
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response (PUT returns None data)
+        mock_result = ValidationResult(True, data=None)
+        mock_client.update_test_case = AsyncMock(return_value=mock_result)
+
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            name="Updated test name",
+            objective="Updated objective",
+            status_name="Ready for Review",
+            custom_fields={"Components": ["Update"], "Version": "v2.0.0"},
+        )
+
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert response_data["message"] == "Test case 'PROJ-T123' updated successfully"
+        assert response_data["testCaseKey"] == "PROJ-T123"
+        mock_client.update_test_case.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_update_test_case_partial_update(self, mock_client):
+        """Test update_test_case with only some fields updated."""
+        from src.mcp_zephyr_scale_cloud.server import update_test_case
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response
+        mock_result = ValidationResult(True, data=None)
+        mock_client.update_test_case = AsyncMock(return_value=mock_result)
+
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            status_name="Completed",
+        )
+
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert response_data["message"] == "Test case 'PROJ-T123' updated successfully"
+        assert response_data["testCaseKey"] == "PROJ-T123"
+        mock_client.update_test_case.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_update_test_case_with_labels_comma_separated(self, mock_client):
+        """Test update_test_case with comma-separated labels."""
+        from src.mcp_zephyr_scale_cloud.server import update_test_case
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response
+        mock_result = ValidationResult(True, data=None)
+        mock_client.update_test_case = AsyncMock(return_value=mock_result)
+
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            labels="automation, regression, critical",
+        )
+
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert response_data["message"] == "Test case 'PROJ-T123' updated successfully"
+        mock_client.update_test_case.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_update_test_case_with_labels_json_array(self, mock_client):
+        """Test update_test_case with JSON array labels."""
+        from src.mcp_zephyr_scale_cloud.server import update_test_case
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response
+        mock_result = ValidationResult(True, data=None)
+        mock_client.update_test_case = AsyncMock(return_value=mock_result)
+
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            labels='["automation", "regression"]',
+        )
+
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert response_data["message"] == "Test case 'PROJ-T123' updated successfully"
+        mock_client.update_test_case.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_update_test_case_with_custom_fields_dict(self, mock_client):
+        """Test update_test_case with dictionary custom_fields."""
+        from src.mcp_zephyr_scale_cloud.server import update_test_case
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response
+        mock_result = ValidationResult(True, data=None)
+        mock_client.update_test_case = AsyncMock(return_value=mock_result)
+
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            custom_fields={"Components": ["Update"], "Version": "v2.0.0"},
+        )
+
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert response_data["message"] == "Test case 'PROJ-T123' updated successfully"
+        mock_client.update_test_case.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_update_test_case_with_custom_fields_string(self, mock_client):
+        """Test update_test_case with JSON string custom_fields."""
+        from src.mcp_zephyr_scale_cloud.server import update_test_case
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response
+        mock_result = ValidationResult(True, data=None)
+        mock_client.update_test_case = AsyncMock(return_value=mock_result)
+
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            custom_fields='{"Components": ["Update"], "Version": "v2.0.0"}',
+        )
+
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert response_data["message"] == "Test case 'PROJ-T123' updated successfully"
+        mock_client.update_test_case.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_update_test_case_with_integer_parameters(self, mock_client):
+        """Test update_test_case with integer parameters."""
+        from src.mcp_zephyr_scale_cloud.server import update_test_case
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock successful API response
+        mock_result = ValidationResult(True, data=None)
+        mock_client.update_test_case = AsyncMock(return_value=mock_result)
+
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            estimated_time="120000",
+            component_id="456",
+            folder_id="789",
+        )
+
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert response_data["message"] == "Test case 'PROJ-T123' updated successfully"
+        mock_client.update_test_case.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_update_test_case_validation_errors(self, mock_client):
+        """Test update_test_case with validation errors."""
+        from src.mcp_zephyr_scale_cloud.server import update_test_case
+
+        # Test with invalid test case key
+        response = await update_test_case(
+            test_case_key="invalid-key",
+            name="Updated name",
+        )
+
+        # Parse JSON error response
+        response_data = json.loads(response)
+        assert response_data["errorCode"] == 400
+        assert "Invalid test case key format" in response_data["message"]
+        # Should not call the API
+        mock_client.update_test_case.assert_not_called()
+
+        # Test with invalid estimated_time
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            estimated_time="invalid",
+        )
+
+        # Parse JSON error response
+        response_data = json.loads(response)
+        assert response_data["errorCode"] == 400
+        assert "Estimated time must be a valid integer" in response_data["message"]
+        # Should not call the API
+        mock_client.update_test_case.assert_not_called()
+
+        # Test with invalid component_id
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            component_id="not-a-number",
+        )
+
+        # Parse JSON error response
+        response_data = json.loads(response)
+        assert response_data["errorCode"] == 400
+        assert "Component ID must be a valid integer" in response_data["message"]
+        # Should not call the API
+        mock_client.update_test_case.assert_not_called()
+
+        # Test with invalid folder_id
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            folder_id="not-a-number",
+        )
+
+        # Parse JSON error response
+        response_data = json.loads(response)
+        assert response_data["errorCode"] == 400
+        assert "Folder ID must be a valid integer" in response_data["message"]
+        # Should not call the API
+        mock_client.update_test_case.assert_not_called()
+
+        # Test with invalid labels format
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            labels='["label1", 123]',  # Invalid: non-string in array
+        )
+
+        # Parse JSON error response
+        response_data = json.loads(response)
+        assert response_data["errorCode"] == 400
+        assert "All labels must be strings" in response_data["message"]
+        # Should not call the API
+        mock_client.update_test_case.assert_not_called()
+
+        # Test with invalid custom_fields format
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            custom_fields="invalid json",
+        )
+
+        # Parse JSON error response
+        response_data = json.loads(response)
+        assert response_data["errorCode"] == 400
+        assert "Custom fields must be valid JSON" in response_data["message"]
+        # Should not call the API
+        mock_client.update_test_case.assert_not_called()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_update_test_case_api_error(self, mock_client):
+        """Test update_test_case with API error."""
+        from src.mcp_zephyr_scale_cloud.server import update_test_case
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock API error response
+        mock_result = ValidationResult(False, errors=["Test case not found"])
+        mock_client.update_test_case = AsyncMock(return_value=mock_result)
+
+        response = await update_test_case(
+            test_case_key="PROJ-T999",
+            name="Updated name",
+        )
+
+        # Parse JSON error response
+        response_data = json.loads(response)
+        assert response_data["errorCode"] == 400
+        assert "Test case not found" in response_data["message"]
+        mock_client.update_test_case.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_update_test_case_no_config(self):
+        """Test update_test_case when client is not configured."""
+        from src.mcp_zephyr_scale_cloud.server import update_test_case
+
+        response = await update_test_case(
+            test_case_key="PROJ-T123",
+            name="Updated name",
+        )
+
+        # Should return configuration error
+        assert "❌ ERROR: Zephyr Scale configuration not found" in response
