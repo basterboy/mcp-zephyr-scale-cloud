@@ -701,3 +701,21 @@ class TestFolderMCPTools:
         )
         assert "**Resource Id:** 54321" in response
         mock_client.create_test_case_web_link.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
+    async def test_create_issue_link_invalid_issue_key(self, mock_client):
+        """Test create_issue_link with issue key instead of issue ID."""
+        from src.mcp_zephyr_scale_cloud.server import create_issue_link
+
+        # Test with issue key (should fail with helpful message)
+        response = await create_issue_link(
+            test_case_key="PROJ-T1234", issue_id="PROJ-1234"  # type: ignore
+        )
+
+        assert "❌ ERROR: Invalid issue ID" in response
+        assert "issue key" in response
+        assert "PROJ-1234" in response
+        assert "Atlassian/Jira MCP tool" in response
+        # Should not call the API
+        mock_client.create_test_case_issue_link.assert_not_called()

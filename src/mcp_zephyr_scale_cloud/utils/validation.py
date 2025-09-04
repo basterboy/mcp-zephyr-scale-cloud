@@ -494,8 +494,26 @@ def validate_issue_id(issue_id: int) -> "ValidationResult[int]":
         ValidationResult with validated issue ID or error messages
     """
     if not isinstance(issue_id, int) or issue_id < 1:
-        return ValidationResult(
-            False,
-            ["Issue ID must be a positive integer (1 or greater)"],
-        )
+        errors = ["Issue ID must be a positive integer (1 or greater)"]
+
+        # Check if user might have provided an issue key instead of ID
+        if isinstance(issue_id, str) and "-" in str(issue_id):
+            errors.append(
+                f"It looks like you provided an issue key ('{issue_id}') "
+                "instead of an issue ID"
+            )
+            errors.append("Please provide the numeric Jira issue ID, not the issue key")
+            errors.append(
+                "Tip: Use the Atlassian/Jira MCP tool to look up the issue ID "
+                "from the key"
+            )
+        elif not isinstance(issue_id, int):
+            errors.append(f"Received {type(issue_id).__name__}: {issue_id}")
+            errors.append(
+                "If you have an issue key (e.g., 'PROJ-1234'), use the "
+                "Atlassian/Jira MCP tool to get the issue ID"
+            )
+
+        return ValidationResult(False, errors)
+
     return ValidationResult(True, data=issue_id)
