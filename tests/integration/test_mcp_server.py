@@ -1,6 +1,7 @@
 """Integration tests for MCP server."""
 
-from unittest.mock import AsyncMock, patch
+import json
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -91,6 +92,7 @@ class TestMCPServerIntegration:
     @pytest.mark.asyncio
     async def test_healthcheck_tool_success(self, mock_env_vars):
         """Test healthcheck tool with successful response."""
+
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
             mock_result = AsyncMock()
             mock_result.is_valid = True
@@ -99,9 +101,9 @@ class TestMCPServerIntegration:
 
             result = await healthcheck()
 
-            assert "SUCCESS" in result
-            assert "healthy" in result
-            assert mock_env_vars["ZEPHYR_SCALE_BASE_URL"] in result
+            # Parse JSON response
+            response_data = json.loads(result)
+            assert response_data["status"] == "UP"
 
     @pytest.mark.asyncio
     async def test_healthcheck_tool_no_config(self):
@@ -109,6 +111,7 @@ class TestMCPServerIntegration:
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", None):
             result = await healthcheck()
 
+            # For config errors, _CONFIG_ERROR_MSG is returned directly as a string
             assert "ERROR" in result
             assert "configuration not found" in result
 
@@ -117,40 +120,42 @@ class TestMCPServerIntegration:
         self, mock_env_vars, sample_priority_list
     ):
         """Test get_priorities tool with successful response."""
+
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
             mock_result = AsyncMock()
             mock_result.is_valid = True
-            mock_result.data = type("MockPriorityList", (), sample_priority_list)()
+            # Create a mock object with model_dump method (not async)
+            mock_data = Mock()
+            mock_data.model_dump.return_value = sample_priority_list
+            mock_result.data = mock_data
             mock_client.get_priorities = AsyncMock(return_value=mock_result)
 
-            with patch(
-                "src.mcp_zephyr_scale_cloud.server.format_priority_list"
-            ) as mock_format:
-                mock_format.return_value = "Formatted priority list"
+            result = await get_priorities()
 
-                result = await get_priorities()
-
-                assert result == "Formatted priority list"
-                mock_client.get_priorities.assert_called_once()
+            # Parse JSON response
+            response_data = json.loads(result)
+            assert response_data == sample_priority_list
+            mock_client.get_priorities.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_priority_tool_success(self, mock_env_vars, sample_priority_data):
         """Test get_priority tool with successful response."""
+
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
             mock_result = AsyncMock()
             mock_result.is_valid = True
-            mock_result.data = type("MockPriority", (), sample_priority_data)()
+            # Create a mock object with model_dump method (not async)
+            mock_data = Mock()
+            mock_data.model_dump.return_value = sample_priority_data
+            mock_result.data = mock_data
             mock_client.get_priority = AsyncMock(return_value=mock_result)
 
-            with patch(
-                "src.mcp_zephyr_scale_cloud.server.format_priority_details"
-            ) as mock_format:
-                mock_format.return_value = "Formatted priority details"
+            result = await get_priority(1)
 
-                result = await get_priority(1)
-
-                assert result == "Formatted priority details"
-                mock_client.get_priority.assert_called_once_with(1)
+            # Parse JSON response
+            response_data = json.loads(result)
+            assert response_data == sample_priority_data
+            mock_client.get_priority.assert_called_once_with(1)
 
     @pytest.mark.asyncio
     async def test_create_priority_tool_success(
@@ -171,19 +176,17 @@ class TestMCPServerIntegration:
                 # Mock client success
                 mock_result = AsyncMock()
                 mock_result.is_valid = True
-                mock_result.data = type(
-                    "MockCreatedResource", (), sample_created_resource
-                )()
+                # Create a mock object with model_dump method (not async)
+                mock_data = Mock()
+                mock_data.model_dump.return_value = sample_created_resource
+                mock_result.data = mock_data
                 mock_client.create_priority = AsyncMock(return_value=mock_result)
 
-                with patch(
-                    "src.mcp_zephyr_scale_cloud.server.format_success_message"
-                ) as mock_format:
-                    mock_format.return_value = "Priority created successfully"
+                result = await create_priority("TEST", "High Priority")
 
-                    result = await create_priority("TEST", "High Priority")
-
-                    assert result == "Priority created successfully"
+                # Parse JSON response
+                response_data = json.loads(result)
+                assert response_data == sample_created_resource
 
     @pytest.mark.asyncio
     async def test_update_priority_tool_success(self, mock_env_vars):
@@ -205,75 +208,75 @@ class TestMCPServerIntegration:
                 mock_result.data = {"success": True, "message": "Updated"}
                 mock_client.update_priority = AsyncMock(return_value=mock_result)
 
-                with patch(
-                    "src.mcp_zephyr_scale_cloud.server.format_success_message"
-                ) as mock_format:
-                    mock_format.return_value = "Priority updated successfully"
+                result = await update_priority(1, 123, "Updated Priority", 0)
 
-                    result = await update_priority(1, 123, "Updated Priority", 0)
-
-                    assert result == "Priority updated successfully"
+                # Parse JSON response - update operations return simple success status
+                response_data = json.loads(result)
+                assert response_data == {"status": "updated"}
 
     @pytest.mark.asyncio
     async def test_get_statuses_tool_success(self, mock_env_vars, sample_status_list):
         """Test get_statuses tool with successful response."""
+
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
             mock_result = AsyncMock()
             mock_result.is_valid = True
-            mock_result.data = type("MockStatusList", (), sample_status_list)()
+            # Create a mock object with model_dump method (not async)
+            mock_data = Mock()
+            mock_data.model_dump.return_value = sample_status_list
+            mock_result.data = mock_data
             mock_client.get_statuses = AsyncMock(return_value=mock_result)
 
-            with patch(
-                "src.mcp_zephyr_scale_cloud.server.format_status_list"
-            ) as mock_format:
-                mock_format.return_value = "Formatted status list"
+            result = await get_statuses()
 
-                result = await get_statuses()
-
-                assert result == "Formatted status list"
-                mock_client.get_statuses.assert_called_once()
+            # Parse JSON response
+            response_data = json.loads(result)
+            assert response_data == sample_status_list
+            mock_client.get_statuses.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_statuses_tool_with_filters(
         self, mock_env_vars, sample_status_list
     ):
         """Test get_statuses tool with project and type filters."""
+
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
             mock_result = AsyncMock()
             mock_result.is_valid = True
-            mock_result.data = type("MockStatusList", (), sample_status_list)()
+            # Create a mock object with model_dump method (not async)
+            mock_data = Mock()
+            mock_data.model_dump.return_value = sample_status_list
+            mock_result.data = mock_data
             mock_client.get_statuses = AsyncMock(return_value=mock_result)
 
-            with patch(
-                "src.mcp_zephyr_scale_cloud.server.format_status_list"
-            ) as mock_format:
-                mock_format.return_value = "Filtered status list"
+            result = await get_statuses(
+                project_key="TEST", status_type="TEST_EXECUTION", max_results=100
+            )
 
-                result = await get_statuses(
-                    project_key="TEST", status_type="TEST_EXECUTION", max_results=100
-                )
-
-                assert result == "Filtered status list"
-                mock_client.get_statuses.assert_called_once()
+            # Parse JSON response
+            response_data = json.loads(result)
+            assert response_data == sample_status_list
+            mock_client.get_statuses.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_status_tool_success(self, mock_env_vars, sample_status_data):
         """Test get_status tool with successful response."""
+
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
             mock_result = AsyncMock()
             mock_result.is_valid = True
-            mock_result.data = type("MockStatus", (), sample_status_data)()
+            # Create a mock object with model_dump method (not async)
+            mock_data = Mock()
+            mock_data.model_dump.return_value = sample_status_data
+            mock_result.data = mock_data
             mock_client.get_status = AsyncMock(return_value=mock_result)
 
-            with patch(
-                "src.mcp_zephyr_scale_cloud.server.format_status_details"
-            ) as mock_format:
-                mock_format.return_value = "Formatted status details"
+            result = await get_status(1)
 
-                result = await get_status(1)
-
-                assert result == "Formatted status details"
-                mock_client.get_status.assert_called_once_with(1)
+            # Parse JSON response
+            response_data = json.loads(result)
+            assert response_data == sample_status_data
+            mock_client.get_status.assert_called_once_with(1)
 
     @pytest.mark.asyncio
     async def test_create_status_tool_success(
@@ -294,21 +297,17 @@ class TestMCPServerIntegration:
                 # Mock client success
                 mock_result = AsyncMock()
                 mock_result.is_valid = True
-                mock_result.data = type(
-                    "MockCreatedResource", (), sample_created_resource
-                )()
+                # Create a mock object with model_dump method (not async)
+                mock_data = Mock()
+                mock_data.model_dump.return_value = sample_created_resource
+                mock_result.data = mock_data
                 mock_client.create_status = AsyncMock(return_value=mock_result)
 
-                with patch(
-                    "src.mcp_zephyr_scale_cloud.server.format_success_message"
-                ) as mock_format:
-                    mock_format.return_value = "Status created successfully"
+                result = await create_status("TEST", "In Progress", "TEST_EXECUTION")
 
-                    result = await create_status(
-                        "TEST", "In Progress", "TEST_EXECUTION"
-                    )
-
-                    assert result == "Status created successfully"
+                # Parse JSON response
+                response_data = json.loads(result)
+                assert response_data == sample_created_resource
 
     @pytest.mark.asyncio
     async def test_update_status_tool_success(self, mock_env_vars):
@@ -330,14 +329,11 @@ class TestMCPServerIntegration:
                 mock_result.data = {"success": True, "message": "Updated"}
                 mock_client.update_status = AsyncMock(return_value=mock_result)
 
-                with patch(
-                    "src.mcp_zephyr_scale_cloud.server.format_success_message"
-                ) as mock_format:
-                    mock_format.return_value = "Status updated successfully"
+                result = await update_status(1, 123, "Updated Status", 0)
 
-                    result = await update_status(1, 123, "Updated Status", 0)
-
-                    assert result == "Status updated successfully"
+                # Parse JSON response - update operations return simple success status
+                response_data = json.loads(result)
+                assert response_data == {"status": "updated"}
 
     @pytest.mark.asyncio
     async def test_status_tool_no_config(self):
@@ -370,22 +366,23 @@ class TestFolderMCPTools:
     @pytest.mark.asyncio
     async def test_get_folders_tool_success(self, mock_env_vars, sample_folder_list):
         """Test get_folders tool with successful response."""
+
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
             # Mock client success
             mock_result = AsyncMock()
             mock_result.is_valid = True
-            mock_result.data = type("MockFolderList", (), sample_folder_list)()
+            # Create a mock object with model_dump method (not async)
+            mock_data = Mock()
+            mock_data.model_dump.return_value = sample_folder_list
+            mock_result.data = mock_data
             mock_client.get_folders = AsyncMock(return_value=mock_result)
 
-            with patch(
-                "src.mcp_zephyr_scale_cloud.server.format_folder_list"
-            ) as mock_format:
-                mock_format.return_value = "Formatted folder list"
+            result = await get_folders()
 
-                result = await get_folders()
-
-                assert result == "Formatted folder list"
-                mock_client.get_folders.assert_called_once()
+            # Parse JSON response
+            response_data = json.loads(result)
+            assert response_data == sample_folder_list
+            mock_client.get_folders.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_folders_tool_with_filters(
@@ -414,42 +411,43 @@ class TestFolderMCPTools:
                     # Mock client success
                     mock_result = AsyncMock()
                     mock_result.is_valid = True
-                    mock_result.data = type("MockFolderList", (), sample_folder_list)()
+                    # Create a mock object with model_dump method (not async)
+                    mock_data = Mock()
+                    mock_data.model_dump.return_value = sample_folder_list
+                    mock_result.data = mock_data
                     mock_client.get_folders = AsyncMock(return_value=mock_result)
 
-                    with patch(
-                        "src.mcp_zephyr_scale_cloud.server.format_folder_list"
-                    ) as mock_format:
-                        mock_format.return_value = "Filtered folder list"
+                    result = await get_folders("TEST", "TEST_CASE", 25)
 
-                        result = await get_folders("TEST", "TEST_CASE", 25)
-
-                        assert result == "Filtered folder list"
-                        mock_client.get_folders.assert_called_once_with(
-                            project_key="TEST",
-                            folder_type=mock_type_result.data,
-                            max_results=25,
-                        )
+                    # Parse JSON response
+                    response_data = json.loads(result)
+                    assert response_data == sample_folder_list
+                    mock_client.get_folders.assert_called_once_with(
+                        project_key="TEST",
+                        folder_type=mock_type_result.data,
+                        max_results=25,
+                    )
 
     @pytest.mark.asyncio
     async def test_get_folder_tool_success(self, mock_env_vars, sample_folder_data):
         """Test get_folder tool with successful response."""
+
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
             # Mock client success
             mock_result = AsyncMock()
             mock_result.is_valid = True
-            mock_result.data = type("MockFolder", (), sample_folder_data)()
+            # Create a mock object with model_dump method (not async)
+            mock_data = Mock()
+            mock_data.model_dump.return_value = sample_folder_data
+            mock_result.data = mock_data
             mock_client.get_folder = AsyncMock(return_value=mock_result)
 
-            with patch(
-                "src.mcp_zephyr_scale_cloud.server.format_folder_details"
-            ) as mock_format:
-                mock_format.return_value = "Formatted folder details"
+            result = await get_folder(1)
 
-                result = await get_folder(1)
-
-                assert result == "Formatted folder details"
-                mock_client.get_folder.assert_called_once_with(1)
+            # Parse JSON response
+            response_data = json.loads(result)
+            assert response_data == sample_folder_data
+            mock_client.get_folder.assert_called_once_with(1)
 
     @pytest.mark.asyncio
     async def test_create_folder_tool_success(
@@ -470,23 +468,22 @@ class TestFolderMCPTools:
                 # Mock client success
                 mock_result = AsyncMock()
                 mock_result.is_valid = True
-                mock_result.data = type(
-                    "MockCreatedResource", (), sample_created_resource
-                )()
+                # Create a mock object with model_dump method (not async)
+                mock_data = Mock()
+                mock_data.model_dump.return_value = sample_created_resource
+                mock_result.data = mock_data
                 mock_client.create_folder = AsyncMock(return_value=mock_result)
 
-                with patch(
-                    "src.mcp_zephyr_scale_cloud.server.format_success_message"
-                ) as mock_format:
-                    mock_format.return_value = "Folder created successfully"
+                result = await create_folder("Test Folder", "TEST", "TEST_CASE", 1)
 
-                    result = await create_folder("Test Folder", "TEST", "TEST_CASE", 1)
-
-                    assert result == "Folder created successfully"
+                # Parse JSON response
+                response_data = json.loads(result)
+                assert response_data == sample_created_resource
 
     @pytest.mark.asyncio
     async def test_folder_tools_error_handling(self, mock_env_vars):
         """Test folder tools error handling."""
+
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
             # Mock client failure
             mock_result = AsyncMock()
@@ -494,45 +491,44 @@ class TestFolderMCPTools:
             mock_result.errors = ["API error"]
             mock_client.get_folders = AsyncMock(return_value=mock_result)
 
-            with patch(
-                "src.mcp_zephyr_scale_cloud.server.format_error_message"
-            ) as mock_format:
-                mock_format.return_value = "Error occurred"
+            result = await get_folders()
 
-                result = await get_folders()
-
-                assert result == "Error occurred"
+            # Parse JSON error response
+            response_data = json.loads(result)
+            assert response_data["errorCode"] == 500
+            assert "API error" in response_data["message"]
 
     @pytest.mark.asyncio
     async def test_folder_tools_no_client(self, mock_env_vars):
         """Test folder tools when client is not initialized."""
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", None):
-            with patch(
-                "src.mcp_zephyr_scale_cloud.server.format_error_message"
-            ) as mock_format:
-                mock_format.return_value = "Client not initialized"
+            result = await get_folders()
 
-                result = await get_folders()
-
-                assert result == "Client not initialized"
+            # For client not initialized errors, _CONFIG_ERROR_MSG is returned directly
+            assert "ERROR" in result
+            assert "configuration not found" in result
 
     @pytest.mark.asyncio
     async def test_create_folder_parent_id_validation(self, mock_env_vars):
         """Test create_folder parent_id validation."""
+
         # Test with invalid parent_id string
         result = await create_folder("Test", "PROJ", "TEST_CASE", "invalid")
-        assert "Invalid parent folder ID" in result
-        assert "must be a valid integer" in result
+        response_data = json.loads(result)
+        assert response_data["errorCode"] == 400
+        assert "Parent folder ID must be a valid integer" in response_data["message"]
 
         # Test with negative parent_id
         result = await create_folder("Test", "PROJ", "TEST_CASE", "-1")
-        assert "Invalid parent folder ID" in result
-        assert "must be a positive integer" in result
+        response_data = json.loads(result)
+        assert response_data["errorCode"] == 400
+        assert "Folder ID must be a positive integer" in response_data["message"]
 
         # Test with zero parent_id
         result = await create_folder("Test", "PROJ", "TEST_CASE", "0")
-        assert "Invalid parent folder ID" in result
-        assert "must be a positive integer" in result
+        response_data = json.loads(result)
+        assert response_data["errorCode"] == 400
+        assert "Folder ID must be a positive integer" in response_data["message"]
 
     @pytest.mark.asyncio
     @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
@@ -561,8 +557,11 @@ class TestFolderMCPTools:
 
         response = await get_test_case_versions(test_case_key="PROJ-T1234")
 
-        assert "Found 1 version for test case PROJ-T1234" in response
-        assert "**Version 1:** ID 1" in response
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert response_data["total"] == 1
+        assert len(response_data["values"]) == 1
+        assert response_data["values"][0]["id"] == 1
         mock_client.get_test_case_versions.assert_called_once_with(
             test_case_key="PROJ-T1234", max_results=10, start_at=0
         )
@@ -596,9 +595,11 @@ class TestFolderMCPTools:
 
         response = await get_test_case_version(test_case_key="PROJ-T1234", version=2)
 
-        assert "**Test Case Version 2** for PROJ-T1234" in response
-        assert "**Test Case: PROJ-T1234**" in response
-        assert "**Name:** Test case version 2" in response
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert response_data["id"] == 12345
+        assert response_data["key"] == "PROJ-T1234"
+        assert response_data["name"] == "Test case version 2"
         mock_client.get_test_case_version.assert_called_once_with(
             test_case_key="PROJ-T1234", version=2
         )
@@ -640,11 +641,14 @@ class TestFolderMCPTools:
 
         response = await get_links(test_case_key="PROJ-T1234")
 
-        assert "Links for test case PROJ-T1234" in response
-        assert "Jira Issues (1):" in response
-        assert "COVERAGE: Issue #12345" in response
-        assert "Web Links (1):" in response
-        assert "https://example.com" in response
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert len(response_data["issues"]) == 1
+        assert response_data["issues"][0]["issueId"] == 12345
+        assert response_data["issues"][0]["type"] == "COVERAGE"
+        assert len(response_data["webLinks"]) == 1
+        assert response_data["webLinks"][0]["url"] == "https://example.com"
+        assert response_data["webLinks"][0]["description"] == "Example link"
         mock_client.get_test_case_links.assert_called_once_with(
             test_case_key="PROJ-T1234"
         )
@@ -666,12 +670,10 @@ class TestFolderMCPTools:
 
         response = await create_issue_link(test_case_key="PROJ-T1234", issue_id=67890)
 
-        assert "Issue Link Created" in response
-        assert (
-            "Successfully created issue link between test case PROJ-T1234 "
-            "and Jira issue 67890" in response
-        )
-        assert "**Resource Id:** 12345" in response
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert response_data["id"] == 12345
+        assert response_data["self"] == "https://api.example.com/links/12345"
         mock_client.create_test_case_issue_link.assert_called_once()
 
     @pytest.mark.asyncio
@@ -695,12 +697,10 @@ class TestFolderMCPTools:
             description="Test documentation",
         )
 
-        assert "Web Link Created" in response
-        assert (
-            "Successfully created web link between test case PROJ-T1234 "
-            "and https://docs.example.com (Test documentation)" in response
-        )
-        assert "**Resource Id:** 54321" in response
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert response_data["id"] == 54321
+        assert response_data["self"] == "https://api.example.com/weblinks/54321"
         mock_client.create_test_case_web_link.assert_called_once()
 
     @pytest.mark.asyncio
@@ -714,10 +714,13 @@ class TestFolderMCPTools:
             test_case_key="PROJ-T1234", issue_id="PROJ-1234"  # type: ignore
         )
 
-        assert "❌ ERROR: Invalid issue ID" in response
-        assert "issue key" in response
-        assert "PROJ-1234" in response
-        assert "Atlassian/Jira MCP tool" in response
+        # Parse JSON error response
+        response_data = json.loads(response)
+        assert response_data["errorCode"] == 400
+        assert "Issue ID must be a positive integer" in response_data["message"]
+        assert "issue key" in response_data["message"]
+        assert "PROJ-1234" in response_data["message"]
+        assert "Atlassian/Jira MCP tool" in response_data["message"]
         # Should not call the API
         mock_client.create_test_case_issue_link.assert_not_called()
 
@@ -746,11 +749,10 @@ class TestFolderMCPTools:
             labels='["automation", "login"]',
         )
 
-        assert "Test Case Created Successfully!" in response
-        assert "PROJ-T123" in response
-        assert "Resource ID:** 98765" in response
-        assert "Project:** PROJ" in response
-        assert "create_test_steps" in response
+        # Parse JSON response
+        response_data = json.loads(response)
+        assert response_data["id"] == 98765
+        assert response_data["self"] == "https://api.example.com/testcases/PROJ-T123"
         mock_client.create_test_case.assert_called_once()
 
     @pytest.mark.asyncio
@@ -762,15 +764,21 @@ class TestFolderMCPTools:
         # Test with invalid project key
         response = await create_test_case(project_key="invalid-key", name="Test case")
 
-        assert "❌ ERROR: Invalid project key" in response
-        assert "uppercase letters" in response
+        # Parse JSON error response
+        response_data = json.loads(response)
+        assert response_data["errorCode"] == 400
+        assert "Project key" in response_data["message"]
+        assert "invalid-key" in response_data["message"]
+        assert "uppercase letters" in response_data["message"]
         # Should not call the API
         mock_client.create_test_case.assert_not_called()
 
         # Test with empty name
         response = await create_test_case(project_key="PROJ", name="")
 
-        assert "❌ ERROR: Invalid test case name" in response
-        assert "empty" in response
+        # Parse JSON error response
+        response_data = json.loads(response)
+        assert response_data["errorCode"] == 400
+        assert "Test case name cannot be empty" in response_data["message"]
         # Should not call the API
         mock_client.create_test_case.assert_not_called()
