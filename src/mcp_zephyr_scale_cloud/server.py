@@ -1642,6 +1642,81 @@ async def create_test_case(
                 indent=2,
             )
 
+    # Handle priority and status name lookups if provided
+    # Priority name lookup
+    resolved_priority_id = None
+    if priority_name is not None:
+        priorities_result = await zephyr_client.get_priorities(project_key=project_key)
+        if not priorities_result.is_valid:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Failed to get priorities for project {project_key}: "
+                    f"{'; '.join(priorities_result.errors)}",
+                },
+                indent=2,
+            )
+
+        # Find priority by name (case-insensitive)
+        priority_found = False
+        for priority in priorities_result.data.values:
+            if priority.name.lower() == priority_name.lower():
+                resolved_priority_id = priority.id
+                priority_found = True
+                break
+
+        if not priority_found:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": (
+                        f"Priority '{priority_name}' not found in project "
+                        f"{project_key}. Use get_priorities tool to see "
+                        f"available priorities."
+                    ),
+                },
+                indent=2,
+            )
+
+    # Status name lookup
+    resolved_status_id = None
+    if status_name is not None:
+        statuses_result = await zephyr_client.get_statuses(
+            project_key=project_key, status_type="TEST_CASE"
+        )
+        if not statuses_result.is_valid:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": (
+                        f"Failed to get statuses for project {project_key}: "
+                        f"{'; '.join(statuses_result.errors)}"
+                    ),
+                },
+                indent=2,
+            )
+
+        # Find status by name (case-insensitive)
+        status_found = False
+        for status in statuses_result.data.values:
+            if status.name.lower() == status_name.lower():
+                resolved_status_id = status.id
+                status_found = True
+                break
+
+        if not status_found:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": (
+                        f"Status '{status_name}' not found in project "
+                        f"{project_key}. Use get_statuses tool to see "
+                        f"available statuses."
+                    ),
+                },
+                indent=2,
+            )
+
     # Build test case data
     test_case_data = {
         "projectKey": project_key,
@@ -1659,13 +1734,16 @@ async def create_test_case(
         test_case_data["estimatedTime"] = parsed_estimated_time
 
     if parsed_component_id is not None:
-        test_case_data["componentId"] = parsed_component_id
+        # The API expects a component object, not just componentId
+        test_case_data["component"] = {"id": parsed_component_id}
 
-    if priority_name is not None:
-        test_case_data["priorityName"] = priority_name
+    # Use resolved priority ID if priority_name was provided
+    if resolved_priority_id is not None:
+        test_case_data["priority"] = {"id": resolved_priority_id}
 
-    if status_name is not None:
-        test_case_data["statusName"] = status_name
+    # Use resolved status ID if status_name was provided
+    if resolved_status_id is not None:
+        test_case_data["status"] = {"id": resolved_status_id}
 
     if parsed_folder_id is not None:
         test_case_data["folderId"] = parsed_folder_id
@@ -1924,6 +2002,81 @@ async def update_test_case(
                 indent=2,
             )
 
+    # Handle priority and status name lookups if provided
+    # Extract project key from test case key (format: PROJ-T123)
+    project_key = test_case_key.split("-")[0]
+
+    # Priority name lookup
+    resolved_priority_id = None
+    if priority_name is not None:
+        priorities_result = await zephyr_client.get_priorities(project_key=project_key)
+        if not priorities_result.is_valid:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Failed to get priorities for project {project_key}: "
+                    f"{'; '.join(priorities_result.errors)}",
+                },
+                indent=2,
+            )
+
+        # Find priority by name (case-insensitive)
+        priority_found = False
+        for priority in priorities_result.data.values:
+            if priority.name.lower() == priority_name.lower():
+                resolved_priority_id = priority.id
+                priority_found = True
+                break
+
+        if not priority_found:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": (
+                        f"Priority '{priority_name}' not found in project "
+                        f"{project_key}. Use get_priorities tool to see "
+                        f"available priorities."
+                    ),
+                },
+                indent=2,
+            )
+
+    # Status name lookup
+    resolved_status_id = None
+    if status_name is not None:
+        statuses_result = await zephyr_client.get_statuses(
+            project_key=project_key, status_type="TEST_CASE"
+        )
+        if not statuses_result.is_valid:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Failed to get statuses for project {project_key}: "
+                    f"{'; '.join(statuses_result.errors)}",
+                },
+                indent=2,
+            )
+
+        # Find status by name (case-insensitive)
+        status_found = False
+        for status in statuses_result.data.values:
+            if status.name.lower() == status_name.lower():
+                resolved_status_id = status.id
+                status_found = True
+                break
+
+        if not status_found:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": (
+                        f"Status '{status_name}' not found in project {project_key}. "
+                        f"Use get_statuses tool to see available statuses."
+                    ),
+                },
+                indent=2,
+            )
+
     # Build test case update data (only include non-None values)
     test_case_data = {}
 
@@ -1941,13 +2094,16 @@ async def update_test_case(
         test_case_data["estimatedTime"] = parsed_estimated_time
 
     if parsed_component_id is not None:
-        test_case_data["componentId"] = parsed_component_id
+        # The API expects a component object, not just componentId
+        test_case_data["component"] = {"id": parsed_component_id}
 
-    if priority_name is not None:
-        test_case_data["priorityName"] = priority_name
+    # Use resolved priority ID if priority_name was provided
+    if resolved_priority_id is not None:
+        test_case_data["priorityId"] = resolved_priority_id
 
-    if status_name is not None:
-        test_case_data["statusName"] = status_name
+    # Use resolved status ID if status_name was provided
+    if resolved_status_id is not None:
+        test_case_data["statusId"] = resolved_status_id
 
     if parsed_folder_id is not None:
         test_case_data["folderId"] = parsed_folder_id

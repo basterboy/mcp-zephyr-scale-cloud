@@ -1000,7 +1000,10 @@ class ZephyrClient:
                 request_data["estimatedTime"] = current_data.estimated_time
 
             if current_data.component is not None:
-                request_data["componentId"] = current_data.component.id
+                request_data["component"] = {
+                    "id": current_data.component.id,
+                    "self": current_data.component.self,
+                }
 
             if current_data.folder is not None:
                 request_data["folderId"] = current_data.folder.id
@@ -1017,9 +1020,38 @@ class ZephyrClient:
                     exclude_none=True
                 )
 
-            # Now merge in the update data, which may override current values
-            # This will include priorityName/statusName if the user is updating them
-            request_data.update(update_data)
+            # Handle special fields that need object structure for the API
+            # Priority update
+            if "priorityId" in update_data:
+                request_data["priority"] = {"id": update_data["priorityId"]}
+            elif "priority" in update_data:
+                request_data["priority"] = update_data["priority"]
+
+            # Status update
+            if "statusId" in update_data:
+                request_data["status"] = {"id": update_data["statusId"]}
+            elif "status" in update_data:
+                request_data["status"] = update_data["status"]
+
+            # Component update
+            if "componentId" in update_data:
+                request_data["component"] = {"id": update_data["componentId"]}
+            elif "component" in update_data:
+                request_data["component"] = update_data["component"]
+
+            # Merge other update data (excluding the special fields we handled above)
+            excluded_fields = [
+                "priorityId",
+                "statusId",
+                "componentId",
+                "priority",
+                "status",
+                "component",
+            ]
+            filtered_update_data = {
+                k: v for k, v in update_data.items() if k not in excluded_fields
+            }
+            request_data.update(filtered_update_data)
 
             async with httpx.AsyncClient() as client:
                 response = await client.put(
