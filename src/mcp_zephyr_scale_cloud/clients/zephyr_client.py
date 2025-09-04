@@ -27,8 +27,8 @@ from ..schemas.test_case import (
     IssueLinkInput,
     TestCase,
     TestCaseInput,
-    TestCaseUpdateInput,
     TestCaseLinkList,
+    TestCaseUpdateInput,
     WebLinkInput,
 )
 from ..schemas.test_script import TestScript, TestScriptInput
@@ -983,9 +983,7 @@ class ZephyrClient:
         """
         try:
             # Convert to dict and exclude None values
-            request_data = test_case_input.model_dump(
-                by_alias=True, exclude_none=True
-            )
+            request_data = test_case_input.model_dump(by_alias=True, exclude_none=True)
 
             async with httpx.AsyncClient() as client:
                 response = await client.put(
