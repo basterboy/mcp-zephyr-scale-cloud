@@ -9,12 +9,16 @@ A Model Context Protocol (MCP) server for Zephyr Scale Cloud, enabling AI assist
 - ⭐ **Priority Management** - Create, read, update priorities across projects
 - 📊 **Status Management** - Manage test execution statuses with type filtering
 - 📁 **Folder Management** - Organize test artifacts with hierarchical folder structure
+- 🧪 **Test Case Management** - Full CRUD operations for test cases with metadata
+- 📝 **Test Steps & Scripts** - Manage test step definitions and scripts (plain/BDD)
+- 🔗 **Test Case Links** - Link test cases to Jira issues and web resources
+- 📋 **Test Case Retrieval** - Advanced pagination and filtering capabilities
+- 📚 **Version Management** - Test case version history and retrieval
 - 🔧 **Production Ready** - Server lifespan management and structured logging
 - 🧪 **Comprehensive Testing** - Unit tests, integration tests, and CI/CD pipeline
 - 📝 **Type Safety** - Pydantic schema validation for all API operations
 
 ### 🚧 **Planned Features:**
-- 🧪 Test case management
 - 📈 Test execution and results
 - 🔄 Test cycle management
 - 👥 Project and team management
@@ -41,7 +45,14 @@ Create a `.env` file with your Zephyr Scale Cloud credentials:
 ```bash
 ZEPHYR_SCALE_API_TOKEN=your_api_token_here
 ZEPHYR_SCALE_BASE_URL=https://api.zephyrscale.smartbear.com/v2
+
+# Optional: Default project key for tools that support it
+ZEPHYR_SCALE_DEFAULT_PROJECT_KEY=MYPROJ
 ```
+
+### Environment Variable Fallback
+
+Many tools now support automatic project key resolution. If you have access to multiple projects, you can set `ZEPHYR_SCALE_DEFAULT_PROJECT_KEY` to avoid specifying the project key in every tool call. Tools like `get_test_cases`, `get_folders`, and others will automatically use this default when no explicit project key is provided.
 
 ### Logging Configuration
 
@@ -140,6 +151,23 @@ poetry run mypy src/    # Type checking
 make format  # Fix formatting and imports
 ```
 
+## Recent Improvements
+
+### 🚀 **Major Updates:**
+- **Test Case Management**: Full CRUD operations for test cases with advanced metadata support
+- **Stable Pagination**: Switched from unreliable NextGen cursor pagination to stable offset-based pagination
+- **Performance Optimization**: Added comprehensive pagination guidance with max_results=1000 recommendations  
+- **Link Management**: Test case linking to Jira issues and web resources
+- **Version Control**: Test case version history and retrieval capabilities
+- **Environment Integration**: Automatic project key resolution from environment variables
+- **Enhanced Error Handling**: Improved validation and user-friendly error messages
+
+### 🔧 **Technical Improvements:**
+- **Schema Simplification**: Streamlined update operations using Pydantic model_dump()
+- **Validation Enhancement**: Comprehensive input validation with helpful error guidance
+- **Code Quality**: Extensive refactoring for maintainability and performance
+- **Test Coverage**: Expanded test suite covering all new functionality
+
 ## Architecture
 
 This project implements an **MCP Server** that connects AI assistants to Zephyr Scale Cloud:
@@ -164,7 +192,11 @@ src/mcp_zephyr_scale_cloud/
 │   ├── common.py         # Shared entity schemas
 │   ├── priority.py       # Priority-specific schemas
 │   ├── status.py         # Status-specific schemas
-│   └── project.py        # Project-specific schemas
+│   ├── folder.py         # Folder-specific schemas
+│   ├── test_case.py      # Test case schemas with pagination support
+│   ├── test_script.py    # Test script schemas
+│   ├── test_step.py      # Test step schemas
+│   └── version.py        # Version-specific schemas
 ├── utils/                 # Utility functions
 │   ├── __init__.py
 │   ├── validation.py     # Input validation utilities
@@ -249,7 +281,7 @@ Tests run automatically on:
 
 ## MCP Tools
 
-This server provides **17 MCP tools** for Zephyr Scale Cloud integration:
+This server provides **25 MCP tools** for Zephyr Scale Cloud integration:
 
 | **Category** | **Tools** | **Description** |
 |--------------|-----------|-----------------|
@@ -259,8 +291,9 @@ This server provides **17 MCP tools** for Zephyr Scale Cloud integration:
 | **Folders** | 3 tools | Folder management and organization |
 | **Test Steps** | 2 tools | Test step retrieval and creation |
 | **Test Scripts** | 2 tools | Test script retrieval and creation |
-| **Test Cases** | 1 tool | Test case information retrieval |
-| **Total** | **17 tools** | **Production-ready MCP server** |
+| **Test Cases** | 7 tools | Complete test case management suite |
+| **Test Case Links** | 2 tools | Link management for test cases |
+| **Total** | **25 tools** | **Production-ready MCP server** |
 
 ### Currently Available:
 
@@ -292,8 +325,18 @@ This server provides **17 MCP tools** for Zephyr Scale Cloud integration:
 - `get_test_script` - Retrieve test script for a specific test case
 - `create_test_script` - Create or update test script with plain text or BDD format
 
-#### **📋 Test Case Information**
+#### **📋 Test Case Management**
 - `get_test_case` - Get detailed test case information including metadata, status, priority, and content
+- `get_test_cases` - Retrieve test cases with advanced offset-based pagination and filtering
+- `create_test_case` - Create new test cases with comprehensive metadata support
+- `update_test_case` - Update existing test cases with validation and error handling
+- `get_test_case_versions` - Retrieve version history for test cases
+- `get_test_case_version` - Get specific version of a test case
+- `get_links` - Get all links (issues + web links) associated with a test case
+
+#### **🔗 Test Case Links**
+- `create_issue_link` - Link test cases to Jira issues for traceability
+- `create_web_link` - Add web links to test cases for documentation
 
 ## 📊 Status Operations Guide
 
@@ -396,14 +439,59 @@ folder_details = await get_folder(folder_id=456)
 - Child folders reference their parent via `parent_id`
 - Each folder type maintains its own hierarchy within a project
 
-### Planned:
-- `get_projects` - List all available projects
-- `get_test_cases` - Retrieve test cases from a project
-- `create_test_case` - Create a new test case
-- `update_test_case` - Update an existing test case
-- `get_test_cycles` - Retrieve test cycles
-- `create_test_execution` - Create test execution results
-- `get_test_results` - Retrieve test execution results
+## 🔧 Test Case Management Guide
+
+The test case management tools provide comprehensive CRUD operations for managing test cases in Zephyr Scale Cloud.
+
+### **Key Features:**
+- **Full CRUD Operations**: Create, read, update, and retrieve test cases
+- **Advanced Pagination**: Efficient offset-based pagination with performance optimizations
+- **Version Management**: Access to test case version history
+- **Link Management**: Connect test cases to Jira issues and web resources
+- **Rich Metadata**: Support for priorities, statuses, folders, components, and custom fields
+- **Environment Integration**: Automatic project key resolution from environment variables
+
+### **Pagination Performance Tips:**
+- Use `max_results=1000` for fastest bulk data retrieval
+- Follow offset-based pagination: `start_at = current_start_at + max_results`
+- Ensure `start_at` is a multiple of `max_results` (API requirement)
+- Check `len(values) < max_results` to detect the last page
+
+### **Example Usage:**
+
+```python
+# Get test cases with maximum performance
+test_cases = await get_test_cases(
+    project_key="MYPROJ",
+    max_results=1000,  # Maximum for best performance
+    start_at=0
+)
+
+# Create a comprehensive test case
+new_test_case = await create_test_case(
+    name="Login functionality test",
+    project_key="MYPROJ",
+    objective="Verify user can log in successfully",
+    priority_name="High",
+    status_name="Draft",
+    folder_id=123,
+    labels=["smoke", "authentication"]
+)
+
+# Update test case with validation
+updated = await update_test_case(
+    test_case_key="MYPROJ-T123",
+    name="Updated login test",
+    priority_id=456,
+    status_id=789
+)
+
+# Link to Jira issue for traceability
+link_result = await create_issue_link(
+    test_case_key="MYPROJ-T123",
+    issue_id=456789
+)
+```
 
 ## License
 
