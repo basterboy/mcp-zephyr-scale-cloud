@@ -210,7 +210,7 @@ class ZephyrClient:
                 return validate_api_response(response.json(), CreatedResource)
 
             except httpx.HTTPError as e:
-                return ValidationResult(False, [f"Failed to create priority: {str(e)}"])
+                return self._handle_http_error(e, "Failed to create priority")
 
     async def update_priority(
         self, priority_id: int, request: UpdatePriorityRequest
@@ -250,8 +250,8 @@ class ZephyrClient:
                 )
 
             except httpx.HTTPError as e:
-                return ValidationResult(
-                    False, [f"Failed to update priority {priority_id}: {str(e)}"]
+                return self._handle_http_error(
+                    e, f"Failed to update priority {priority_id}"
                 )
 
     # Status operations
@@ -303,10 +303,7 @@ class ZephyrClient:
                 return validate_api_response(response.json(), StatusList)
 
         except httpx.HTTPError as e:
-            return ValidationResult(
-                False,
-                [f"Failed to get statuses: {str(e)}"],
-            )
+            return self._handle_http_error(e, "Failed to get statuses")
 
     async def get_status(self, status_id: int) -> ValidationResult:
         """Get a specific status by ID.
@@ -340,10 +337,7 @@ class ZephyrClient:
                         "you do not have access to it"
                     ],
                 )
-            return ValidationResult(
-                False,
-                [f"Failed to get status {status_id}: {str(e)}"],
-            )
+            return self._handle_http_error(e, f"Failed to get status {status_id}")
 
     async def create_status(self, request: CreateStatusRequest) -> ValidationResult:
         """Create a new status.
@@ -370,10 +364,7 @@ class ZephyrClient:
                 return validate_api_response(response.json(), CreatedResource)
 
         except httpx.HTTPError as e:
-            return ValidationResult(
-                False,
-                [f"Failed to create status: {str(e)}"],
-            )
+            return self._handle_http_error(e, "Failed to create status")
 
     async def update_status(
         self, status_id: int, request: UpdateStatusRequest
@@ -422,10 +413,7 @@ class ZephyrClient:
                         "you do not have access to it"
                     ],
                 )
-            return ValidationResult(
-                False,
-                [f"Failed to update status {status_id}: {str(e)}"],
-            )
+            return self._handle_http_error(e, f"Failed to update status {status_id}")
 
     # Folder operations
 
@@ -480,10 +468,7 @@ class ZephyrClient:
                 return validate_api_response(response_data, FolderList)
 
         except httpx.HTTPError as e:
-            return ValidationResult(
-                False,
-                [f"Failed to get folders: {str(e)}"],
-            )
+            return self._handle_http_error(e, "Failed to get folders")
 
     async def get_folder(self, folder_id: int) -> ValidationResult:
         """Get a specific folder by ID.
@@ -520,10 +505,7 @@ class ZephyrClient:
                         "you do not have access to it"
                     ],
                 )
-            return ValidationResult(
-                False,
-                [f"Failed to get folder {folder_id}: {str(e)}"],
-            )
+            return self._handle_http_error(e, f"Failed to get folder {folder_id}")
 
     async def create_folder(self, request: CreateFolderRequest) -> ValidationResult:
         """Create a new folder.
@@ -599,9 +581,8 @@ class ZephyrClient:
                 return validate_api_response(response_data, TestStepsList)
 
         except httpx.HTTPError as e:
-            return ValidationResult(
-                False,
-                [f"Failed to get test steps for test case {test_case_key}: {str(e)}"],
+            return self._handle_http_error(
+                e, f"Failed to get test steps for test case {test_case_key}"
             )
 
     async def create_test_steps(
@@ -638,12 +619,8 @@ class ZephyrClient:
                 return validate_api_response(response_data, CreatedResource)
 
         except httpx.HTTPError as e:
-            return ValidationResult(
-                False,
-                [
-                    f"Failed to create test steps for test case "
-                    f"{test_case_key}: {str(e)}"
-                ],
+            return self._handle_http_error(
+                e, f"Failed to create test steps for test case {test_case_key}"
             )
 
     async def get_test_script(
@@ -673,9 +650,8 @@ class ZephyrClient:
                 return validate_api_response(response_data, TestScript)
 
         except httpx.HTTPError as e:
-            return ValidationResult(
-                False,
-                [f"Failed to get test script for test case {test_case_key}: {str(e)}"],
+            return self._handle_http_error(
+                e, f"Failed to get test script for test case {test_case_key}"
             )
 
     async def create_test_script(
@@ -714,12 +690,8 @@ class ZephyrClient:
                 return validate_api_response(response_data, CreatedResource)
 
         except httpx.HTTPError as e:
-            return ValidationResult(
-                False,
-                [
-                    f"Failed to create test script for test case "
-                    f"{test_case_key}: {str(e)}"
-                ],
+            return self._handle_http_error(
+                e, f"Failed to create test script for test case {test_case_key}"
             )
 
     async def get_test_case(self, test_case_key: str) -> "ValidationResult[TestCase]":
@@ -794,9 +766,8 @@ class ZephyrClient:
                 return validate_api_response(response_data, TestCaseVersionList)
 
         except httpx.HTTPError as e:
-            return ValidationResult(
-                False,
-                [f"Failed to get versions for test case {test_case_key}: {str(e)}"],
+            return self._handle_http_error(
+                e, f"Failed to get versions for test case {test_case_key}"
             )
 
     async def get_test_case_version(
@@ -827,12 +798,8 @@ class ZephyrClient:
                 return validate_api_response(response_data, TestCase)
 
         except httpx.HTTPError as e:
-            return ValidationResult(
-                False,
-                [
-                    f"Failed to get version {version} for test case "
-                    f"{test_case_key}: {str(e)}"
-                ],
+            return self._handle_http_error(
+                e, f"Failed to get version {version} for test case {test_case_key}"
             )
 
     async def get_test_case_links(
@@ -862,9 +829,8 @@ class ZephyrClient:
                 return validate_api_response(response_data, TestCaseLinkList)
 
         except httpx.HTTPError as e:
-            return ValidationResult(
-                False,
-                [f"Failed to get links for test case {test_case_key}: {str(e)}"],
+            return self._handle_http_error(
+                e, f"Failed to get links for test case {test_case_key}"
             )
 
     async def create_test_case_issue_link(
@@ -899,12 +865,8 @@ class ZephyrClient:
                 return validate_api_response(response_data, CreatedResource)
 
         except httpx.HTTPError as e:
-            return ValidationResult(
-                False,
-                [
-                    f"Failed to create issue link for test case "
-                    f"{test_case_key}: {str(e)}"
-                ],
+            return self._handle_http_error(
+                e, f"Failed to create issue link for test case {test_case_key}"
             )
 
     async def create_test_case_web_link(
@@ -939,12 +901,8 @@ class ZephyrClient:
                 return validate_api_response(response_data, CreatedResource)
 
         except httpx.HTTPError as e:
-            return ValidationResult(
-                False,
-                [
-                    f"Failed to create web link for test case "
-                    f"{test_case_key}: {str(e)}"
-                ],
+            return self._handle_http_error(
+                e, f"Failed to create web link for test case {test_case_key}"
             )
 
     async def create_test_case(
