@@ -135,6 +135,14 @@ If you're using Zephyr Scale in the EU region, set:
 "ZEPHYR_SCALE_BASE_URL": "https://eu.api.zephyrscale.smartbear.com/v2"
 ```
 
+### Getting Zephyr API Token:
+
+1. In JIRA, go to **Apps** → **Zephyr Scale** → **API Access Tokens**
+2. Click **Create access token**
+3. Copy the generated token and use it as your `ZEPHYR_SCALE_API_TOKEN`
+
+For detailed instructions, see: [API Access Tokens Management](https://support.smartbear.com/zephyr/docs/en/rest-api/api-access-tokens-management.html)
+
 ## Quick Start
 
 1. **Set up environment variables:**
