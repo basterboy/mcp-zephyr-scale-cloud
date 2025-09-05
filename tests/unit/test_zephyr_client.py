@@ -561,7 +561,7 @@ class TestZephyrClientFolder:
                 update_input = TestCaseUpdateInput(
                     name="Updated test case",
                     objective="Updated objective",
-                    status_name="Ready for Review",
+                    status={"id": 123},
                     custom_fields={"Component": "Test", "Version": "v2.0"},
                 )
 
@@ -583,7 +583,7 @@ class TestZephyrClientFolder:
                 assert request_data["name"] == "Updated test case"  # Updated
                 assert request_data["objective"] == "Updated objective"  # Updated
                 assert request_data["precondition"] == "Original precondition"
-                assert request_data["statusName"] == "Ready for Review"  # Updated
+                assert request_data["status"] == {"id": 123}  # Updated
                 assert request_data["customFields"] == {
                     "Component": "Test",
                     "Version": "v2.0",
@@ -626,7 +626,7 @@ class TestZephyrClientFolder:
                     TestCaseUpdateInput,
                 )
 
-                update_input = TestCaseUpdateInput(status_name="Completed")
+                update_input = TestCaseUpdateInput(status={"id": 456})
 
                 result = await mock_zephyr_client.update_test_case(
                     test_case_key="PROJ-T123", test_case_input=update_input
@@ -640,7 +640,7 @@ class TestZephyrClientFolder:
 
                 # Check request data - should contain merged current + update data
                 request_data = call_args[1]["json"]
-                assert request_data["statusName"] == "Completed"  # Updated
+                assert request_data["status"] == {"id": 456}  # Updated
                 assert request_data["name"] == "Original test case"  # From current
                 assert request_data["objective"] == "Original objective"  # From current
                 # Note: priority/status Link objects are not converted to names yet
