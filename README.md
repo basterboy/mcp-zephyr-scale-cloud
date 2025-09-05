@@ -143,6 +143,27 @@ If you're using Zephyr Scale in the EU region, set:
 
 For detailed instructions, see: [API Access Tokens Management](https://support.smartbear.com/zephyr/docs/en/rest-api/api-access-tokens-management.html)
 
+### About Zephyr Scale Cloud API
+
+This package interfaces with the Zephyr Scale Cloud REST API, which provides comprehensive test management capabilities within Jira. The API allows you to:
+
+- **Import and manage test data** from any framework or tool
+- **Store test execution results** from automated testing
+- **Integrate with CI/CD pipelines** for seamless test reporting
+- **Access test cases, cycles, plans, and execution data**
+
+**Key API Information:**
+- **Base URL**: `https://api.zephyrscale.smartbear.com/v2/` (EU: `https://eu.api.zephyrscale.smartbear.com/v2/`)
+- **Authentication**: JWT Bearer token
+- **Protocol**: HTTP-based REST API
+- **Supported operations**: GET, POST, PUT requests for data retrieval and submission
+
+The MCP Zephyr Scale Cloud package provides 25 tools that wrap these API endpoints, making them easily accessible through AI assistants and automation workflows.
+
+**API Resources:**
+- [REST API Overview](https://support.smartbear.com/zephyr/docs/en/rest-api/rest-api--overview-.html)
+- [Complete API Documentation](https://support.smartbear.com/zephyr-scale-cloud/api-docs/)
+
 ## Quick Start
 
 1. **Set up environment variables:**
