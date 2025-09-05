@@ -34,7 +34,15 @@ Based on the Zephyr Scale Cloud API documentation, the following major categorie
 
 ## Installation
 
-### Option 1: Install from GitHub Releases (Recommended)
+### Option 1: Install from PyPI (Recommended)
+
+Install directly from the Python Package Index:
+
+```bash
+pip install mcp-zephyr-scale-cloud
+```
+
+### Option 2: Install from GitHub Releases
 
 Download and install the latest release directly from GitHub:
 
@@ -47,14 +55,6 @@ Or install from the source distribution:
 
 ```bash
 pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.4/mcp_zephyr_scale_cloud-0.1.4.tar.gz
-```
-
-### Option 2: Install from PyPI (Recommended)
-
-Install directly from the Python Package Index:
-
-```bash
-pip install mcp-zephyr-scale-cloud
 ```
 
 ### Option 3: Install from Source
