@@ -1169,46 +1169,25 @@ async def get_test_case(test_case_key: str) -> str:
 async def get_test_cases(
     project_key: str | None = None,
     folder_id: str | None = None,
-    limit: int = 10,
-    start_at_id: int = 0,
+    max_results: int = 10,
+    start_at: int = 0,
 ) -> str:
-    """Get test cases using cursor-based pagination (NextGen endpoint).
+    """Get test cases using traditional offset-based pagination.
 
-    This tool uses the NextGen API endpoint that provides cursor-based pagination
-    for better performance when retrieving large numbers of test cases.
-
-    ⚠️  CRITICAL PAGINATION WORKFLOW ⚠️
-    This tool uses CURSOR-BASED pagination, NOT offset-based pagination!
-
-    🔄 STEP-BY-STEP PAGINATION:
-    1. FIRST CALL: Use start_at_id=0 (or omit it)
-       Example: get_test_cases(limit=1000)
-
-    2. CHECK RESPONSE: Look for "nextStartAtId" field in the response
-       Example response: {"nextStartAtId": 166328308, "values": [...]}
-
-    3. NEXT CALL: Use the "nextStartAtId" value as start_at_id parameter
-       Example: get_test_cases(limit=1000, start_at_id=166328308)
-
-    4. REPEAT: Keep using the "nextStartAtId" from each response until it becomes null
-       When "nextStartAtId" is null, you've reached the end
-
-    ❌ WRONG: Using random numbers like start_at_id=2000, start_at_id=1000
-    ✅ CORRECT: Using start_at_id=166328308 (from previous response's nextStartAtId)
+    This tool uses the stable /testcases endpoint that provides reliable
+    offset-based pagination for retrieving test cases.
 
     Args:
         project_key: Jira project key filter (e.g., 'PROJ'). If you have access to
                     more than 1000 projects, this parameter may be mandatory.
                     Uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided
         folder_id: ID of a folder to filter test cases (optional)
-        limit: Maximum number of results to return (default: 10, max: 1000)
-        start_at_id: Starting ID for cursor-based pagination. Use 0 for first page,
-                    then ALWAYS use the exact 'nextStartAtId' value from the previous
-                    response (e.g., 166328308). NEVER use random numbers!
+        max_results: Maximum number of results to return (default: 10, max: 1000)
+        start_at: Zero-indexed starting position (default: 0)
 
     Returns:
         JSON response with test cases and pagination information including
-        'nextStartAtId' field for next page (null when no more pages)
+        startAt and maxResults fields for next page calculations
     """
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
@@ -1251,12 +1230,12 @@ async def get_test_cases(
     result = await zephyr_client.get_test_cases(
         project_key=project_key,
         folder_id=resolved_folder_id,
-        limit=limit,
-        start_at_id=start_at_id,
+        max_results=max_results,
+        start_at=start_at,
     )
 
     if result.is_valid:
-        # Return the cursor-paged response
+        # Return the paginated response
         return json.dumps(
             result.data.model_dump(by_alias=True, exclude_none=True, mode="json"),
             indent=2,

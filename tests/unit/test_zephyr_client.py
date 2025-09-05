@@ -671,7 +671,7 @@ class TestZephyrClientFolder:
 
 
 class TestZephyrClientGetTestCases:
-    """Test cases for get_test_cases method (NextGen endpoint)."""
+    """Test cases for get_test_cases method (traditional endpoint)."""
 
     @pytest.fixture
     def mock_zephyr_client(self):
@@ -688,8 +688,8 @@ class TestZephyrClientGetTestCases:
         from src.mcp_zephyr_scale_cloud.schemas.priority import PriorityLink
         from src.mcp_zephyr_scale_cloud.schemas.status import StatusLink
         from src.mcp_zephyr_scale_cloud.schemas.test_case import (
-            CursorPagedTestCaseList,
             TestCase,
+            TestCaseList,
         )
 
         # Mock test case data
@@ -704,9 +704,9 @@ class TestZephyrClientGetTestCases:
 
         mock_response_data = {
             "values": [mock_test_case.model_dump(by_alias=True, exclude_none=True)],
-            "limit": 10,
-            "nextStartAtId": 124,
-            "next": "https://api.test.com/v2/testcases/nextgen?startAtId=124&limit=10",
+            "maxResults": 10,
+            "startAt": 0,
+            "next": "https://api.test.com/v2/testcases?startAt=10&maxResults=10",
         }
 
         with patch("httpx.AsyncClient") as mock_client_class:
@@ -720,32 +720,32 @@ class TestZephyrClientGetTestCases:
             mock_client.get.return_value = mock_response
 
             result = await mock_zephyr_client.get_test_cases(
-                project_key="PROJ", folder_id=123, limit=10, start_at_id=0
+                project_key="PROJ", folder_id=123, max_results=10, start_at=0
             )
 
             assert result.is_valid
-            assert isinstance(result.data, CursorPagedTestCaseList)
+            assert isinstance(result.data, TestCaseList)
             assert len(result.data.values) == 1
             assert result.data.values[0].key == "PROJ-T456"
-            assert result.data.limit == 10
-            assert result.data.next_start_at_id == 124
+            assert result.data.max_results == 10
+            assert result.data.start_at == 0
 
             # Verify API call
             mock_client.get.assert_called_once()
             call_args = mock_client.get.call_args
-            assert call_args[0][0] == "https://api.test.com/v2/testcases/nextgen"
+            assert call_args[0][0] == "https://api.test.com/v2/testcases"
             assert call_args[1]["params"]["projectKey"] == "PROJ"
             assert call_args[1]["params"]["folderId"] == 123
-            assert call_args[1]["params"]["limit"] == 10
-            assert call_args[1]["params"]["startAtId"] == 0
+            assert call_args[1]["params"]["maxResults"] == 10
+            assert call_args[1]["params"]["startAt"] == 0
 
     @pytest.mark.asyncio
     async def test_get_test_cases_no_filters(self, mock_zephyr_client):
         """Test get_test_cases with no filters."""
         mock_response_data = {
             "values": [],
-            "limit": 10,
-            "nextStartAtId": None,
+            "maxResults": 10,
+            "startAt": 0,
             "next": None,
         }
 
@@ -763,26 +763,26 @@ class TestZephyrClientGetTestCases:
 
             assert result.is_valid
             assert len(result.data.values) == 0
-            assert result.data.limit == 10
-            assert result.data.next_start_at_id is None
+            assert result.data.max_results == 10
+            assert result.data.start_at == 0
 
             # Verify API call parameters - no project_key or folder_id
             call_args = mock_client.get.call_args
             params = call_args[1]["params"]
             assert "projectKey" not in params
             assert "folderId" not in params
-            assert params["limit"] == 10
-            assert params["startAtId"] == 0
+            assert params["maxResults"] == 10
+            assert params["startAt"] == 0
 
     @pytest.mark.asyncio
     async def test_get_test_cases_invalid_pagination(self, mock_zephyr_client):
         """Test get_test_cases with invalid pagination parameters."""
-        result = await mock_zephyr_client.get_test_cases(limit=-1, start_at_id=-5)
+        result = await mock_zephyr_client.get_test_cases(max_results=-1, start_at=-5)
 
         assert not result.is_valid
         assert len(result.errors) == 2
-        assert "limit must be at least 1" in result.errors
-        assert "start_at_id must be non-negative" in result.errors
+        assert "max_results must be at least 1" in result.errors
+        assert "start_at must be non-negative" in result.errors
 
     @pytest.mark.asyncio
     async def test_get_test_cases_http_error(self, mock_zephyr_client):

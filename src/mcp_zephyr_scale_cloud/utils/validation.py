@@ -133,38 +133,6 @@ def validate_pagination_params(
     )
 
 
-def validate_cursor_pagination_params(
-    limit: int | None = None, start_at_id: int | None = None
-) -> ValidationResult:
-    """Validate cursor-based pagination parameters for NextGen endpoints.
-
-    Args:
-        limit: Maximum number of results to return (1-1000, default 10)
-        start_at_id: Starting ID for cursor-based pagination (>=0, default 0)
-
-    Returns:
-        ValidationResult with validation status and normalized parameters
-    """
-    errors = []
-
-    if limit is not None:
-        if limit < 1:
-            errors.append("limit must be at least 1")
-        elif limit > 1000:
-            errors.append("limit cannot exceed 1000")
-
-    if start_at_id is not None:
-        if start_at_id < 0:
-            errors.append("start_at_id must be non-negative")
-
-    if errors:
-        return ValidationResult(False, errors)
-
-    return ValidationResult(
-        True, data={"limit": limit or 10, "startAtId": start_at_id or 0}
-    )
-
-
 def validate_api_response(
     response_data: dict[str, Any], expected_schema: type
 ) -> ValidationResult:
