@@ -1718,12 +1718,9 @@ async def update_test_case(
     precondition: str | None = None,
     estimated_time: str | None = None,
     component_id: str | None = None,
-    priority_name: str | None = None,
     priority_id: str | None = None,
-    status_name: str | None = None,
     status_id: str | None = None,
     folder_id: str | None = None,
-    folder_name: str | None = None,
     owner_id: str | None = None,
     labels: str | None = None,
     custom_fields: str | dict | None = None,
@@ -1737,13 +1734,9 @@ async def update_test_case(
         precondition: Test case preconditions (optional)
         estimated_time: Estimated duration in milliseconds as string (optional)
         component_id: Jira component ID as string (optional)
-        priority_name: Priority name (optional, mutually exclusive with priority_id)
-        priority_id: Priority ID as string
-                    (optional, mutually exclusive with priority_name)
-        status_name: Status name (optional, mutually exclusive with status_id)
-        status_id: Status ID as string (optional, mutually exclusive with status_name)
-        folder_id: Folder ID as string (optional, mutually exclusive with folder_name)
-        folder_name: Folder name (optional, mutually exclusive with folder_id)
+        priority_id: Priority ID as string (optional, use get_priorities to find IDs)
+        status_id: Status ID as string (optional, use get_statuses to find IDs)
+        folder_id: Folder ID as string (optional, use get_folders to find IDs)
         owner_id: Jira user account ID for owner (optional)
         labels: Labels as JSON array string (e.g., '["automation", "smoke"]') or
                 comma-separated (e.g., "automation, smoke") (optional)
@@ -1754,6 +1747,48 @@ async def update_test_case(
     Returns:
         Success message or error message
     """
+
+    # Detect common mistakes where users try to pass names instead of IDs
+    # and provide helpful error messages directing them to lookup tools
+    def check_for_name_instead_of_id(param_name: str, param_value: str) -> str | None:
+        """Check if parameter looks like name instead of ID, return error message."""
+        try:
+            int(param_value)
+            return None  # It's a valid integer, not a name
+        except (ValueError, TypeError):
+            if param_name == "priority_id":
+                return (
+                    f"priority_id must be a numeric ID, got '{param_value}'. "
+                    f"Use get_priorities tool to find priority IDs by name."
+                )
+            elif param_name == "status_id":
+                return (
+                    f"status_id must be a numeric ID, got '{param_value}'. "
+                    f"Use get_statuses tool to find status IDs by name."
+                )
+            elif param_name == "folder_id":
+                return (
+                    f"folder_id must be a numeric ID, got '{param_value}'. "
+                    f"Use get_folders tool to find folder IDs by name."
+                )
+            return f"{param_name} must be a numeric ID, got '{param_value}'."
+
+    # Check for name-instead-of-ID mistakes early
+    if priority_id is not None:
+        error_msg = check_for_name_instead_of_id("priority_id", priority_id)
+        if error_msg:
+            return json.dumps({"errorCode": 400, "message": error_msg}, indent=2)
+
+    if status_id is not None:
+        error_msg = check_for_name_instead_of_id("status_id", status_id)
+        if error_msg:
+            return json.dumps({"errorCode": 400, "message": error_msg}, indent=2)
+
+    if folder_id is not None:
+        error_msg = check_for_name_instead_of_id("folder_id", folder_id)
+        if error_msg:
+            return json.dumps({"errorCode": 400, "message": error_msg}, indent=2)
+
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
 
@@ -1762,37 +1797,6 @@ async def update_test_case(
     if not test_case_validation.is_valid:
         return json.dumps(
             {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
-            indent=2,
-        )
-
-    # Validate mutually exclusive parameters
-    if priority_name is not None and priority_id is not None:
-        return json.dumps(
-            {
-                "errorCode": 400,
-                "message": "priority_name and priority_id are mutually exclusive. "
-                "Please provide only one.",
-            },
-            indent=2,
-        )
-
-    if status_name is not None and status_id is not None:
-        return json.dumps(
-            {
-                "errorCode": 400,
-                "message": "status_name and status_id are mutually exclusive. "
-                "Please provide only one.",
-            },
-            indent=2,
-        )
-
-    if folder_id is not None and folder_name is not None:
-        return json.dumps(
-            {
-                "errorCode": 400,
-                "message": "folder_id and folder_name are mutually exclusive. "
-                "Please provide only one.",
-            },
             indent=2,
         )
 
@@ -1892,19 +1896,6 @@ async def update_test_case(
                     "errorCode": 400,
                     "message": f"Status ID must be a valid integer, "
                     f"got: {status_id}",
-                },
-                indent=2,
-            )
-
-    # Validate folder_name if provided (will need lookup)
-    parsed_folder_name = None
-    if folder_name is not None:
-        parsed_folder_name = folder_name.strip()
-        if not parsed_folder_name:
-            return json.dumps(
-                {
-                    "errorCode": 400,
-                    "message": "Folder name cannot be empty",
                 },
                 indent=2,
             )
@@ -2023,132 +2014,11 @@ async def update_test_case(
                 indent=2,
             )
 
-    # Handle priority and status name lookups if provided
-    # Extract project key from test case key (format: PROJ-T123)
-    project_key = test_case_key.split("-")[0]
+    # Use provided IDs directly - no lookups needed
+    resolved_priority_id = parsed_priority_id if priority_id is not None else None
+    resolved_status_id = parsed_status_id if status_id is not None else None
+    resolved_folder_id = parsed_folder_id if folder_id is not None else None
 
-    # Priority lookup (by name or ID)
-    resolved_priority_id = None
-    if priority_name is not None:
-        priorities_result = await zephyr_client.get_priorities(project_key=project_key)
-        if not priorities_result.is_valid:
-            return json.dumps(
-                {
-                    "errorCode": 400,
-                    "message": f"Failed to get priorities for project {project_key}: "
-                    f"{'; '.join(priorities_result.errors)}",
-                },
-                indent=2,
-            )
-
-        # Find priority by name (case-insensitive)
-        priority_found = False
-        for priority in priorities_result.data.values:
-            if priority.name.lower() == priority_name.lower():
-                resolved_priority_id = priority.id
-                priority_found = True
-                break
-
-        if not priority_found:
-            return json.dumps(
-                {
-                    "errorCode": 400,
-                    "message": (
-                        f"Priority '{priority_name}' not found in project "
-                        f"{project_key}. Use get_priorities tool to see "
-                        f"available priorities."
-                    ),
-                },
-                indent=2,
-            )
-    elif priority_id is not None:
-        # Use provided priority ID directly
-        resolved_priority_id = parsed_priority_id
-
-    # Status lookup (by name or ID)
-    resolved_status_id = None
-    if status_name is not None:
-        from .schemas.status import StatusType
-
-        statuses_result = await zephyr_client.get_statuses(
-            project_key=project_key, status_type=StatusType.TEST_CASE
-        )
-        if not statuses_result.is_valid:
-            return json.dumps(
-                {
-                    "errorCode": 400,
-                    "message": f"Failed to get statuses for project {project_key}: "
-                    f"{'; '.join(statuses_result.errors)}",
-                },
-                indent=2,
-            )
-
-        # Find status by name (case-insensitive)
-        status_found = False
-        for status in statuses_result.data.values:
-            if status.name.lower() == status_name.lower():
-                resolved_status_id = status.id
-                status_found = True
-                break
-
-        if not status_found:
-            return json.dumps(
-                {
-                    "errorCode": 400,
-                    "message": (
-                        f"Status '{status_name}' not found in project {project_key}. "
-                        f"Use get_statuses tool to see available statuses."
-                    ),
-                },
-                indent=2,
-            )
-    elif status_id is not None:
-        # Use provided status ID directly
-        resolved_status_id = parsed_status_id
-
-    # Folder lookup (by name or ID)
-    resolved_folder_id = None
-    if folder_name is not None:
-        # Look up folder by name
-        # Extract project key from test case key (format: PROJ-T123)
-        folders_result = await zephyr_client.get_folders(
-            project_key=project_key, folder_type=None
-        )
-        if not folders_result.is_valid:
-            return json.dumps(
-                {
-                    "errorCode": 400,
-                    "message": f"Failed to get folders for project {project_key}: "
-                    f"{'; '.join(folders_result.errors)}",
-                },
-                indent=2,
-            )
-
-        # Find folder by name (case-insensitive)
-        folder_found = False
-        for folder in folders_result.data.values:
-            if folder.name.lower() == parsed_folder_name.lower():
-                resolved_folder_id = folder.id
-                folder_found = True
-                break
-
-        if not folder_found:
-            return json.dumps(
-                {
-                    "errorCode": 400,
-                    "message": (
-                        f"Folder '{parsed_folder_name}' not found in project "
-                        f"{project_key}. Use get_folders tool to see "
-                        f"available folders."
-                    ),
-                },
-                indent=2,
-            )
-    elif folder_id is not None:
-        # Use provided folder ID directly
-        resolved_folder_id = parsed_folder_id
-
-    # Build test case update data (only include non-None values)
     test_case_data = {}
 
     # Add optional fields only if they are provided
