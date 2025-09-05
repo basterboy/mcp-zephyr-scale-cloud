@@ -1719,8 +1719,11 @@ async def update_test_case(
     estimated_time: str | None = None,
     component_id: str | None = None,
     priority_name: str | None = None,
+    priority_id: str | None = None,
     status_name: str | None = None,
+    status_id: str | None = None,
     folder_id: str | None = None,
+    folder_name: str | None = None,
     owner_id: str | None = None,
     labels: str | None = None,
     custom_fields: str | dict | None = None,
@@ -1734,9 +1737,13 @@ async def update_test_case(
         precondition: Test case preconditions (optional)
         estimated_time: Estimated duration in milliseconds as string (optional)
         component_id: Jira component ID as string (optional)
-        priority_name: Priority name (optional)
-        status_name: Status name (optional)
-        folder_id: Folder ID as string to place the test case (optional)
+        priority_name: Priority name (optional, mutually exclusive with priority_id)
+        priority_id: Priority ID as string
+                    (optional, mutually exclusive with priority_name)
+        status_name: Status name (optional, mutually exclusive with status_id)
+        status_id: Status ID as string (optional, mutually exclusive with status_name)
+        folder_id: Folder ID as string (optional, mutually exclusive with folder_name)
+        folder_name: Folder name (optional, mutually exclusive with folder_id)
         owner_id: Jira user account ID for owner (optional)
         labels: Labels as JSON array string (e.g., '["automation", "smoke"]') or
                 comma-separated (e.g., "automation, smoke") (optional)
@@ -1755,6 +1762,37 @@ async def update_test_case(
     if not test_case_validation.is_valid:
         return json.dumps(
             {"errorCode": 400, "message": "; ".join(test_case_validation.errors)},
+            indent=2,
+        )
+
+    # Validate mutually exclusive parameters
+    if priority_name is not None and priority_id is not None:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": "priority_name and priority_id are mutually exclusive. "
+                "Please provide only one.",
+            },
+            indent=2,
+        )
+
+    if status_name is not None and status_id is not None:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": "status_name and status_id are mutually exclusive. "
+                "Please provide only one.",
+            },
+            indent=2,
+        )
+
+    if folder_id is not None and folder_name is not None:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": "folder_id and folder_name are mutually exclusive. "
+                "Please provide only one.",
+            },
             indent=2,
         )
 
@@ -1806,6 +1844,67 @@ async def update_test_case(
                     "errorCode": 400,
                     "message": f"Component ID must be a valid integer, "
                     f"got: {component_id}",
+                },
+                indent=2,
+            )
+
+    # Validate priority_id if provided
+    parsed_priority_id = None
+    if priority_id is not None:
+        try:
+            parsed_priority_id = int(priority_id)
+            if parsed_priority_id <= 0:
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": f"Priority ID must be a positive integer, "
+                        f"got: {priority_id}",
+                    },
+                    indent=2,
+                )
+        except (ValueError, TypeError):
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Priority ID must be a valid integer, "
+                    f"got: {priority_id}",
+                },
+                indent=2,
+            )
+
+    # Validate status_id if provided
+    parsed_status_id = None
+    if status_id is not None:
+        try:
+            parsed_status_id = int(status_id)
+            if parsed_status_id <= 0:
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": f"Status ID must be a positive integer, "
+                        f"got: {status_id}",
+                    },
+                    indent=2,
+                )
+        except (ValueError, TypeError):
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Status ID must be a valid integer, "
+                    f"got: {status_id}",
+                },
+                indent=2,
+            )
+
+    # Validate folder_name if provided (will need lookup)
+    parsed_folder_name = None
+    if folder_name is not None:
+        parsed_folder_name = folder_name.strip()
+        if not parsed_folder_name:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": "Folder name cannot be empty",
                 },
                 indent=2,
             )
@@ -1928,7 +2027,7 @@ async def update_test_case(
     # Extract project key from test case key (format: PROJ-T123)
     project_key = test_case_key.split("-")[0]
 
-    # Priority name lookup
+    # Priority lookup (by name or ID)
     resolved_priority_id = None
     if priority_name is not None:
         priorities_result = await zephyr_client.get_priorities(project_key=project_key)
@@ -1962,8 +2061,11 @@ async def update_test_case(
                 },
                 indent=2,
             )
+    elif priority_id is not None:
+        # Use provided priority ID directly
+        resolved_priority_id = parsed_priority_id
 
-    # Status name lookup
+    # Status lookup (by name or ID)
     resolved_status_id = None
     if status_name is not None:
         from .schemas.status import StatusType
@@ -2000,6 +2102,51 @@ async def update_test_case(
                 },
                 indent=2,
             )
+    elif status_id is not None:
+        # Use provided status ID directly
+        resolved_status_id = parsed_status_id
+
+    # Folder lookup (by name or ID)
+    resolved_folder_id = None
+    if folder_name is not None:
+        # Look up folder by name
+        # Extract project key from test case key (format: PROJ-T123)
+        folders_result = await zephyr_client.get_folders(
+            project_key=project_key, folder_type=None
+        )
+        if not folders_result.is_valid:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Failed to get folders for project {project_key}: "
+                    f"{'; '.join(folders_result.errors)}",
+                },
+                indent=2,
+            )
+
+        # Find folder by name (case-insensitive)
+        folder_found = False
+        for folder in folders_result.data.values:
+            if folder.name.lower() == parsed_folder_name.lower():
+                resolved_folder_id = folder.id
+                folder_found = True
+                break
+
+        if not folder_found:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": (
+                        f"Folder '{parsed_folder_name}' not found in project "
+                        f"{project_key}. Use get_folders tool to see "
+                        f"available folders."
+                    ),
+                },
+                indent=2,
+            )
+    elif folder_id is not None:
+        # Use provided folder ID directly
+        resolved_folder_id = parsed_folder_id
 
     # Build test case update data (only include non-None values)
     test_case_data = {}
@@ -2031,8 +2178,8 @@ async def update_test_case(
         # The API expects a status object with id and self
         test_case_data["status"] = {"id": resolved_status_id}
 
-    if parsed_folder_id is not None:
-        test_case_data["folderId"] = parsed_folder_id
+    if resolved_folder_id is not None:
+        test_case_data["folderId"] = resolved_folder_id
 
     if owner_id is not None:
         test_case_data["ownerId"] = owner_id
