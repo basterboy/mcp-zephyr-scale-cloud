@@ -1177,15 +1177,24 @@ async def get_test_cases(
     This tool uses the NextGen API endpoint that provides cursor-based pagination
     for better performance when retrieving large numbers of test cases.
 
-    PAGINATION USAGE:
-    - First request: Use start_at_id=0 (default)
-    - Subsequent requests: Use the 'nextStartAtId' value from the previous response
-    - Continue until 'nextStartAtId' is null (no more pages)
+    ⚠️  CRITICAL PAGINATION WORKFLOW ⚠️
+    This tool uses CURSOR-BASED pagination, NOT offset-based pagination!
 
-    Example pagination flow:
-    1. get_test_cases(limit=1000) -> returns nextStartAtId: 166328308
-    2. get_test_cases(limit=1000, start_at_id=166328308) -> get next page
-    3. Continue with returned nextStartAtId until it's null
+    🔄 STEP-BY-STEP PAGINATION:
+    1. FIRST CALL: Use start_at_id=0 (or omit it)
+       Example: get_test_cases(limit=1000)
+
+    2. CHECK RESPONSE: Look for "nextStartAtId" field in the response
+       Example response: {"nextStartAtId": 166328308, "values": [...]}
+
+    3. NEXT CALL: Use the "nextStartAtId" value as start_at_id parameter
+       Example: get_test_cases(limit=1000, start_at_id=166328308)
+
+    4. REPEAT: Keep using the "nextStartAtId" from each response until it becomes null
+       When "nextStartAtId" is null, you've reached the end
+
+    ❌ WRONG: Using random numbers like start_at_id=2000, start_at_id=1000
+    ✅ CORRECT: Using start_at_id=166328308 (from previous response's nextStartAtId)
 
     Args:
         project_key: Jira project key filter (e.g., 'PROJ'). If you have access to
@@ -1194,7 +1203,8 @@ async def get_test_cases(
         folder_id: ID of a folder to filter test cases (optional)
         limit: Maximum number of results to return (default: 10, max: 1000)
         start_at_id: Starting ID for cursor-based pagination. Use 0 for first page,
-                    then use 'nextStartAtId' from previous response for next pages
+                    then ALWAYS use the exact 'nextStartAtId' value from the previous
+                    response (e.g., 166328308). NEVER use random numbers!
 
     Returns:
         JSON response with test cases and pagination information including
