@@ -147,42 +147,19 @@ class TestCaseUpdateInput(BaseModel):
         ge=0,
         example=138000,
     )
-    component_id: int | None = Field(
-        None,
-        alias="componentId",
-        description="ID of a component from Jira",
-        ge=0,
-        example=10001,
-    )
     component: dict[str, Any] | None = Field(
         None,
-        description="Component object for API (resolved from component_id)",
+        description="ID of the component from Jira to update the test case to",
         example={"id": 10001},
-    )
-    priority_name: str | None = Field(
-        None,
-        alias="priorityName",
-        description="The priority name",
-        max_length=255,
-        min_length=1,
-        example="High",
     )
     priority: dict[str, Any] | None = Field(
         None,
-        description="Priority object for API (resolved from priority_name)",
+        description="ID of the priority to update the test case to",
         example={"id": 123},
-    )
-    status_name: str | None = Field(
-        None,
-        alias="statusName",
-        description="The status name",
-        max_length=255,
-        min_length=1,
-        example="Draft",
     )
     status: dict[str, Any] | None = Field(
         None,
-        description="Status object for API (resolved from status_name)",
+        description="ID of the status to update the test case to",
         example={"id": 456},
     )
     folder_id: int | None = Field(

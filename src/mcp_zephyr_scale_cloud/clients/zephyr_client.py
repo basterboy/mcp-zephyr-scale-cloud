@@ -972,14 +972,7 @@ class ZephyrClient:
             current_data = current_result.data
             update_data = test_case_input.model_dump(by_alias=True, exclude_none=True)
 
-            # The API requires the complete TestCase structure but has a mismatch:
-            # GET returns Link objects, PUT expects names for priority/status
-            #
-            # Strategy: Send all the fields we can get from the current data,
-            # and for priority/status, we'll need to either:
-            # 1. Look them up by ID, or 2. Only send if being updated
-
-            # Start with required fields that the API demands
+            # The API requires the complete TestCase structure.
             request_data = {
                 "id": current_data.id,
                 "key": current_data.key,
@@ -1006,7 +999,6 @@ class ZephyrClient:
                 request_data["folder"] = {"id": current_data.folder.id}
 
             if current_data.owner is not None:
-                # Both GET and PUT use the same owner object structure
                 request_data["owner"] = {"accountId": current_data.owner.account_id}
 
             if current_data.labels is not None:
@@ -1017,29 +1009,8 @@ class ZephyrClient:
                     exclude_none=True
                 )
 
-            # Handle special fields that need object structure for the API
-            # Priority update - the server now sends proper priority objects
-            if "priority" in update_data:
-                request_data["priority"] = update_data["priority"]
-
-            # Status update - the server now sends proper status objects
-            if "status" in update_data:
-                request_data["status"] = update_data["status"]
-
-            # Component update - the server now sends proper component objects
-            if "component" in update_data:
-                request_data["component"] = update_data["component"]
-
-            # Folder update - the server now sends proper folder objects
-            if "folder" in update_data:
-                request_data["folder"] = update_data["folder"]
-
-            # Merge other update data (excluding the special fields we handled above)
-            excluded_fields = ["priority", "status", "component", "folder"]
-            filtered_update_data = {
-                k: v for k, v in update_data.items() if k not in excluded_fields
-            }
-            request_data.update(filtered_update_data)
+            # Apply updates from the server
+            request_data.update(update_data)
 
             async with httpx.AsyncClient() as client:
                 response = await client.put(
