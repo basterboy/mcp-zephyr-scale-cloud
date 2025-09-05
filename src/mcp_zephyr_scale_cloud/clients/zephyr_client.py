@@ -1013,7 +1013,9 @@ class ZephyrClient:
                 request_data["labels"] = current_data.labels
 
             if current_data.custom_fields is not None:
-                request_data["customFields"] = current_data.custom_fields
+                request_data["customFields"] = current_data.custom_fields.model_dump(
+                    exclude_none=True
+                )
 
             # Now merge in the update data, which may override current values
             # This will include priorityName/statusName if the user is updating them
