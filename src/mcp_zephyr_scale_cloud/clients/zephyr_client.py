@@ -979,6 +979,13 @@ class ZephyrClient:
             )
             request_data.update(update_data)
 
+            # Convert folderId to folder object format expected by API
+            if "folderId" in request_data:
+                folder_id = request_data.pop("folderId")
+                request_data["folder"] = {
+                    "id": folder_id
+                }
+
             async with httpx.AsyncClient() as client:
                 response = await client.put(
                     f"{self.config.base_url}/testcases/{test_case_key}",
