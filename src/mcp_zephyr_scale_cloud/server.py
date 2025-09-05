@@ -1177,17 +1177,44 @@ async def get_test_cases(
     This tool uses the stable /testcases endpoint that provides reliable
     offset-based pagination for retrieving test cases.
 
+    📖 OFFSET-BASED PAGINATION GUIDE:
+    Offset pagination works like pages in a book - you specify which "page" to start
+    reading from and how many items per "page".
+
+    🔢 HOW TO PAGINATE THROUGH ALL RESULTS:
+    1. FIRST REQUEST: start_at=0, max_results=1000 (gets items 0-999)
+    2. NEXT REQUEST: start_at=1000, max_results=1000 (gets items 1000-1999)
+    3. CONTINUE: start_at=2000, max_results=1000 (gets items 2000-2999)
+    4. STOP when response has fewer items than max_results
+
+    💡 PAGINATION FORMULA:
+    - Next start_at = current_start_at + max_results
+    - Example: If start_at=0 and max_results=1000, next start_at=1000
+    - Always ensure start_at is a multiple of max_results (as per API docs)
+
+    ⚡ PERFORMANCE TIP:
+    Use max_results=1000 (maximum allowed) for fastest data retrieval.
+    The API default is only 10, which is very slow for large datasets.
+
+    🛑 IMPORTANT:
+    - start_at should be a multiple of max_results (API requirement)
+    - Check response length vs max_results to detect the last page
+    - Server may return fewer results than requested due to constraints
+
     Args:
         project_key: Jira project key filter (e.g., 'PROJ'). If you have access to
                     more than 1000 projects, this parameter may be mandatory.
                     Uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided
         folder_id: ID of a folder to filter test cases (optional)
-        max_results: Maximum number of results to return (default: 10, max: 1000)
-        start_at: Zero-indexed starting position (default: 0)
+        max_results: Maximum number of results to return (default: 10, max: 1000).
+                    RECOMMENDATION: Use 1000 for fastest bulk data retrieval.
+        start_at: Zero-indexed starting position (default: 0).
+                 MUST be a multiple of max_results.
+                 For next page: start_at + max_results
 
     Returns:
-        JSON response with test cases and pagination information including
-        startAt and maxResults fields for next page calculations
+        JSON response with test cases and pagination information.
+        Check if len(values) < max_results to detect the last page.
     """
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
