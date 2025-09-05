@@ -1177,16 +1177,28 @@ async def get_test_cases(
     This tool uses the NextGen API endpoint that provides cursor-based pagination
     for better performance when retrieving large numbers of test cases.
 
+    PAGINATION USAGE:
+    - First request: Use start_at_id=0 (default)
+    - Subsequent requests: Use the 'nextStartAtId' value from the previous response
+    - Continue until 'nextStartAtId' is null (no more pages)
+
+    Example pagination flow:
+    1. get_test_cases(limit=1000) -> returns nextStartAtId: 166328308
+    2. get_test_cases(limit=1000, start_at_id=166328308) -> get next page
+    3. Continue with returned nextStartAtId until it's null
+
     Args:
         project_key: Jira project key filter (e.g., 'PROJ'). If you have access to
                     more than 1000 projects, this parameter may be mandatory.
                     Uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided
         folder_id: ID of a folder to filter test cases (optional)
         limit: Maximum number of results to return (default: 10, max: 1000)
-        start_at_id: Starting ID for cursor-based pagination (default: 0)
+        start_at_id: Starting ID for cursor-based pagination. Use 0 for first page,
+                    then use 'nextStartAtId' from previous response for next pages
 
     Returns:
-        JSON response with test cases and pagination information
+        JSON response with test cases and pagination information including
+        'nextStartAtId' field for next page (null when no more pages)
     """
     if not zephyr_client:
         return _CONFIG_ERROR_MSG

@@ -336,7 +336,8 @@ class CursorPagedList(BaseModel):
     next_start_at_id: int | None = Field(
         None,
         alias="nextStartAtId",
-        description="Starting ID for the next page",
+        description="Starting ID for the next page. Use this value as "
+        "start_at_id parameter for next request. Null when no more pages.",
         ge=0,
     )
     limit: int = Field(
