@@ -69,13 +69,13 @@ Download and install the latest release directly from GitHub:
 
 ```bash
 # Download the latest wheel file from GitHub releases
-pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.3/mcp_zephyr_scale_cloud-0.1.3-py3-none-any.whl
+pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.4/mcp_zephyr_scale_cloud-0.1.4-py3-none-any.whl
 ```
 
 Or install from the source distribution:
 
 ```bash
-pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.3/mcp_zephyr_scale_cloud-0.1.3.tar.gz
+pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.4/mcp_zephyr_scale_cloud-0.1.4.tar.gz
 ```
 
 ### Option 2: Install from PyPI (Recommended)
@@ -102,6 +102,37 @@ After installation, verify it works:
 
 ```bash
 python -c "import mcp_zephyr_scale_cloud; print('✅ Successfully installed!')"
+```
+
+## Integration with Cursor
+
+After installing the package, add the following to your Cursor configuration:
+
+```json
+{
+  "mcpServers": {
+    "zephyr-scale-cloud": {
+      "command": "mcp-zephyr-scale-cloud",
+      "env": {
+        "ZEPHYR_SCALE_API_TOKEN": "your-zephyr-api-token",
+        "ZEPHYR_SCALE_BASE_URL": "https://api.zephyrscale.smartbear.com/v2",
+        "ZEPHYR_SCALE_DEFAULT_PROJECT_KEY": "YOURPROJ"
+      }
+    }
+  }
+}
+```
+
+### Configuration Options:
+
+- **ZEPHYR_SCALE_API_TOKEN**: Your Zephyr Scale API token (required)
+- **ZEPHYR_SCALE_BASE_URL**: API base URL (optional, defaults to `https://api.zephyrscale.smartbear.com/v2`)  
+- **ZEPHYR_SCALE_DEFAULT_PROJECT_KEY**: Default project key for tools that support it (optional)
+
+### EU Region Users:
+If you're using Zephyr Scale in the EU region, set:
+```json
+"ZEPHYR_SCALE_BASE_URL": "https://eu.api.zephyrscale.smartbear.com/v2"
 ```
 
 ## Quick Start
