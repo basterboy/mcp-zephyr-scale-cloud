@@ -1,13 +1,5 @@
 """Utility modules for Zephyr Scale Cloud MCP server."""
 
-from .formatting import (
-    format_error_message,
-    format_priority_details,
-    format_priority_display,
-    format_priority_list,
-    format_success_message,
-    format_validation_errors,
-)
 from .validation import (
     ValidationResult,
     sanitize_input,
@@ -24,10 +16,4 @@ __all__ = [
     "validate_pagination_params",
     "validate_api_response",
     "sanitize_input",
-    "format_priority_display",
-    "format_priority_list",
-    "format_priority_details",
-    "format_error_message",
-    "format_success_message",
-    "format_validation_errors",
 ]

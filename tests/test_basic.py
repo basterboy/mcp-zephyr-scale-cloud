@@ -592,7 +592,6 @@ class TestEnvironmentConfiguration:
             TestCaseLinkList,
             WebLink,
         )
-        from src.mcp_zephyr_scale_cloud.utils.formatting import format_test_case_display
 
         # Test case with full links and custom fields
         test_case = TestCase(
@@ -605,7 +604,7 @@ class TestEnvironmentConfiguration:
             priority=PriorityLink(id=2, self="https://api.example.com/priorities/2"),
             status=StatusLink(id=1, self="https://api.example.com/statuses/1"),
             customFields={
-                "Components": ["PPO initiative"],
+                "Components": ["Custom Component"],
                 "Version": None,
                 "Priority": "High",
                 "Tags": ["UI", "Backend"],
@@ -636,7 +635,7 @@ class TestEnvironmentConfiguration:
         assert test_case.custom_fields is not None
         custom_fields_dict = test_case.custom_fields.model_dump()
         assert "Components" in custom_fields_dict
-        assert custom_fields_dict["Components"] == ["PPO initiative"]
+        assert custom_fields_dict["Components"] == ["Custom Component"]
         assert custom_fields_dict["Priority"] == "High"
 
         assert test_case.links is not None
@@ -646,16 +645,14 @@ class TestEnvironmentConfiguration:
         assert test_case.links.issues[0].type == "COVERAGE"
         assert test_case.links.web_links[0].url == "https://docs.example.com/feature"
 
-        # Test formatting includes custom fields and links
-        formatted = format_test_case_display(test_case)
-        assert "Custom Fields:" in formatted
-        assert "Components: PPO initiative" in formatted
-        assert "Priority: High" in formatted
-        assert "Links:" in formatted
-        assert "Issues (1):" in formatted
-        assert "COVERAGE: Issue 2051212" in formatted
-        assert "Web Links (1):" in formatted
-        assert "https://docs.example.com/feature" in formatted
+        # Test case model_dump includes all data
+        test_case_data = test_case.model_dump(by_alias=True, exclude_none=True)
+        assert "customFields" in test_case_data
+        assert "links" in test_case_data
+        assert test_case_data["customFields"]["Components"] == ["Custom Component"]
+        assert test_case_data["customFields"]["Priority"] == "High"
+        assert len(test_case_data["links"]["issues"]) == 1
+        assert len(test_case_data["links"]["webLinks"]) == 1
 
     def test_version_schema_creation(self):
         """Test version schema creation and basic functionality."""
