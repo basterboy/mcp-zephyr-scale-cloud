@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2025-09-05
+
+### 📚 Documentation Overhaul
+- **Comprehensive README restructure** - Complete reorganization for better user experience
+- **Added Cursor integration guide** - Step-by-step setup instructions with configuration examples
+- **Added Zephyr API token guide** - Detailed instructions for obtaining API tokens from JIRA
+- **Added API overview section** - Comprehensive explanation of Zephyr Scale Cloud API capabilities
+- **Improved installation section** - Reordered options with PyPI as primary recommendation
+- **Enhanced configuration documentation** - Better organization of environment variables and options
+- **Removed redundant sections** - Eliminated duplicate installation and configuration blocks
+- **Streamlined content flow** - Logical progression from installation to usage
+
+### 🔧 Technical Improvements  
+- **Fixed PyPI publishing workflow** - Replaced deprecated `poetry publish --no-build` with `twine upload`
+- **Updated GitHub Actions** - Migrated to latest artifact actions (v4) for better reliability
+
 ## [0.1.4] - 2025-09-05
 
 ### 🔧 Fixed
