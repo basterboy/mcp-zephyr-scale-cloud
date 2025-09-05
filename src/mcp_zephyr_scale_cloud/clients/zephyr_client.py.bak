@@ -56,15 +56,13 @@ class ZephyrClient:
             "Accept": "application/json",
         }
 
-    def _handle_http_error(
-        self, error: httpx.HTTPError, operation: str
-    ) -> ValidationResult:
+    def _handle_http_error(self, error: httpx.HTTPError, operation: str) -> ValidationResult:
         """Handle HTTP errors with detailed error messages when available.
-
+        
         Args:
             error: The HTTP error that occurred
             operation: Description of the operation that failed
-
+            
         Returns:
             ValidationResult with detailed error message
         """
@@ -105,8 +103,8 @@ class ZephyrClient:
                     )
 
             except httpx.HTTPError as e:
-                return self._handle_http_error(
-                    e, "Failed to connect to Zephyr Scale Cloud API"
+                return ValidationResult(
+                    False, [f"Failed to connect to Zephyr Scale Cloud API: {str(e)}"]
                 )
 
     async def get_priorities(
@@ -180,9 +178,7 @@ class ZephyrClient:
                             "you do not have access to it"
                         ],
                     )
-                return self._handle_http_error(
-                    e, f"Failed to retrieve priority {priority_id}"
-                )
+                return self._handle_http_error(e, f"Failed to retrieve priority {priority_id}")
 
     async def create_priority(self, request: CreatePriorityRequest) -> ValidationResult:
         """Create a new priority.
@@ -553,7 +549,10 @@ class ZephyrClient:
                 return validate_api_response(response_data, CreatedResource)
 
         except httpx.HTTPError as e:
-            return self._handle_http_error(e, "Failed to create folder")
+            return ValidationResult(
+                False,
+                [f"Failed to create folder: {str(e)}"],
+            )
 
     async def get_test_steps(
         self,
@@ -747,8 +746,9 @@ class ZephyrClient:
                 return validate_api_response(response_data, TestCase)
 
         except httpx.HTTPError as e:
-            return self._handle_http_error(
-                e, f"Failed to get test case {test_case_key}"
+            return ValidationResult(
+                False,
+                [f"Failed to get test case {test_case_key}: {str(e)}"],
             )
 
     async def get_test_case_versions(
@@ -1026,9 +1026,15 @@ class ZephyrClient:
                 "id": current_data.id,
                 "key": current_data.key,
                 "name": current_data.name,
-                "project": {"id": current_data.project.id},
-                "priority": {"id": current_data.priority.id},
-                "status": {"id": current_data.status.id},
+                "project": {
+                    "id": current_data.project.id
+                },
+                "priority": {
+                    "id": current_data.priority.id
+                },
+                "status": {
+                    "id": current_data.status.id
+                },
             }
 
             # Add all optional fields that we can safely map
@@ -1049,7 +1055,9 @@ class ZephyrClient:
 
             if current_data.owner is not None:
                 # Both GET and PUT use the same owner object structure
-                request_data["owner"] = {"accountId": current_data.owner.account_id}
+                request_data["owner"] = {
+                    "accountId": current_data.owner.account_id
+                }
 
             if current_data.labels is not None:
                 request_data["labels"] = current_data.labels
@@ -1074,6 +1082,4 @@ class ZephyrClient:
                 return ValidationResult(True, data=None)
 
         except httpx.HTTPError as e:
-            return self._handle_http_error(
-                e, f"Failed to update test case {test_case_key}"
-            )
+            return self._handle_http_error(e, f"Failed to update test case {test_case_key}")
