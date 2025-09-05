@@ -790,31 +790,8 @@ class TestFolderMCPTools:
     @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
     async def test_update_test_case_success(self, mock_client):
         """Test successful update_test_case tool call."""
-        # Mock status lookup for status_name="Ready for Review"
-        from src.mcp_zephyr_scale_cloud.schemas.common import ProjectLink
-        from src.mcp_zephyr_scale_cloud.schemas.status import Status, StatusList
         from src.mcp_zephyr_scale_cloud.server import update_test_case
         from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
-
-        mock_project = ProjectLink(
-            id=1, name="Test Project", self="http://test.com/project/1"
-        )
-
-        mock_status = Status(
-            id=456,
-            name="Ready for Review",
-            description="Status for ready items",
-            color="#00FF00",
-            index=2,
-            default=False,
-            archived=False,
-            project=mock_project,
-        )
-        mock_status_list = StatusList(
-            values=[mock_status], total=1, maxResults=50, startAt=0, isLast=True
-        )
-        mock_statuses_result = ValidationResult(True, data=mock_status_list)
-        mock_client.get_statuses = AsyncMock(return_value=mock_statuses_result)
 
         # Mock successful API response (PUT returns None data)
         mock_result = ValidationResult(True, data=None)
@@ -824,7 +801,7 @@ class TestFolderMCPTools:
             test_case_key="PROJ-T123",
             name="Updated test name",
             objective="Updated objective",
-            status_name="Ready for Review",
+            status_id="456",  # Use ID directly instead of name
             custom_fields={"Components": ["Update"], "Version": "v2.0.0"},
         )
 
@@ -838,30 +815,8 @@ class TestFolderMCPTools:
     @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
     async def test_update_test_case_partial_update(self, mock_client):
         """Test update_test_case with only some fields updated."""
-        from src.mcp_zephyr_scale_cloud.schemas.common import ProjectLink
-        from src.mcp_zephyr_scale_cloud.schemas.status import Status, StatusList
         from src.mcp_zephyr_scale_cloud.server import update_test_case
         from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
-
-        # Mock status lookup for status_name="Completed"
-        mock_project = ProjectLink(
-            id=1, name="Test Project", self="http://test.com/project/1"
-        )
-        mock_status = Status(
-            id=789,
-            name="Completed",
-            description="Completed status",
-            color="#0000FF",
-            index=3,
-            default=False,
-            archived=False,
-            project=mock_project,
-        )
-        mock_status_list = StatusList(
-            values=[mock_status], total=1, maxResults=50, startAt=0, isLast=True
-        )
-        mock_statuses_result = ValidationResult(True, data=mock_status_list)
-        mock_client.get_statuses = AsyncMock(return_value=mock_statuses_result)
 
         # Mock successful API response
         mock_result = ValidationResult(True, data=None)
@@ -869,7 +824,7 @@ class TestFolderMCPTools:
 
         response = await update_test_case(
             test_case_key="PROJ-T123",
-            status_name="Completed",
+            status_id="789",  # Use ID directly instead of name
         )
 
         # Parse JSON response
@@ -1039,7 +994,8 @@ class TestFolderMCPTools:
         # Parse JSON error response
         response_data = json.loads(response)
         assert response_data["errorCode"] == 400
-        assert "Folder ID must be a valid integer" in response_data["message"]
+        assert "folder_id must be a numeric ID" in response_data["message"]
+        assert "Use get_folders tool to find folder IDs" in response_data["message"]
         # Should not call the API
         mock_client.update_test_case.assert_not_called()
 
