@@ -69,13 +69,13 @@ Download and install the latest release directly from GitHub:
 
 ```bash
 # Download the latest wheel file from GitHub releases
-pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.2/mcp_zephyr_scale_cloud-0.1.2-py3-none-any.whl
+pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.3/mcp_zephyr_scale_cloud-0.1.3-py3-none-any.whl
 ```
 
 Or install from the source distribution:
 
 ```bash
-pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.2/mcp_zephyr_scale_cloud-0.1.2.tar.gz
+pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.3/mcp_zephyr_scale_cloud-0.1.3.tar.gz
 ```
 
 ### Option 2: Install from PyPI (Recommended)
