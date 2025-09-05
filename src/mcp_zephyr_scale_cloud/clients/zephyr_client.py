@@ -1000,13 +1000,10 @@ class ZephyrClient:
                 request_data["estimatedTime"] = current_data.estimated_time
 
             if current_data.component is not None:
-                request_data["component"] = {
-                    "id": current_data.component.id,
-                    "self": current_data.component.self,
-                }
+                request_data["component"] = {"id": current_data.component.id}
 
             if current_data.folder is not None:
-                request_data["folderId"] = current_data.folder.id
+                request_data["folder"] = {"id": current_data.folder.id}
 
             if current_data.owner is not None:
                 # Both GET and PUT use the same owner object structure
@@ -1036,9 +1033,6 @@ class ZephyrClient:
             # Folder update - the server now sends proper folder objects
             if "folder" in update_data:
                 request_data["folder"] = update_data["folder"]
-                # Remove any existing folderId to avoid conflicts
-                if "folderId" in request_data:
-                    del request_data["folderId"]
 
             # Merge other update data (excluding the special fields we handled above)
             excluded_fields = ["priority", "status", "component", "folder"]
