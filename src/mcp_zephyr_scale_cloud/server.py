@@ -1966,8 +1966,10 @@ async def update_test_case(
     # Status name lookup
     resolved_status_id = None
     if status_name is not None:
+        from .schemas.status import StatusType
+
         statuses_result = await zephyr_client.get_statuses(
-            project_key=project_key, status_type="TEST_CASE"
+            project_key=project_key, status_type=StatusType.TEST_CASE
         )
         if not statuses_result.is_valid:
             return json.dumps(
