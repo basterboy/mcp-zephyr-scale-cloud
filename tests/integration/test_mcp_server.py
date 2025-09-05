@@ -1051,10 +1051,12 @@ class TestFolderMCPTools:
         """Test update_test_case when client is not configured."""
         from src.mcp_zephyr_scale_cloud.server import update_test_case
 
-        response = await update_test_case(
-            test_case_key="PROJ-T123",
-            name="Updated name",
-        )
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", None):
+            response = await update_test_case(
+                test_case_key="PROJ-T123",
+                name="Updated name",
+            )
 
-        # Should return configuration error
-        assert "❌ ERROR: Zephyr Scale configuration not found" in response
+            # Should return configuration error
+            assert "ERROR" in response
+            assert "configuration not found" in response
