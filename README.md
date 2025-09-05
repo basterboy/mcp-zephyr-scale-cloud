@@ -78,9 +78,9 @@ Or install from the source distribution:
 pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.1/mcp_zephyr_scale_cloud-0.1.1.tar.gz
 ```
 
-### Option 2: Install from PyPI (When Available)
+### Option 2: Install from PyPI (Recommended)
 
-Once published to PyPI, you'll be able to install with:
+Install directly from the Python Package Index:
 
 ```bash
 pip install mcp-zephyr-scale-cloud

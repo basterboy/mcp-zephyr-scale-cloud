@@ -150,9 +150,6 @@ jobs:
   publish-pypi:
     needs: [test, build, release]
     runs-on: ubuntu-latest
-    # Only run this job if PyPI secrets are configured
-    # Comment out this condition if you don't want to publish to PyPI
-    if: ${{ secrets.PYPI_API_TOKEN != '' }}
     
     steps:
     - name: Checkout code
