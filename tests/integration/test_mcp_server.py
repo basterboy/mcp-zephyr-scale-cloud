@@ -1087,9 +1087,9 @@ class TestFolderMCPTools:
                     "status": {"id": 2, "self": "http://example.com/statuses/2"},
                 },
             ],
-            "limit": 10,
-            "nextStartAtId": 125,
-            "next": "https://api.example.com/v2/testcases/nextgen?startAtId=125&limit=10",
+            "maxResults": 10,
+            "startAt": 0,
+            "next": "https://api.example.com/v2/testcases?startAt=10&maxResults=10",
         }
 
         with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
@@ -1102,7 +1102,7 @@ class TestFolderMCPTools:
             mock_client.get_test_cases = AsyncMock(return_value=mock_result)
 
             result = await get_test_cases(
-                project_key="PROJ", folder_id="123", limit=10, start_at_id=0
+                project_key="PROJ", folder_id="123", max_results=10, start_at=0
             )
 
             # Parse JSON response
@@ -1110,12 +1110,12 @@ class TestFolderMCPTools:
             assert response_data == sample_test_cases_data
             assert len(response_data["values"]) == 2
             assert response_data["values"][0]["key"] == "PROJ-T456"
-            assert response_data["limit"] == 10
-            assert response_data["nextStartAtId"] == 125
+            assert response_data["maxResults"] == 10
+            assert response_data["startAt"] == 0
 
             # Verify client was called with correct parameters
             mock_client.get_test_cases.assert_called_once_with(
-                project_key="PROJ", folder_id=123, limit=10, start_at_id=0
+                project_key="PROJ", folder_id=123, max_results=10, start_at=0
             )
 
     @pytest.mark.asyncio
@@ -1125,8 +1125,8 @@ class TestFolderMCPTools:
 
         sample_empty_data = {
             "values": [],
-            "limit": 10,
-            "nextStartAtId": None,
+            "maxResults": 10,
+            "startAt": 0,
             "next": None,
         }
 
@@ -1147,7 +1147,7 @@ class TestFolderMCPTools:
 
             # Verify client was called with default project key from environment
             mock_client.get_test_cases.assert_called_once_with(
-                project_key="TEST", folder_id=None, limit=10, start_at_id=0
+                project_key="TEST", folder_id=None, max_results=10, start_at=0
             )
 
     @pytest.mark.asyncio
@@ -1223,8 +1223,8 @@ class TestFolderMCPTools:
 
         sample_data = {
             "values": [],
-            "limit": 10,
-            "nextStartAtId": None,
+            "maxResults": 10,
+            "startAt": 0,
             "next": None,
         }
 
@@ -1241,7 +1241,7 @@ class TestFolderMCPTools:
 
             # Verify client was called with environment default
             mock_client.get_test_cases.assert_called_once_with(
-                project_key="TEST", folder_id=None, limit=10, start_at_id=0
+                project_key="TEST", folder_id=None, max_results=10, start_at=0
             )
 
     @pytest.mark.asyncio

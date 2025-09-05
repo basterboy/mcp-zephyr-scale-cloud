@@ -24,11 +24,11 @@ from ..schemas.status import (
     UpdateStatusRequest,
 )
 from ..schemas.test_case import (
-    CursorPagedTestCaseList,
     IssueLinkInput,
     TestCase,
     TestCaseInput,
     TestCaseLinkList,
+    TestCaseList,
     TestCaseUpdateInput,
     WebLinkInput,
 )
@@ -38,7 +38,6 @@ from ..schemas.version import TestCaseVersionList
 from ..utils.validation import (
     ValidationResult,
     validate_api_response,
-    validate_cursor_pagination_params,
     validate_pagination_params,
 )
 
@@ -729,38 +728,34 @@ class ZephyrClient:
         self,
         project_key: str | None = None,
         folder_id: int | None = None,
-        limit: int = 10,
-        start_at_id: int = 0,
-    ) -> "ValidationResult[CursorPagedTestCaseList]":
+        max_results: int = 10,
+        start_at: int = 0,
+    ) -> "ValidationResult[TestCaseList]":
         """
-        Get test cases using cursor-based pagination (NextGen endpoint).
+        Get test cases using traditional offset-based pagination.
 
-        This method uses the NextGen API endpoint that provides cursor-based
-        pagination for better performance with large datasets.
-
-        PAGINATION: Use 'nextStartAtId' from response for next page requests.
+        This method uses the stable /testcases endpoint that provides reliable
+        offset-based pagination for retrieving test cases.
 
         Args:
             project_key: Jira project key filter (e.g., 'PROJ')
             folder_id: Folder ID filter to get test cases from specific folder
-            limit: Maximum number of results to return (default: 10, max: 1000)
-            start_at_id: Starting ID for cursor pagination. Use 0 for first page,
-                        then use 'nextStartAtId' from previous response
+            max_results: Maximum number of results to return (default: 10, max: 1000)
+            start_at: Zero-indexed starting position (default: 0)
 
         Returns:
-            ValidationResult with CursorPagedTestCaseList data including
-            'nextStartAtId' for next page (null when no more pages)
+            ValidationResult with TestCaseList data including startAt and maxResults
         """
         try:
             # Validate pagination parameters
-            validation_result = validate_cursor_pagination_params(limit, start_at_id)
+            validation_result = validate_pagination_params(max_results, start_at)
             if not validation_result.is_valid:
                 return ValidationResult(False, validation_result.errors)
 
             # Build query parameters
             params = {
-                "limit": limit,
-                "startAtId": start_at_id,
+                "maxResults": max_results,
+                "startAt": start_at,
             }
 
             if project_key is not None:
@@ -771,7 +766,7 @@ class ZephyrClient:
 
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"{self.config.base_url}/testcases/nextgen",
+                    f"{self.config.base_url}/testcases",
                     headers=self.headers,
                     params=params,
                     timeout=10.0,
@@ -781,7 +776,7 @@ class ZephyrClient:
                 response_data = response.json()
 
                 # Validate and parse response
-                return validate_api_response(response_data, CursorPagedTestCaseList)
+                return validate_api_response(response_data, TestCaseList)
 
         except httpx.HTTPError as e:
             return self._handle_http_error(e, "Failed to get test cases")
