@@ -1033,8 +1033,15 @@ class ZephyrClient:
             if "component" in update_data:
                 request_data["component"] = update_data["component"]
 
+            # Folder update - the server now sends proper folder objects
+            if "folder" in update_data:
+                request_data["folder"] = update_data["folder"]
+                # Remove any existing folderId to avoid conflicts
+                if "folderId" in request_data:
+                    del request_data["folderId"]
+
             # Merge other update data (excluding the special fields we handled above)
-            excluded_fields = ["priority", "status", "component"]
+            excluded_fields = ["priority", "status", "component", "folder"]
             filtered_update_data = {
                 k: v for k, v in update_data.items() if k not in excluded_fields
             }
