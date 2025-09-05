@@ -972,44 +972,8 @@ class ZephyrClient:
             current_data = current_result.data
             update_data = test_case_input.model_dump(by_alias=True, exclude_none=True)
 
-            # The API requires the complete TestCase structure.
-            request_data = {
-                "id": current_data.id,
-                "key": current_data.key,
-                "name": current_data.name,
-                "project": {"id": current_data.project.id},
-                "priority": {"id": current_data.priority.id},
-                "status": {"id": current_data.status.id},
-            }
-
-            # Add all optional fields that we can safely map
-            if current_data.objective is not None:
-                request_data["objective"] = current_data.objective
-
-            if current_data.precondition is not None:
-                request_data["precondition"] = current_data.precondition
-
-            if current_data.estimated_time is not None:
-                request_data["estimatedTime"] = current_data.estimated_time
-
-            if current_data.component is not None:
-                request_data["component"] = {"id": current_data.component.id}
-
-            if current_data.folder is not None:
-                request_data["folder"] = {"id": current_data.folder.id}
-
-            if current_data.owner is not None:
-                request_data["owner"] = {"accountId": current_data.owner.account_id}
-
-            if current_data.labels is not None:
-                request_data["labels"] = current_data.labels
-
-            if current_data.custom_fields is not None:
-                request_data["customFields"] = current_data.custom_fields.model_dump(
-                    exclude_none=True
-                )
-
-            # Apply updates from the server
+            # Convert current_data to dict and apply updates
+            request_data = current_data.model_dump(by_alias=True, exclude_none=True)
             request_data.update(update_data)
 
             async with httpx.AsyncClient() as client:
