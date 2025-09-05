@@ -2179,7 +2179,8 @@ async def update_test_case(
         test_case_data["status"] = {"id": resolved_status_id}
 
     if resolved_folder_id is not None:
-        test_case_data["folderId"] = resolved_folder_id
+        # The API expects a folder object with id and self
+        test_case_data["folder"] = {"id": resolved_folder_id}
 
     if owner_id is not None:
         test_case_data["ownerId"] = owner_id
