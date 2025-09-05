@@ -32,10 +32,6 @@ Based on the Zephyr Scale Cloud API documentation, the following major categorie
 - 📊 **Issue Link Coverage** - Comprehensive Jira issue link coverage tracking
 
 
-### Environment Variable Fallback
-
-Many tools now support automatic project key resolution. If you have access to multiple projects, you can set `ZEPHYR_SCALE_DEFAULT_PROJECT_KEY` to avoid specifying the project key in every tool call. Tools like `get_test_cases`, `get_folders`, and others will automatically use this default when no explicit project key is provided.
-
 ## Installation
 
 ### Option 1: Install from GitHub Releases (Recommended)
@@ -103,6 +99,10 @@ After installing the package, add the following to your Cursor configuration:
 - **ZEPHYR_SCALE_API_TOKEN**: Your Zephyr Scale API token (required)
 - **ZEPHYR_SCALE_BASE_URL**: API base URL (optional, defaults to `https://api.zephyrscale.smartbear.com/v2`)  
 - **ZEPHYR_SCALE_DEFAULT_PROJECT_KEY**: Default project key for tools that support it (optional)
+
+#### Environment Variable Fallback
+
+Many tools now support automatic project key resolution. If you have access to multiple projects, you can set `ZEPHYR_SCALE_DEFAULT_PROJECT_KEY` to avoid specifying the project key in every tool call. Tools like `get_test_cases`, `get_folders`, and others will automatically use this default when no explicit project key is provided.
 
 ### Getting Zephyr API Token:
 
