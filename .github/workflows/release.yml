@@ -1,0 +1,178 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v0.1.0, v1.0.0, etc.
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          venv-${{ runner.os }}-${{ matrix.python-version }}-
+
+    - name: Install dependencies
+      run: |
+        poetry install --with dev
+
+    - name: Run linting
+      run: |
+        poetry run ruff check src/ tests/
+        poetry run black --check src/ tests/
+
+    - name: Run tests
+      run: |
+        poetry run pytest --tb=short
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Install dependencies
+      run: |
+        poetry install --with dev
+
+    - name: Extract version from tag
+      id: version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Building version: $VERSION"
+
+    - name: Build package
+      run: |
+        poetry build
+
+    - name: Test package installation
+      run: |
+        pip install dist/*.whl
+        python -c "import mcp_zephyr_scale_cloud; print('✅ Package imports successfully')"
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist
+        path: dist/
+
+  release:
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating releases
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: dist
+        path: dist/
+
+    - name: Extract release notes
+      id: extract_notes
+      run: |
+        # Extract release notes from CHANGELOG.md for this version
+        VERSION=${{ needs.build.outputs.version }}
+        
+        # Find the section for this version and extract until next version or end
+        awk "/^## \[$VERSION\]/{flag=1; next} /^## \[/{flag=0} flag" CHANGELOG.md > release_notes.md
+        
+        # If release notes are empty, create a simple one
+        if [ ! -s release_notes.md ]; then
+          echo "🚀 Release v$VERSION" > release_notes.md
+          echo "" >> release_notes.md
+          echo "See [CHANGELOG.md](CHANGELOG.md) for details." >> release_notes.md
+        fi
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/*
+        body_path: release_notes.md
+        draft: false
+        prerelease: false
+        tag_name: ${{ github.ref_name }}
+        name: "Release ${{ github.ref_name }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-pypi:
+    needs: [test, build, release]
+    runs-on: ubuntu-latest
+    # Only run this job if PyPI secrets are configured
+    # Comment out this condition if you don't want to publish to PyPI
+    if: ${{ secrets.PYPI_API_TOKEN != '' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: dist
+        path: dist/
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+
+    - name: Configure Poetry for PyPI
+      run: |
+        poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
+
+    - name: Publish to PyPI
+      run: |
+        poetry publish --no-build
