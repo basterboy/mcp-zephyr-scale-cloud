@@ -129,12 +129,6 @@ After installing the package, add the following to your Cursor configuration:
 - **ZEPHYR_SCALE_BASE_URL**: API base URL (optional, defaults to `https://api.zephyrscale.smartbear.com/v2`)  
 - **ZEPHYR_SCALE_DEFAULT_PROJECT_KEY**: Default project key for tools that support it (optional)
 
-### EU Region Users:
-If you're using Zephyr Scale in the EU region, set:
-```json
-"ZEPHYR_SCALE_BASE_URL": "https://eu.api.zephyrscale.smartbear.com/v2"
-```
-
 ### Getting Zephyr API Token:
 
 1. In JIRA, go to **Apps** → **Zephyr Scale** → **API Access Tokens**
