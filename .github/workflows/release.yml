@@ -135,12 +135,15 @@ jobs:
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        files: dist/*
+        files: |
+          dist/*.whl
+          dist/*.tar.gz
         body_path: release_notes.md
         draft: false
         prerelease: false
         tag_name: ${{ github.ref_name }}
         name: "Release ${{ github.ref_name }}"
+        make_latest: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
