@@ -1166,6 +1166,77 @@ async def get_test_case(test_case_key: str) -> str:
 
 
 @mcp.tool()
+async def get_test_cases(
+    project_key: str | None = None,
+    folder_id: str | None = None,
+    limit: int = 10,
+    start_at_id: int = 0,
+) -> str:
+    """Get test cases using cursor-based pagination (NextGen endpoint).
+
+    This tool uses the NextGen API endpoint that provides cursor-based pagination
+    for better performance when retrieving large numbers of test cases.
+
+    Args:
+        project_key: Jira project key filter (e.g., 'PROJ'). If you have access to
+                    more than 1000 projects, this parameter may be mandatory
+        folder_id: ID of a folder to filter test cases (optional)
+        limit: Maximum number of results to return (default: 10, max: 1000)
+        start_at_id: Starting ID for cursor-based pagination (default: 0)
+
+    Returns:
+        JSON response with test cases and pagination information
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate folder_id parameter
+    resolved_folder_id = None
+    if folder_id is not None:
+        try:
+            resolved_folder_id = int(folder_id)
+            if resolved_folder_id < 1:
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": "folder_id must be a positive integer",
+                    },
+                    indent=2,
+                )
+        except ValueError:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": "folder_id must be a valid integer",
+                },
+                indent=2,
+            )
+
+    # Call the client
+    result = await zephyr_client.get_test_cases(
+        project_key=project_key,
+        folder_id=resolved_folder_id,
+        limit=limit,
+        start_at_id=start_at_id,
+    )
+
+    if result.is_valid:
+        # Return the cursor-paged response
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True, mode="json"),
+            indent=2,
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": "; ".join(result.errors),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
 async def get_test_case_versions(
     test_case_key: str, max_results: int = 10, start_at: int = 0
 ) -> str:

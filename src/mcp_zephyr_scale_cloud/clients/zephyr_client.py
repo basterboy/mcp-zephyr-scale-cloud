@@ -24,6 +24,7 @@ from ..schemas.status import (
     UpdateStatusRequest,
 )
 from ..schemas.test_case import (
+    CursorPagedTestCaseList,
     IssueLinkInput,
     TestCase,
     TestCaseInput,
@@ -37,6 +38,7 @@ from ..schemas.version import TestCaseVersionList
 from ..utils.validation import (
     ValidationResult,
     validate_api_response,
+    validate_cursor_pagination_params,
     validate_pagination_params,
 )
 
@@ -723,6 +725,63 @@ class ZephyrClient:
                 e, f"Failed to get test case {test_case_key}"
             )
 
+    async def get_test_cases(
+        self,
+        project_key: str | None = None,
+        folder_id: int | None = None,
+        limit: int = 10,
+        start_at_id: int = 0,
+    ) -> "ValidationResult[CursorPagedTestCaseList]":
+        """
+        Get test cases using cursor-based pagination (NextGen endpoint).
+
+        This method uses the NextGen API endpoint that provides cursor-based
+        pagination for better performance with large datasets.
+
+        Args:
+            project_key: Jira project key filter (e.g., 'PROJ')
+            folder_id: Folder ID filter to get test cases from specific folder
+            limit: Maximum number of results to return (default: 10, max: 1000)
+            start_at_id: Starting ID for cursor-based pagination (default: 0)
+
+        Returns:
+            ValidationResult with CursorPagedTestCaseList data or error messages
+        """
+        try:
+            # Validate pagination parameters
+            validation_result = validate_cursor_pagination_params(limit, start_at_id)
+            if not validation_result.is_valid:
+                return ValidationResult(False, validation_result.errors)
+
+            # Build query parameters
+            params = {
+                "limit": limit,
+                "startAtId": start_at_id,
+            }
+
+            if project_key is not None:
+                params["projectKey"] = project_key
+
+            if folder_id is not None:
+                params["folderId"] = folder_id
+
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.config.base_url}/testcases/nextgen",
+                    headers=self.headers,
+                    params=params,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CursorPagedTestCaseList)
+
+        except httpx.HTTPError as e:
+            return self._handle_http_error(e, "Failed to get test cases")
+
     async def get_test_case_versions(
         self,
         test_case_key: str,
@@ -982,9 +1041,7 @@ class ZephyrClient:
             # Convert folderId to folder object format expected by API
             if "folderId" in request_data:
                 folder_id = request_data.pop("folderId")
-                request_data["folder"] = {
-                    "id": folder_id
-                }
+                request_data["folder"] = {"id": folder_id}
 
             async with httpx.AsyncClient() as client:
                 response = await client.put(

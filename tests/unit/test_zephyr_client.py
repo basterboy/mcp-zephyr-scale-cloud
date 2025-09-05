@@ -668,3 +668,135 @@ class TestZephyrClientFolder:
             assert not result.is_valid
             assert "Failed to get current test case PROJ-T999" in result.errors[0]
             assert "Test case not found" in result.errors[0]
+
+
+class TestZephyrClientGetTestCases:
+    """Test cases for get_test_cases method (NextGen endpoint)."""
+
+    @pytest.fixture
+    def mock_zephyr_client(self):
+        """Create a ZephyrClient instance with mocked config."""
+        config = MagicMock()
+        config.api_token = "test_token"
+        config.base_url = "https://api.test.com/v2"
+        return ZephyrClient(config)
+
+    @pytest.mark.asyncio
+    async def test_get_test_cases_success(self, mock_zephyr_client):
+        """Test successful get_test_cases call."""
+        from src.mcp_zephyr_scale_cloud.schemas.common import ProjectLink
+        from src.mcp_zephyr_scale_cloud.schemas.priority import PriorityLink
+        from src.mcp_zephyr_scale_cloud.schemas.status import StatusLink
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import (
+            CursorPagedTestCaseList,
+            TestCase,
+        )
+
+        # Mock test case data
+        mock_test_case = TestCase(
+            id=123,
+            key="PROJ-T456",
+            name="Test case",
+            project=ProjectLink(id=1, self="http://example.com"),
+            priority=PriorityLink(id=1, self="http://example.com"),
+            status=StatusLink(id=1, self="http://example.com"),
+        )
+
+        mock_response_data = {
+            "values": [mock_test_case.model_dump(by_alias=True, exclude_none=True)],
+            "limit": 10,
+            "nextStartAtId": 124,
+            "next": "https://api.test.com/v2/testcases/nextgen?startAtId=124&limit=10",
+        }
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.raise_for_status.return_value = None
+            mock_client.get.return_value = mock_response
+
+            result = await mock_zephyr_client.get_test_cases(
+                project_key="PROJ", folder_id=123, limit=10, start_at_id=0
+            )
+
+            assert result.is_valid
+            assert isinstance(result.data, CursorPagedTestCaseList)
+            assert len(result.data.values) == 1
+            assert result.data.values[0].key == "PROJ-T456"
+            assert result.data.limit == 10
+            assert result.data.next_start_at_id == 124
+
+            # Verify API call
+            mock_client.get.assert_called_once()
+            call_args = mock_client.get.call_args
+            assert call_args[0][0] == "https://api.test.com/v2/testcases/nextgen"
+            assert call_args[1]["params"]["projectKey"] == "PROJ"
+            assert call_args[1]["params"]["folderId"] == 123
+            assert call_args[1]["params"]["limit"] == 10
+            assert call_args[1]["params"]["startAtId"] == 0
+
+    @pytest.mark.asyncio
+    async def test_get_test_cases_no_filters(self, mock_zephyr_client):
+        """Test get_test_cases with no filters."""
+        mock_response_data = {
+            "values": [],
+            "limit": 10,
+            "nextStartAtId": None,
+            "next": None,
+        }
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_response_data
+            mock_response.raise_for_status.return_value = None
+            mock_client.get.return_value = mock_response
+
+            result = await mock_zephyr_client.get_test_cases()
+
+            assert result.is_valid
+            assert len(result.data.values) == 0
+            assert result.data.limit == 10
+            assert result.data.next_start_at_id is None
+
+            # Verify API call parameters - no project_key or folder_id
+            call_args = mock_client.get.call_args
+            params = call_args[1]["params"]
+            assert "projectKey" not in params
+            assert "folderId" not in params
+            assert params["limit"] == 10
+            assert params["startAtId"] == 0
+
+    @pytest.mark.asyncio
+    async def test_get_test_cases_invalid_pagination(self, mock_zephyr_client):
+        """Test get_test_cases with invalid pagination parameters."""
+        result = await mock_zephyr_client.get_test_cases(limit=-1, start_at_id=-5)
+
+        assert not result.is_valid
+        assert len(result.errors) == 2
+        assert "limit must be at least 1" in result.errors
+        assert "start_at_id must be non-negative" in result.errors
+
+    @pytest.mark.asyncio
+    async def test_get_test_cases_http_error(self, mock_zephyr_client):
+        """Test get_test_cases HTTP error handling."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            # Mock HTTP error
+            mock_client.get.side_effect = httpx.HTTPStatusError(
+                "Not Found", request=MagicMock(), response=MagicMock(status_code=404)
+            )
+
+            result = await mock_zephyr_client.get_test_cases()
+
+            assert not result.is_valid
+            assert "Failed to get test cases" in result.errors[0]
