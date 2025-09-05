@@ -31,31 +31,6 @@ Based on the Zephyr Scale Cloud API documentation, the following major categorie
 - 🤖 **Automation Integration** - Custom, Cucumber, and JUnit test execution automation
 - 📊 **Issue Link Coverage** - Comprehensive Jira issue link coverage tracking
 
-## Installation
-
-Using Poetry (recommended):
-```bash
-git clone https://github.com/basterboy/mcp-zephyr-scale-cloud.git
-cd mcp-zephyr-scale-cloud
-poetry install
-```
-
-Or using pip:
-```bash
-pip install mcp-zephyr-scale-cloud
-```
-
-## Configuration
-
-Create a `.env` file with your Zephyr Scale Cloud credentials:
-
-```bash
-ZEPHYR_SCALE_API_TOKEN=your_api_token_here
-ZEPHYR_SCALE_BASE_URL=https://api.zephyrscale.smartbear.com/v2
-
-# Optional: Default project key for tools that support it
-ZEPHYR_SCALE_DEFAULT_PROJECT_KEY=MYPROJ
-```
 
 ### Environment Variable Fallback
 
@@ -147,7 +122,7 @@ This package interfaces with the Zephyr Scale Cloud REST API, which provides com
 - **Access test cases, cycles, plans, and execution data**
 
 **Key API Information:**
-- **Base URL**: `https://api.zephyrscale.smartbear.com/v2/` (EU: `https://eu.api.zephyrscale.smartbear.com/v2/`)
+- **Base URL**: `https://api.zephyrscale.smartbear.com/v2/`
 - **Authentication**: JWT Bearer token
 - **Protocol**: HTTP-based REST API
 - **Supported operations**: GET, POST, PUT requests for data retrieval and submission
