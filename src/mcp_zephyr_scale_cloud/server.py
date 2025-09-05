@@ -1179,7 +1179,8 @@ async def get_test_cases(
 
     Args:
         project_key: Jira project key filter (e.g., 'PROJ'). If you have access to
-                    more than 1000 projects, this parameter may be mandatory
+                    more than 1000 projects, this parameter may be mandatory.
+                    Uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided
         folder_id: ID of a folder to filter test cases (optional)
         limit: Maximum number of results to return (default: 10, max: 1000)
         start_at_id: Starting ID for cursor-based pagination (default: 0)
@@ -1189,6 +1190,18 @@ async def get_test_cases(
     """
     if not zephyr_client:
         return _CONFIG_ERROR_MSG
+
+    # Get project key with default fallback
+    project_key = get_project_key_with_default(project_key)
+
+    # Validate project key if provided
+    if project_key:
+        project_key_result = validate_project_key(project_key)
+        if not project_key_result.is_valid:
+            return json.dumps(
+                {"errorCode": 400, "message": "; ".join(project_key_result.errors)},
+                indent=2,
+            )
 
     # Validate folder_id parameter
     resolved_folder_id = None

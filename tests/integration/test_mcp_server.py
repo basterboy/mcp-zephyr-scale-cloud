@@ -1145,9 +1145,9 @@ class TestFolderMCPTools:
             assert response_data == sample_empty_data
             assert len(response_data["values"]) == 0
 
-            # Verify client was called with default parameters
+            # Verify client was called with default project key from environment
             mock_client.get_test_cases.assert_called_once_with(
-                project_key=None, folder_id=None, limit=10, start_at_id=0
+                project_key="TEST", folder_id=None, limit=10, start_at_id=0
             )
 
     @pytest.mark.asyncio
@@ -1155,24 +1155,32 @@ class TestFolderMCPTools:
         """Test get_test_cases tool with invalid folder_id."""
         from src.mcp_zephyr_scale_cloud.server import get_test_cases
 
-        result = await get_test_cases(folder_id="invalid")
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
+            # Mock client to avoid configuration error
+            mock_client.get_test_cases = AsyncMock()
 
-        # Should return validation error
-        response_data = json.loads(result)
-        assert response_data["errorCode"] == 400
-        assert "folder_id must be a valid integer" in response_data["message"]
+            result = await get_test_cases(folder_id="invalid")
+
+            # Should return validation error
+            response_data = json.loads(result)
+            assert response_data["errorCode"] == 400
+            assert "folder_id must be a valid integer" in response_data["message"]
 
     @pytest.mark.asyncio
     async def test_get_test_cases_tool_negative_folder_id(self, mock_env_vars):
         """Test get_test_cases tool with negative folder_id."""
         from src.mcp_zephyr_scale_cloud.server import get_test_cases
 
-        result = await get_test_cases(folder_id="-1")
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
+            # Mock client to avoid configuration error
+            mock_client.get_test_cases = AsyncMock()
 
-        # Should return validation error
-        response_data = json.loads(result)
-        assert response_data["errorCode"] == 400
-        assert "folder_id must be a positive integer" in response_data["message"]
+            result = await get_test_cases(folder_id="-1")
+
+            # Should return validation error
+            response_data = json.loads(result)
+            assert response_data["errorCode"] == 400
+            assert "folder_id must be a positive integer" in response_data["message"]
 
     @pytest.mark.asyncio
     async def test_get_test_cases_tool_client_error(self, mock_env_vars):
@@ -1191,6 +1199,50 @@ class TestFolderMCPTools:
             response_data = json.loads(result)
             assert response_data["errorCode"] == 400
             assert "API error occurred" in response_data["message"]
+
+    @pytest.mark.asyncio
+    async def test_get_test_cases_tool_invalid_project_key(self, mock_env_vars):
+        """Test get_test_cases tool with invalid project key."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_cases
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
+            # Mock client to avoid configuration error
+            mock_client.get_test_cases = AsyncMock()
+
+            result = await get_test_cases(project_key="invalid-key")
+
+            # Should return validation error
+            response_data = json.loads(result)
+            assert response_data["errorCode"] == 400
+            assert "Project key 'invalid-key' is invalid" in response_data["message"]
+
+    @pytest.mark.asyncio
+    async def test_get_test_cases_tool_uses_env_default(self, mock_env_vars):
+        """Test get_test_cases tool uses environment default project key."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_cases
+
+        sample_data = {
+            "values": [],
+            "limit": 10,
+            "nextStartAtId": None,
+            "next": None,
+        }
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
+            mock_result = AsyncMock()
+            mock_result.is_valid = True
+            mock_data = Mock()
+            mock_data.model_dump.return_value = sample_data
+            mock_result.data = mock_data
+            mock_client.get_test_cases = AsyncMock(return_value=mock_result)
+
+            # Call without project_key - should use environment default
+            await get_test_cases()
+
+            # Verify client was called with environment default
+            mock_client.get_test_cases.assert_called_once_with(
+                project_key="TEST", folder_id=None, limit=10, start_at_id=0
+            )
 
     @pytest.mark.asyncio
     async def test_get_test_cases_tool_no_config(self):
