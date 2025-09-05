@@ -738,14 +738,18 @@ class ZephyrClient:
         This method uses the NextGen API endpoint that provides cursor-based
         pagination for better performance with large datasets.
 
+        PAGINATION: Use 'nextStartAtId' from response for next page requests.
+
         Args:
             project_key: Jira project key filter (e.g., 'PROJ')
             folder_id: Folder ID filter to get test cases from specific folder
             limit: Maximum number of results to return (default: 10, max: 1000)
-            start_at_id: Starting ID for cursor-based pagination (default: 0)
+            start_at_id: Starting ID for cursor pagination. Use 0 for first page,
+                        then use 'nextStartAtId' from previous response
 
         Returns:
-            ValidationResult with CursorPagedTestCaseList data or error messages
+            ValidationResult with CursorPagedTestCaseList data including
+            'nextStartAtId' for next page (null when no more pages)
         """
         try:
             # Validate pagination parameters
