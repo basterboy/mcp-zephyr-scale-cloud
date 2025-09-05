@@ -166,13 +166,14 @@ jobs:
         name: dist
         path: dist/
 
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-
-    - name: Configure Poetry for PyPI
+    - name: Install twine
       run: |
-        poetry config pypi-token.pypi ${{ secrets.PYPI_API_TOKEN }}
+        python -m pip install --upgrade pip
+        pip install twine
 
     - name: Publish to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
       run: |
-        poetry publish --no-build
+        twine upload dist/*
