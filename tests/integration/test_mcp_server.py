@@ -1061,3 +1061,145 @@ class TestFolderMCPTools:
             # Should return configuration error
             assert "ERROR" in response
             assert "configuration not found" in response
+
+    @pytest.mark.asyncio
+    async def test_get_test_cases_tool_success(self, mock_env_vars):
+        """Test get_test_cases tool with successful response."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_cases
+
+        # Sample test cases response data
+        sample_test_cases_data = {
+            "values": [
+                {
+                    "id": 123,
+                    "key": "PROJ-T456",
+                    "name": "Test case 1",
+                    "project": {"id": 1, "self": "http://example.com/projects/1"},
+                    "priority": {"id": 1, "self": "http://example.com/priorities/1"},
+                    "status": {"id": 1, "self": "http://example.com/statuses/1"},
+                },
+                {
+                    "id": 124,
+                    "key": "PROJ-T457",
+                    "name": "Test case 2",
+                    "project": {"id": 1, "self": "http://example.com/projects/1"},
+                    "priority": {"id": 2, "self": "http://example.com/priorities/2"},
+                    "status": {"id": 2, "self": "http://example.com/statuses/2"},
+                },
+            ],
+            "limit": 10,
+            "nextStartAtId": 125,
+            "next": "https://api.example.com/v2/testcases/nextgen?startAtId=125&limit=10",
+        }
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
+            mock_result = AsyncMock()
+            mock_result.is_valid = True
+            # Create a mock object with model_dump method
+            mock_data = Mock()
+            mock_data.model_dump.return_value = sample_test_cases_data
+            mock_result.data = mock_data
+            mock_client.get_test_cases = AsyncMock(return_value=mock_result)
+
+            result = await get_test_cases(
+                project_key="PROJ", folder_id="123", limit=10, start_at_id=0
+            )
+
+            # Parse JSON response
+            response_data = json.loads(result)
+            assert response_data == sample_test_cases_data
+            assert len(response_data["values"]) == 2
+            assert response_data["values"][0]["key"] == "PROJ-T456"
+            assert response_data["limit"] == 10
+            assert response_data["nextStartAtId"] == 125
+
+            # Verify client was called with correct parameters
+            mock_client.get_test_cases.assert_called_once_with(
+                project_key="PROJ", folder_id=123, limit=10, start_at_id=0
+            )
+
+    @pytest.mark.asyncio
+    async def test_get_test_cases_tool_no_filters(self, mock_env_vars):
+        """Test get_test_cases tool with no filters."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_cases
+
+        sample_empty_data = {
+            "values": [],
+            "limit": 10,
+            "nextStartAtId": None,
+            "next": None,
+        }
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
+            mock_result = AsyncMock()
+            mock_result.is_valid = True
+            mock_data = Mock()
+            mock_data.model_dump.return_value = sample_empty_data
+            mock_result.data = mock_data
+            mock_client.get_test_cases = AsyncMock(return_value=mock_result)
+
+            result = await get_test_cases()
+
+            # Parse JSON response
+            response_data = json.loads(result)
+            assert response_data == sample_empty_data
+            assert len(response_data["values"]) == 0
+
+            # Verify client was called with default parameters
+            mock_client.get_test_cases.assert_called_once_with(
+                project_key=None, folder_id=None, limit=10, start_at_id=0
+            )
+
+    @pytest.mark.asyncio
+    async def test_get_test_cases_tool_invalid_folder_id(self, mock_env_vars):
+        """Test get_test_cases tool with invalid folder_id."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_cases
+
+        result = await get_test_cases(folder_id="invalid")
+
+        # Should return validation error
+        response_data = json.loads(result)
+        assert response_data["errorCode"] == 400
+        assert "folder_id must be a valid integer" in response_data["message"]
+
+    @pytest.mark.asyncio
+    async def test_get_test_cases_tool_negative_folder_id(self, mock_env_vars):
+        """Test get_test_cases tool with negative folder_id."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_cases
+
+        result = await get_test_cases(folder_id="-1")
+
+        # Should return validation error
+        response_data = json.loads(result)
+        assert response_data["errorCode"] == 400
+        assert "folder_id must be a positive integer" in response_data["message"]
+
+    @pytest.mark.asyncio
+    async def test_get_test_cases_tool_client_error(self, mock_env_vars):
+        """Test get_test_cases tool when client returns error."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_cases
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client") as mock_client:
+            mock_result = AsyncMock()
+            mock_result.is_valid = False
+            mock_result.errors = ["API error occurred"]
+            mock_client.get_test_cases = AsyncMock(return_value=mock_result)
+
+            result = await get_test_cases()
+
+            # Should return error response
+            response_data = json.loads(result)
+            assert response_data["errorCode"] == 400
+            assert "API error occurred" in response_data["message"]
+
+    @pytest.mark.asyncio
+    async def test_get_test_cases_tool_no_config(self):
+        """Test get_test_cases tool when client is not configured."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_cases
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", None):
+            response = await get_test_cases()
+
+            # Should return configuration error
+            assert "ERROR" in response
+            assert "configuration not found" in response

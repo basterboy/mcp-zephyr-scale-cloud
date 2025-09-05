@@ -323,3 +323,34 @@ class TestCase(BaseModel):
     )
 
     model_config = {"populate_by_name": True}
+
+
+class CursorPagedList(BaseModel):
+    """Base cursor-based pagination response."""
+
+    next: str | None = Field(
+        None,
+        description="URL for the next page of results",
+        format="url",
+    )
+    next_start_at_id: int | None = Field(
+        None,
+        alias="nextStartAtId",
+        description="Starting ID for the next page",
+        ge=0,
+    )
+    limit: int = Field(
+        ...,
+        description="Maximum number of results per page",
+        ge=0,
+        example=10,
+    )
+
+
+class CursorPagedTestCaseList(CursorPagedList):
+    """Response schema for NextGen test cases endpoint (cursor-based pagination)."""
+
+    values: list[TestCase] = Field(
+        default_factory=list,
+        description="List of test cases",
+    )

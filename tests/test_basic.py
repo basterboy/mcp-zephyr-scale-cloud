@@ -984,3 +984,77 @@ class TestEnvironmentConfiguration:
         result = validate_test_case_update_input({"name": ""})
         assert not result.is_valid
         assert "String should have at least 1 character" in " ".join(result.errors)
+
+    def test_cursor_paged_test_case_list_schema(self):
+        """Test CursorPagedTestCaseList schema creation and serialization."""
+        from src.mcp_zephyr_scale_cloud.schemas.common import ProjectLink
+        from src.mcp_zephyr_scale_cloud.schemas.priority import PriorityLink
+        from src.mcp_zephyr_scale_cloud.schemas.status import StatusLink
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import (
+            CursorPagedTestCaseList,
+            TestCase,
+        )
+
+        # Create test case data
+        test_case = TestCase(
+            id=123,
+            key="PROJ-T456",
+            name="Test case",
+            project=ProjectLink(id=1, self="http://example.com/projects/1"),
+            priority=PriorityLink(id=1, self="http://example.com/priorities/1"),
+            status=StatusLink(id=1, self="http://example.com/statuses/1"),
+        )
+
+        # Create cursor paged response
+        paged_response = CursorPagedTestCaseList(
+            values=[test_case],
+            limit=10,
+        )
+        # Set optional fields explicitly
+        paged_response.next_start_at_id = 124
+        paged_response.next = (
+            "https://api.example.com/v2/testcases/nextgen?startAtId=124&limit=10"
+        )
+
+        assert len(paged_response.values) == 1
+        assert paged_response.values[0].key == "PROJ-T456"
+        assert paged_response.limit == 10
+        assert paged_response.next_start_at_id == 124
+        assert paged_response.next is not None
+
+        # Test model dump with aliases
+        dumped = paged_response.model_dump(by_alias=True, exclude_none=True)
+        assert "nextStartAtId" in dumped
+        assert "next_start_at_id" not in dumped
+        assert dumped["nextStartAtId"] == 124
+        assert dumped["limit"] == 10
+        assert len(dumped["values"]) == 1
+
+        # Test empty response
+        empty_response = CursorPagedTestCaseList(
+            values=[],
+            limit=10,
+        )
+
+        assert len(empty_response.values) == 0
+        assert empty_response.next_start_at_id is None
+        assert empty_response.next is None
+
+    def test_cursor_paged_list_base_schema(self):
+        """Test CursorPagedList base schema."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import CursorPagedList
+
+        # Test minimal cursor paged response
+        cursor_response = CursorPagedList(limit=25)
+        cursor_response.next_start_at_id = 100
+        cursor_response.next = "https://api.example.com/v2/next"
+
+        assert cursor_response.limit == 25
+        assert cursor_response.next_start_at_id == 100
+        assert cursor_response.next == "https://api.example.com/v2/next"
+
+        # Test model dump with aliases
+        dumped = cursor_response.model_dump(by_alias=True, exclude_none=True)
+        assert "nextStartAtId" in dumped
+        assert dumped["nextStartAtId"] == 100
+        assert dumped["limit"] == 25
