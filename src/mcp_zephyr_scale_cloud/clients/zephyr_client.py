@@ -737,11 +737,14 @@ class ZephyrClient:
         This method uses the stable /testcases endpoint that provides reliable
         offset-based pagination for retrieving test cases.
 
+        PAGINATION: Use start_at as multiple of max_results for next pages.
+        PERFORMANCE: Use max_results=1000 for fastest bulk retrieval.
+
         Args:
             project_key: Jira project key filter (e.g., 'PROJ')
             folder_id: Folder ID filter to get test cases from specific folder
             max_results: Maximum number of results to return (default: 10, max: 1000)
-            start_at: Zero-indexed starting position (default: 0)
+            start_at: Zero-indexed starting position, should be multiple of max_results
 
         Returns:
             ValidationResult with TestCaseList data including startAt and maxResults
