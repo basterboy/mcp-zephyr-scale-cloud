@@ -466,9 +466,9 @@ class TestTestCaseUpdateInputValidation:
             "objective": "Updated objective",
             "precondition": "Updated precondition",
             "estimatedTime": 120000,
-            "componentId": 123,
-            "priorityName": "High",
-            "statusName": "Ready",
+            "component": {"id": 123},
+            "priority": {"id": 456},
+            "status": {"id": 789},
             "folderId": 456,
             "ownerId": "user123",
             "labels": ["automation", "regression"],
@@ -481,9 +481,9 @@ class TestTestCaseUpdateInputValidation:
         assert result.data.name == "Updated test case"
         assert result.data.objective == "Updated objective"
         assert result.data.estimated_time == 120000
-        assert result.data.component_id == 123
-        assert result.data.priority_name == "High"
-        assert result.data.status_name == "Ready"
+        assert result.data.component == {"id": 123}
+        assert result.data.priority == {"id": 456}
+        assert result.data.status == {"id": 789}
         assert result.data.folder_id == 456
         assert result.data.owner_id == "user123"
         assert result.data.labels == ["automation", "regression"]
@@ -497,14 +497,14 @@ class TestTestCaseUpdateInputValidation:
 
         data = {
             "name": "Updated test case",
-            "statusName": "Completed",
+            "status": {"id": 789},
         }
 
         result = validate_test_case_update_input(data)
 
         assert result.is_valid
         assert result.data.name == "Updated test case"
-        assert result.data.status_name == "Completed"
+        assert result.data.status == {"id": 789}
         assert result.data.objective is None
         assert result.data.estimated_time is None
 
@@ -521,7 +521,7 @@ class TestTestCaseUpdateInputValidation:
         assert result.is_valid
         assert result.data.name is None
         assert result.data.objective is None
-        assert result.data.status_name is None
+        assert result.data.status is None
 
     def test_validate_test_case_update_input_invalid_name_empty(self):
         """Test invalid test case update input with empty name."""
@@ -550,17 +550,17 @@ class TestTestCaseUpdateInputValidation:
         assert "greater than or equal to 0" in " ".join(result.errors)
 
     def test_validate_test_case_update_input_invalid_component_id(self):
-        """Test invalid test case update input with negative component ID."""
+        """Test invalid test case update input with invalid component type."""
         from src.mcp_zephyr_scale_cloud.utils.validation import (
             validate_test_case_update_input,
         )
 
-        data = {"componentId": -1}
+        data = {"component": "not_a_dict"}
 
         result = validate_test_case_update_input(data)
 
         assert not result.is_valid
-        assert "greater than or equal to 0" in " ".join(result.errors)
+        assert len(result.errors) > 0
 
     def test_validate_test_case_update_input_invalid_folder_id(self):
         """Test invalid test case update input with invalid folder ID."""
@@ -575,31 +575,31 @@ class TestTestCaseUpdateInputValidation:
         assert not result.is_valid
         assert "greater than or equal to 1" in " ".join(result.errors)
 
-    def test_validate_test_case_update_input_invalid_priority_name_too_long(self):
-        """Test invalid test case update input with too long priority name."""
+    def test_validate_test_case_update_input_invalid_priority_object(self):
+        """Test invalid test case update input with invalid priority type."""
         from src.mcp_zephyr_scale_cloud.utils.validation import (
             validate_test_case_update_input,
         )
 
-        data = {"priorityName": "x" * 256}  # Max 255 characters
+        data = {"priority": "not_a_dict"}
 
         result = validate_test_case_update_input(data)
 
         assert not result.is_valid
-        assert "String should have at most 255 characters" in " ".join(result.errors)
+        assert len(result.errors) > 0
 
-    def test_validate_test_case_update_input_invalid_status_name_too_long(self):
-        """Test invalid test case update input with too long status name."""
+    def test_validate_test_case_update_input_invalid_status_object(self):
+        """Test invalid test case update input with invalid status type."""
         from src.mcp_zephyr_scale_cloud.utils.validation import (
             validate_test_case_update_input,
         )
 
-        data = {"statusName": "x" * 256}  # Max 255 characters
+        data = {"status": "not_a_dict"}
 
         result = validate_test_case_update_input(data)
 
         assert not result.is_valid
-        assert "String should have at most 255 characters" in " ".join(result.errors)
+        assert len(result.errors) > 0
 
     def test_validate_test_case_update_input_invalid_type(self):
         """Test invalid test case update input with wrong field types."""

@@ -880,9 +880,9 @@ class TestEnvironmentConfiguration:
             objective="Updated objective",
             precondition="Updated precondition",
             estimated_time=120000,
-            component_id=123,
-            priority_name="High",
-            status_name="Ready",
+            component={"id": 123},
+            priority={"id": 456},
+            status={"id": 789},
             folder_id=456,
             owner_id="user123",
             labels=["automation", "regression"],
@@ -892,9 +892,9 @@ class TestEnvironmentConfiguration:
         assert update_input.name == "Updated test case"
         assert update_input.objective == "Updated objective"
         assert update_input.estimated_time == 120000
-        assert update_input.component_id == 123
-        assert update_input.priority_name == "High"
-        assert update_input.status_name == "Ready"
+        assert update_input.component == {"id": 123}
+        assert update_input.priority == {"id": 456}
+        assert update_input.status == {"id": 789}
         assert update_input.folder_id == 456
         assert update_input.owner_id == "user123"
         assert update_input.labels == ["automation", "regression"]
@@ -903,11 +903,11 @@ class TestEnvironmentConfiguration:
         # Test with partial fields (all optional)
         partial_update = TestCaseUpdateInput(
             name="Updated name only",
-            status_name="Completed",
+            status={"id": 999},
         )
 
         assert partial_update.name == "Updated name only"
-        assert partial_update.status_name == "Completed"
+        assert partial_update.status == {"id": 999}
         assert partial_update.objective is None
         assert partial_update.estimated_time is None
 
@@ -916,7 +916,7 @@ class TestEnvironmentConfiguration:
 
         assert empty_update.name is None
         assert empty_update.objective is None
-        assert empty_update.status_name is None
+        assert empty_update.status is None
 
     def test_test_case_update_schema_validation(self):
         """Test TestCaseUpdateInput schema validation."""
@@ -928,9 +928,9 @@ class TestEnvironmentConfiguration:
         with pytest.raises(ValidationError):
             TestCaseUpdateInput(estimated_time=-1)
 
-        # Test invalid component_id
+        # Test invalid component type
         with pytest.raises(ValidationError):
-            TestCaseUpdateInput(component_id=-1)
+            TestCaseUpdateInput(component="not_a_dict")
 
         # Test invalid folder_id
         with pytest.raises(ValidationError):
@@ -940,13 +940,13 @@ class TestEnvironmentConfiguration:
         with pytest.raises(ValidationError):
             TestCaseUpdateInput(name="")
 
-        # Test too long priority name
+        # Test invalid priority type
         with pytest.raises(ValidationError):
-            TestCaseUpdateInput(priority_name="x" * 256)
+            TestCaseUpdateInput(priority="not_a_dict")
 
-        # Test too long status name
+        # Test invalid status type
         with pytest.raises(ValidationError):
-            TestCaseUpdateInput(status_name="x" * 256)
+            TestCaseUpdateInput(status="not_a_dict")
 
     def test_test_case_update_validation_function(self):
         """Test test case update validation function."""
@@ -959,14 +959,14 @@ class TestEnvironmentConfiguration:
             {
                 "name": "Updated test case",
                 "objective": "Updated objective",
-                "statusName": "Ready",
+                "status": {"id": 123},
                 "customFields": {"Component": "Test"},
             }
         )
         assert result.is_valid
         assert result.data.name == "Updated test case"
         assert result.data.objective == "Updated objective"
-        assert result.data.status_name == "Ready"
+        assert result.data.status == {"id": 123}
         assert result.data.custom_fields == {"Component": "Test"}
 
         # Test valid partial update
