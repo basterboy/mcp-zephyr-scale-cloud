@@ -732,8 +732,30 @@ class TestFolderMCPTools:
     async def test_create_test_case_success(self, mock_client):
         """Test successful create_test_case tool call."""
         from src.mcp_zephyr_scale_cloud.schemas.base import CreatedResource
+        from src.mcp_zephyr_scale_cloud.schemas.common import ProjectLink
+        from src.mcp_zephyr_scale_cloud.schemas.priority import Priority, PriorityList
         from src.mcp_zephyr_scale_cloud.server import create_test_case
         from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock priority lookup for priority_name="High"
+        mock_project = ProjectLink(
+            id=1, name="Test Project", self="http://test.com/project/1"
+        )
+        mock_priority = Priority(
+            id=123,
+            name="High",
+            description="High priority",
+            color="#FF0000",
+            index=1,
+            default=False,
+            archived=False,
+            project=mock_project,
+        )
+        mock_priority_list = PriorityList(
+            values=[mock_priority], total=1, maxResults=50, startAt=0, isLast=True
+        )
+        mock_priorities_result = ValidationResult(True, data=mock_priority_list)
+        mock_client.get_priorities = AsyncMock(return_value=mock_priorities_result)
 
         # Mock successful API response
         mock_created = CreatedResource(
@@ -790,8 +812,31 @@ class TestFolderMCPTools:
     @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
     async def test_update_test_case_success(self, mock_client):
         """Test successful update_test_case tool call."""
+        # Mock status lookup for status_name="Ready for Review"
+        from src.mcp_zephyr_scale_cloud.schemas.common import ProjectLink
+        from src.mcp_zephyr_scale_cloud.schemas.status import Status, StatusList
         from src.mcp_zephyr_scale_cloud.server import update_test_case
         from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_project = ProjectLink(
+            id=1, name="Test Project", self="http://test.com/project/1"
+        )
+
+        mock_status = Status(
+            id=456,
+            name="Ready for Review",
+            description="Status for ready items",
+            color="#00FF00",
+            index=2,
+            default=False,
+            archived=False,
+            project=mock_project,
+        )
+        mock_status_list = StatusList(
+            values=[mock_status], total=1, maxResults=50, startAt=0, isLast=True
+        )
+        mock_statuses_result = ValidationResult(True, data=mock_status_list)
+        mock_client.get_statuses = AsyncMock(return_value=mock_statuses_result)
 
         # Mock successful API response (PUT returns None data)
         mock_result = ValidationResult(True, data=None)
@@ -815,8 +860,30 @@ class TestFolderMCPTools:
     @patch("src.mcp_zephyr_scale_cloud.server.zephyr_client")
     async def test_update_test_case_partial_update(self, mock_client):
         """Test update_test_case with only some fields updated."""
+        from src.mcp_zephyr_scale_cloud.schemas.common import ProjectLink
+        from src.mcp_zephyr_scale_cloud.schemas.status import Status, StatusList
         from src.mcp_zephyr_scale_cloud.server import update_test_case
         from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        # Mock status lookup for status_name="Completed"
+        mock_project = ProjectLink(
+            id=1, name="Test Project", self="http://test.com/project/1"
+        )
+        mock_status = Status(
+            id=789,
+            name="Completed",
+            description="Completed status",
+            color="#0000FF",
+            index=3,
+            default=False,
+            archived=False,
+            project=mock_project,
+        )
+        mock_status_list = StatusList(
+            values=[mock_status], total=1, maxResults=50, startAt=0, isLast=True
+        )
+        mock_statuses_result = ValidationResult(True, data=mock_status_list)
+        mock_client.get_statuses = AsyncMock(return_value=mock_statuses_result)
 
         # Mock successful API response
         mock_result = ValidationResult(True, data=None)

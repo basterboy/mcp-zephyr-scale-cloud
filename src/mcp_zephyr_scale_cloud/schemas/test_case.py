@@ -77,6 +77,11 @@ class TestCaseInput(BaseModel):
         ge=0,
         example=10001,
     )
+    component: dict[str, Any] | None = Field(
+        None,
+        description="Component object for API (resolved from component_id)",
+        example={"id": 10001},
+    )
     priority_name: str | None = Field(
         None,
         alias="priorityName",
@@ -85,6 +90,11 @@ class TestCaseInput(BaseModel):
         min_length=1,
         example="High",
     )
+    priority: dict[str, Any] | None = Field(
+        None,
+        description="Priority object for API (resolved from priority_name)",
+        example={"id": 123},
+    )
     status_name: str | None = Field(
         None,
         alias="statusName",
@@ -92,6 +102,11 @@ class TestCaseInput(BaseModel):
         max_length=255,
         min_length=1,
         example="Draft",
+    )
+    status: dict[str, Any] | None = Field(
+        None,
+        description="Status object for API (resolved from status_name)",
+        example={"id": 456},
     )
     folder_id: int | None = Field(
         None,
@@ -154,6 +169,11 @@ class TestCaseUpdateInput(BaseModel):
         ge=0,
         example=10001,
     )
+    component: dict[str, Any] | None = Field(
+        None,
+        description="Component object for API (resolved from component_id)",
+        example={"id": 10001},
+    )
     priority_name: str | None = Field(
         None,
         alias="priorityName",
@@ -162,6 +182,13 @@ class TestCaseUpdateInput(BaseModel):
         min_length=1,
         example="High",
     )
+    priority_id: int | None = Field(
+        None,
+        alias="priorityId",
+        description="The priority ID (resolved from priority name)",
+        ge=1,
+        example=123,
+    )
     status_name: str | None = Field(
         None,
         alias="statusName",
@@ -169,6 +196,13 @@ class TestCaseUpdateInput(BaseModel):
         max_length=255,
         min_length=1,
         example="Draft",
+    )
+    status_id: int | None = Field(
+        None,
+        alias="statusId",
+        description="The status ID (resolved from status name)",
+        ge=1,
+        example=456,
     )
     folder_id: int | None = Field(
         None,
