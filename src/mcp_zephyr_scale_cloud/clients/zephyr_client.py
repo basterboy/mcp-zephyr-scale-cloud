@@ -974,7 +974,9 @@ class ZephyrClient:
 
             # Convert current_data to dict and apply updates
             # Use mode='json' to properly serialize datetime and other complex types
-            request_data = current_data.model_dump(by_alias=True, exclude_none=True, mode='json')
+            request_data = current_data.model_dump(
+                by_alias=True, exclude_none=True, mode="json"
+            )
             request_data.update(update_data)
 
             async with httpx.AsyncClient() as client:
