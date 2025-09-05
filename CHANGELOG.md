@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2025-09-05
+
+### 🔧 Fixed
+- Fixed GitHub release workflow to properly include Python package files (.whl and .tar.gz)
+- Added comprehensive installation instructions to README
+- Improved release automation with better file handling
+
+### 📚 Documentation
+- Added multiple installation options (GitHub releases, PyPI, source)
+- Added installation verification instructions
+- Updated Quick Start guide
+
 ## [0.1.0] - 2025-09-05
 
 ### 🎉 Initial Release
