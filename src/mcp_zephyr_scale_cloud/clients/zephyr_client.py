@@ -1021,33 +1021,20 @@ class ZephyrClient:
                 )
 
             # Handle special fields that need object structure for the API
-            # Priority update
-            if "priorityId" in update_data:
-                request_data["priority"] = {"id": update_data["priorityId"]}
-            elif "priority" in update_data:
+            # Priority update - the server now sends proper priority objects
+            if "priority" in update_data:
                 request_data["priority"] = update_data["priority"]
 
-            # Status update
-            if "statusId" in update_data:
-                request_data["status"] = {"id": update_data["statusId"]}
-            elif "status" in update_data:
+            # Status update - the server now sends proper status objects
+            if "status" in update_data:
                 request_data["status"] = update_data["status"]
 
-            # Component update
-            if "componentId" in update_data:
-                request_data["component"] = {"id": update_data["componentId"]}
-            elif "component" in update_data:
+            # Component update - the server now sends proper component objects
+            if "component" in update_data:
                 request_data["component"] = update_data["component"]
 
             # Merge other update data (excluding the special fields we handled above)
-            excluded_fields = [
-                "priorityId",
-                "statusId",
-                "componentId",
-                "priority",
-                "status",
-                "component",
-            ]
+            excluded_fields = ["priority", "status", "component"]
             filtered_update_data = {
                 k: v for k, v in update_data.items() if k not in excluded_fields
             }
