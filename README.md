@@ -133,20 +133,6 @@ The MCP Zephyr Scale Cloud package provides 25 tools that wrap these API endpoin
 - [REST API Overview](https://support.smartbear.com/zephyr/docs/en/rest-api/rest-api--overview-.html)
 - [Complete API Documentation](https://support.smartbear.com/zephyr-scale-cloud/api-docs/)
 
-## Quick Start
-
-1. **Set up environment variables:**
-```bash
-cp env.template .env
-# Edit .env with your Zephyr Scale API token
-```
-
-2. **Install and run:**
-```bash
-poetry install
-poetry run mcp-zephyr-scale-cloud
-```
-
 ## Development
 
 1. Clone the repository:
