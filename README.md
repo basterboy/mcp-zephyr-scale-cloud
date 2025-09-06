@@ -19,10 +19,17 @@ A Model Context Protocol (MCP) server for Zephyr Scale Cloud, enabling AI assist
 - 📝 **Type Safety** - Pydantic schema validation for all API operations
 
 ### 🚧 **Planned Features:**
-- 📈 Test execution and results
-- 🔄 Test cycle management
-- 👥 Project and team management
-- 📊 Test reporting and analytics
+
+Based on the Zephyr Scale Cloud API documentation, the following major categories are planned for implementation:
+
+- 🔄 **Test Cycle Management** - Create, read, update test cycles with metadata
+- 📈 **Test Execution Management** - Create, read, update test executions and results
+- 📋 **Test Plan Management** - Test plan operations and organization  
+- 🌍 **Environment Management** - Test environment configuration and management
+- 👥 **Project Management** - Project information and configuration
+- 🔗 **Advanced Link Management** - Delete links and enhanced link operations
+- 🤖 **Automation Integration** - Custom, Cucumber, and JUnit test execution automation
+- 📊 **Issue Link Coverage** - Comprehensive Jira issue link coverage tracking
 
 ## Installation
 
@@ -54,26 +61,6 @@ ZEPHYR_SCALE_DEFAULT_PROJECT_KEY=MYPROJ
 
 Many tools now support automatic project key resolution. If you have access to multiple projects, you can set `ZEPHYR_SCALE_DEFAULT_PROJECT_KEY` to avoid specifying the project key in every tool call. Tools like `get_test_cases`, `get_folders`, and others will automatically use this default when no explicit project key is provided.
 
-### Logging Configuration
-
-The server uses Python's standard logging module. Configure logging levels as needed:
-
-```python
-import logging
-
-# For development - see all startup details
-logging.basicConfig(level=logging.INFO)
-
-# For production - warnings and errors only  
-logging.basicConfig(level=logging.WARNING)
-
-# Custom format
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-```
-
 ## Quick Start
 
 1. **Set up environment variables:**
@@ -86,24 +73,6 @@ cp env.template .env
 ```bash
 poetry install
 poetry run mcp-zephyr-scale-cloud
-```
-
-3. **Test your connection:**
-```bash
-# Check if your setup works
-poetry run python -c "
-from src.mcp_zephyr_scale_cloud.config import ZephyrConfig
-from src.mcp_zephyr_scale_cloud.clients.zephyr_client import ZephyrClient
-import asyncio
-
-async def test():
-    config = ZephyrConfig.from_env()
-    client = ZephyrClient(config)
-    result = await client.healthcheck()
-    print(f'API Status: {result.data.get(\"status\") if result.is_valid else \"Failed\"}')
-
-asyncio.run(test())
-"
 ```
 
 ## Development
@@ -155,7 +124,6 @@ make format  # Fix formatting and imports
 
 ### 🚀 **Major Updates:**
 - **Test Case Management**: Full CRUD operations for test cases with advanced metadata support
-- **Stable Pagination**: Switched from unreliable NextGen cursor pagination to stable offset-based pagination
 - **Performance Optimization**: Added comprehensive pagination guidance with max_results=1000 recommendations  
 - **Link Management**: Test case linking to Jira issues and web resources
 - **Version Control**: Test case version history and retrieval capabilities
@@ -199,8 +167,7 @@ src/mcp_zephyr_scale_cloud/
 │   └── version.py        # Version-specific schemas
 ├── utils/                 # Utility functions
 │   ├── __init__.py
-│   ├── validation.py     # Input validation utilities
-│   └── formatting.py     # Output formatting utilities
+│   └── validation.py     # Input validation utilities
 └── clients/
     ├── __init__.py
     └── zephyr_client.py   # Schema-based HTTP Client
@@ -212,7 +179,6 @@ src/mcp_zephyr_scale_cloud/
 - **HTTP Client** (`clients/zephyr_client.py`): Schema-based client making type-safe REST API calls to Zephyr Scale Cloud
 - **Pydantic Schemas** (`schemas/`): Data validation and serialization using Pydantic models
 - **Validation Utils** (`utils/validation.py`): Input validation with comprehensive error handling
-- **Formatting Utils** (`utils/formatting.py`): Rich output formatting for MCP tools
 - **Configuration** (`config.py`): Manages API tokens and settings
 - **Server Lifespan**: Startup validation, API connectivity testing, and graceful shutdown management
 
