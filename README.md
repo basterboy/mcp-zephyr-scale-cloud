@@ -61,6 +61,49 @@ ZEPHYR_SCALE_DEFAULT_PROJECT_KEY=MYPROJ
 
 Many tools now support automatic project key resolution. If you have access to multiple projects, you can set `ZEPHYR_SCALE_DEFAULT_PROJECT_KEY` to avoid specifying the project key in every tool call. Tools like `get_test_cases`, `get_folders`, and others will automatically use this default when no explicit project key is provided.
 
+## Installation
+
+### Option 1: Install from GitHub Releases (Recommended)
+
+Download and install the latest release directly from GitHub:
+
+```bash
+# Download the latest wheel file from GitHub releases
+pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.0/mcp_zephyr_scale_cloud-0.1.0-py3-none-any.whl
+```
+
+Or install from the source distribution:
+
+```bash
+pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.0/mcp_zephyr_scale_cloud-0.1.0.tar.gz
+```
+
+### Option 2: Install from PyPI (When Available)
+
+Once published to PyPI, you'll be able to install with:
+
+```bash
+pip install mcp-zephyr-scale-cloud
+```
+
+### Option 3: Install from Source
+
+For development or latest features:
+
+```bash
+git clone https://github.com/basterboy/mcp-zephyr-scale-cloud.git
+cd mcp-zephyr-scale-cloud
+pip install .
+```
+
+### Verify Installation
+
+After installation, verify it works:
+
+```bash
+python -c "import mcp_zephyr_scale_cloud; print('✅ Successfully installed!')"
+```
+
 ## Quick Start
 
 1. **Set up environment variables:**
