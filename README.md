@@ -59,9 +59,9 @@ source ~/venv-mcp-zephyr/bin/activate
 pip install mcp-zephyr-scale-cloud
 ```
 
-**Quick fix:** Install to user directory
+**Last resort:** Override protection (not recommended)
 ```bash
-pip3 install --user mcp-zephyr-scale-cloud
+pip3 install --break-system-packages mcp-zephyr-scale-cloud
 ```
 
 ### Option 2: Install from GitHub Releases
@@ -544,10 +544,10 @@ link_result = await create_issue_link(
 ### **Installation Issues**
 
 #### **"externally-managed-environment" Error (macOS/Linux)**
-This is a modern Python security feature. Use one of these solutions:
+This is a modern Python security feature (PEP 668). Use one of these solutions:
 - **Recommended:** `pipx install mcp-zephyr-scale-cloud`
 - **Alternative:** Create virtual environment (see installation options above)
-- **Quick fix:** `pip3 install --user mcp-zephyr-scale-cloud`
+- **Last resort:** `pip3 install --break-system-packages mcp-zephyr-scale-cloud` (not recommended)
 
 #### **"No matching distribution found" Error**
 - Ensure you have Python 3.10 or higher: `python3 --version`
