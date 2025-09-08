@@ -42,6 +42,28 @@ Install directly from the Python Package Index:
 pip install mcp-zephyr-scale-cloud
 ```
 
+#### 🍎 **macOS Users with Homebrew Python:**
+
+If you encounter "externally-managed-environment" errors on macOS, use one of these approaches:
+
+**Recommended:** Use pipx (isolates the package)
+```bash
+brew install pipx
+pipx install mcp-zephyr-scale-cloud
+```
+
+**Alternative:** Use virtual environment
+```bash
+python3 -m venv ~/venv-mcp-zephyr
+source ~/venv-mcp-zephyr/bin/activate
+pip install mcp-zephyr-scale-cloud
+```
+
+**Quick fix:** Install to user directory
+```bash
+pip3 install --user mcp-zephyr-scale-cloud
+```
+
 ### Option 2: Install from GitHub Releases
 
 Download and install the latest release directly from GitHub:
@@ -516,6 +538,38 @@ link_result = await create_issue_link(
     issue_id=456789
 )
 ```
+
+## Troubleshooting
+
+### **Installation Issues**
+
+#### **"externally-managed-environment" Error (macOS/Linux)**
+This is a modern Python security feature. Use one of these solutions:
+- **Recommended:** `pipx install mcp-zephyr-scale-cloud`
+- **Alternative:** Create virtual environment (see installation options above)
+- **Quick fix:** `pip3 install --user mcp-zephyr-scale-cloud`
+
+#### **"No matching distribution found" Error**
+- Ensure you have Python 3.10 or higher: `python3 --version`
+- Try upgrading pip: `python3 -m pip install --upgrade pip`
+- Use explicit Python version: `python3.10 -m pip install mcp-zephyr-scale-cloud`
+
+#### **"command not found: mcp-zephyr-scale-cloud"**
+- If installed with pipx: `pipx list` to verify installation
+- If installed with pip: check if Python scripts directory is in PATH
+- Virtual environment: ensure it's activated before running
+
+### **Configuration Issues**
+
+#### **"Configuration Error: Missing API token"**
+- Set environment variable: `export ZEPHYR_SCALE_API_TOKEN="your-token"`
+- Or configure in Cursor settings (see Integration section above)
+- Verify token in JIRA: Apps → Zephyr Scale → API Access Tokens
+
+#### **"401 Unauthorized" or "403 Forbidden"**
+- Check your API token is valid and active
+- Verify project permissions in JIRA
+- Ensure correct base URL for your region
 
 ## License
 
