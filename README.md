@@ -2,9 +2,56 @@
 
 A Model Context Protocol (MCP) server for Zephyr Scale Cloud, enabling AI assistants to interact with test management capabilities.
 
+## Table of Contents
+
+- [Features](#features)
+  - [✅ Currently Implemented](#currently-implemented)
+  - [🚧 Planned Features](#planned-features)
+- [Installation](#installation)
+  - [Install using pipx (Recommended)](#install-using-pipx-recommended)
+  - [Alternative: Install using Poetry](#alternative-install-using-poetry)
+  - [Verify Installation](#verify-installation)
+- [Integration with Cursor](#integration-with-cursor)
+  - [Configuration Options](#configuration-options)
+  - [Environment Variable Fallback](#environment-variable-fallback)
+  - [Getting Zephyr API Token](#getting-zephyr-api-token)
+  - [About Zephyr Scale Cloud API](#about-zephyr-scale-cloud-api)
+- [Development](#development)
+- [Recent Improvements](#recent-improvements)
+  - [🚀 Major Updates](#major-updates)
+  - [🔧 Technical Improvements](#technical-improvements)
+- [Architecture](#architecture)
+  - [Project Structure](#project-structure)
+  - [Key Concepts](#key-concepts)
+- [Advanced Features](#advanced-features)
+  - [🚀 Server Lifespan Management](#server-lifespan-management)
+- [Testing](#testing)
+  - [🧪 Test Structure](#test-structure)
+  - [🚀 Running Tests](#running-tests)
+  - [📊 Test Coverage](#test-coverage)
+  - [🔧 CI/CD](#cicd)
+- [MCP Tools](#mcp-tools)
+  - [Currently Available](#currently-available)
+  - [🩺 Health & Connectivity](#health--connectivity)
+  - [⭐ Priority Management](#priority-management)
+  - [📊 Status Management](#status-management)
+  - [📁 Folder Management](#folder-management)
+  - [📝 Test Step Management](#test-step-management)
+  - [📄 Test Script Management](#test-script-management)
+  - [📋 Test Case Management](#test-case-management)
+  - [🔗 Test Case Links](#test-case-links)
+- [Usage Guides](#usage-guides)
+  - [📊 Status Operations Guide](#status-operations-guide)
+  - [📁 Folder Operations Guide](#folder-operations-guide)
+  - [🔧 Test Case Management Guide](#test-case-management-guide)
+- [Troubleshooting](#troubleshooting)
+  - [Installation Issues](#installation-issues)
+  - [Configuration Issues](#configuration-issues)
+- [License](#license)
+
 ## Features
 
-### ✅ **Currently Implemented:**
+### **Currently Implemented:**
 - 🩺 **API Health Monitoring** - Check connectivity and authentication status
 - ⭐ **Priority Management** - Create, read, update priorities across projects
 - 📊 **Status Management** - Manage test execution statuses with type filtering
@@ -18,7 +65,7 @@ A Model Context Protocol (MCP) server for Zephyr Scale Cloud, enabling AI assist
 - 🧪 **Comprehensive Testing** - Unit tests, integration tests, and CI/CD pipeline
 - 📝 **Type Safety** - Pydantic schema validation for all API operations
 
-### 🚧 **Planned Features:**
+### **Planned Features:**
 
 Based on the Zephyr Scale Cloud API documentation, the following major categories are planned for implementation:
 
@@ -34,59 +81,53 @@ Based on the Zephyr Scale Cloud API documentation, the following major categorie
 
 ## Installation
 
-### Option 1: Install from PyPI (Recommended)
+### Install using pipx (Recommended)
 
-Install directly from the Python Package Index:
+The safest and cleanest way to install MCP servers is using `pipx`, which isolates packages in their own virtual environments.
 
-```bash
-pip install mcp-zephyr-scale-cloud
-```
+#### Install pipx first:
 
-#### 🍎 **macOS Users with Homebrew Python:**
-
-If you encounter "externally-managed-environment" errors on macOS, use one of these approaches:
-
-**Recommended:** Use pipx (isolates the package)
+**macOS (Homebrew):**
 ```bash
 brew install pipx
+```
+
+**Windows:**
+```bash
+# Using pip
+python -m pip install --user pipx
+
+# Or using scoop
+scoop install pipx
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+# Using apt
+sudo apt update && sudo apt install pipx
+
+# Or using pip
+python3 -m pip install --user pipx
+```
+
+#### Install the MCP server:
+```bash
 pipx install mcp-zephyr-scale-cloud
 ```
 
-**Alternative:** Use virtual environment
-```bash
-python3 -m venv ~/venv-mcp-zephyr
-source ~/venv-mcp-zephyr/bin/activate
-pip install mcp-zephyr-scale-cloud
-```
+### Alternative: Install using Poetry
 
-**Last resort:** Override protection (not recommended)
-```bash
-pip3 install --break-system-packages mcp-zephyr-scale-cloud
-```
-
-### Option 2: Install from GitHub Releases
-
-Download and install the latest release directly from GitHub:
+If you're using Poetry for dependency management in your project:
 
 ```bash
-# Download the latest wheel file from GitHub releases
-pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.5/mcp_zephyr_scale_cloud-0.1.5-py3-none-any.whl
-```
+# Add to your project
+poetry add mcp-zephyr-scale-cloud
 
-Or install from the source distribution:
-
-```bash
-pip install https://github.com/basterboy/mcp-zephyr-scale-cloud/releases/download/v0.1.5/mcp_zephyr_scale_cloud-0.1.5.tar.gz
-```
-
-### Option 3: Install from Source
-
-For development or latest features:
-
-```bash
-git clone https://github.com/basterboy/mcp-zephyr-scale-cloud.git
-cd mcp-zephyr-scale-cloud
-pip install .
+# Or install globally in a new environment
+poetry new mcp-zephyr-project
+cd mcp-zephyr-project
+poetry add mcp-zephyr-scale-cloud
+poetry shell
 ```
 
 ### Verify Installation
@@ -202,7 +243,7 @@ make format  # Fix formatting and imports
 
 ## Recent Improvements
 
-### 🚀 **Major Updates:**
+### **Major Updates:**
 - **Test Case Management**: Full CRUD operations for test cases with advanced metadata support
 - **Performance Optimization**: Added comprehensive pagination guidance with max_results=1000 recommendations  
 - **Link Management**: Test case linking to Jira issues and web resources
@@ -210,7 +251,7 @@ make format  # Fix formatting and imports
 - **Environment Integration**: Automatic project key resolution from environment variables
 - **Enhanced Error Handling**: Improved validation and user-friendly error messages
 
-### 🔧 **Technical Improvements:**
+### **Technical Improvements:**
 - **Schema Simplification**: Streamlined update operations using Pydantic model_dump()
 - **Validation Enhancement**: Comprehensive input validation with helpful error guidance
 - **Code Quality**: Extensive refactoring for maintainability and performance
@@ -219,6 +260,8 @@ make format  # Fix formatting and imports
 ## Architecture
 
 This project implements an **MCP Server** that connects AI assistants to Zephyr Scale Cloud:
+
+![MCP Zephyr Scale Cloud Architecture](image.png)
 
 ```
 AI Assistant (Claude) 
@@ -264,7 +307,7 @@ src/mcp_zephyr_scale_cloud/
 
 ## Advanced Features
 
-### 🚀 Server Lifespan Management
+### Server Lifespan Management
 
 This MCP server implements advanced [server lifespan management](https://github.com/modelcontextprotocol/python-sdk?tab=readme-ov-file#low-level-server) for robust production deployment:
 
@@ -284,7 +327,7 @@ This MCP server implements advanced [server lifespan management](https://github.
 
 This project includes comprehensive testing to ensure reliability:
 
-### 🧪 Test Structure
+### Test Structure
 ```
 tests/
 ├── test_basic.py           # Basic functionality tests
@@ -298,7 +341,7 @@ tests/
 └── conftest.py            # Shared test fixtures
 ```
 
-### 🚀 Running Tests
+### Running Tests
 ```bash
 # Quick test run
 make test-fast
@@ -313,13 +356,13 @@ poetry run pytest tests/ --tb=short -x
 poetry run pytest tests/test_basic.py -v
 ```
 
-### 📊 Test Coverage
+### Test Coverage
 - **Unit Tests**: Test individual components in isolation
 - **Integration Tests**: Test MCP server functionality end-to-end
 - **Schema Tests**: Validate Pydantic models and API contracts
 - **Validation Tests**: Ensure input validation works correctly
 
-### 🔧 CI/CD
+### CI/CD
 Tests run automatically on:
 - **GitHub Actions**: On push/PR to main branch
 - **Multiple Python versions**: 3.10, 3.11, 3.12
@@ -343,35 +386,35 @@ This server provides **25 MCP tools** for Zephyr Scale Cloud integration:
 
 ### Currently Available:
 
-#### **🩺 Health & Connectivity**
+#### **Health & Connectivity**
 - `healthcheck` - Check Zephyr Scale Cloud API connectivity and authentication status
 
-#### **⭐ Priority Management**
+#### **Priority Management**
 - `get_priorities` - Get all priorities with optional project filtering
 - `get_priority` - Get details of a specific priority by ID
 - `create_priority` - Create a new priority in a project
 - `update_priority` - Update an existing priority
 
-#### **📊 Status Management**
+#### **Status Management**
 - `get_statuses` - Get all statuses with optional project and type filtering
 - `get_status` - Get details of a specific status by ID
 - `create_status` - Create a new status in a project
 - `update_status` - Update an existing status
 
-#### **📁 Folder Management**
+#### **Folder Management**
 - `get_folders` - Get all folders with optional project and type filtering
 - `get_folder` - Get details of a specific folder by ID
 - `create_folder` - Create a new folder in a project
 
-#### **📝 Test Step Management**
+#### **Test Step Management**
 - `get_test_steps` - Retrieve test steps for a specific test case with pagination support
 - `create_test_steps` - Create test steps for a test case with APPEND/OVERWRITE modes
 
-#### **📄 Test Script Management**
+#### **Test Script Management**
 - `get_test_script` - Retrieve test script for a specific test case
 - `create_test_script` - Create or update test script with plain text or BDD format
 
-#### **📋 Test Case Management**
+#### **Test Case Management**
 - `get_test_case` - Get detailed test case information including metadata, status, priority, and content
 - `get_test_cases` - Retrieve test cases with advanced offset-based pagination and filtering
 - `create_test_case` - Create new test cases with comprehensive metadata support
@@ -380,11 +423,13 @@ This server provides **25 MCP tools** for Zephyr Scale Cloud integration:
 - `get_test_case_version` - Get specific version of a test case
 - `get_links` - Get all links (issues + web links) associated with a test case
 
-#### **🔗 Test Case Links**
+#### **Test Case Links**
 - `create_issue_link` - Link test cases to Jira issues for traceability
 - `create_web_link` - Add web links to test cases for documentation
 
-## 📊 Status Operations Guide
+## Usage Guides
+
+## Status Operations Guide
 
 Status operations allow you to manage test execution statuses in Zephyr Scale Cloud. Each status can be associated with different entity types:
 
@@ -432,7 +477,7 @@ updated = await update_status(
 - **Default**: Whether this is the default status for the type
 - **Archived**: Whether the status is archived
 
-## 📁 Folder Operations Guide
+## Folder Operations Guide
 
 Folder operations allow you to organize and manage test artifacts in Zephyr Scale Cloud. Folders provide hierarchical structure for test cases, test plans, and test cycles.
 
@@ -485,7 +530,7 @@ folder_details = await get_folder(folder_id=456)
 - Child folders reference their parent via `parent_id`
 - Each folder type maintains its own hierarchy within a project
 
-## 🔧 Test Case Management Guide
+## Test Case Management Guide
 
 The test case management tools provide comprehensive CRUD operations for managing test cases in Zephyr Scale Cloud.
 
@@ -543,21 +588,34 @@ link_result = await create_issue_link(
 
 ### **Installation Issues**
 
-#### **"externally-managed-environment" Error (macOS/Linux)**
-This is a modern Python security feature (PEP 668). Use one of these solutions:
-- **Recommended:** `pipx install mcp-zephyr-scale-cloud`
-- **Alternative:** Create virtual environment (see installation options above)
-- **Last resort:** `pip3 install --break-system-packages mcp-zephyr-scale-cloud` (not recommended)
+#### **pipx not found**
+Install pipx first using the platform-specific instructions in the Installation section above.
+
+#### **"externally-managed-environment" Error**
+This error occurs when trying to use `pip` directly. Solution:
+- **Use pipx instead:** `pipx install mcp-zephyr-scale-cloud` (recommended)
+- **Or use Poetry:** Follow the Poetry installation instructions above
 
 #### **"No matching distribution found" Error**
 - Ensure you have Python 3.10 or higher: `python3 --version`
-- Try upgrading pip: `python3 -m pip install --upgrade pip`
-- Use explicit Python version: `python3.10 -m pip install mcp-zephyr-scale-cloud`
+- Update pipx: `pipx upgrade-all`
+- Try with explicit Python version: `python3.10 -m pipx install mcp-zephyr-scale-cloud`
 
 #### **"command not found: mcp-zephyr-scale-cloud"**
-- If installed with pipx: `pipx list` to verify installation
-- If installed with pip: check if Python scripts directory is in PATH
-- Virtual environment: ensure it's activated before running
+- **With pipx:** Check installation with `pipx list`
+- **PATH issue:** Run `pipx ensurepath` to add pipx bin directory to PATH
+- **With Poetry:** Ensure you're in the Poetry shell with `poetry shell`
+
+#### **pipx PATH warnings**
+If you see warnings about PATH not being set:
+```bash
+# Add pipx to PATH
+pipx ensurepath
+
+# Restart your shell or run:
+source ~/.bashrc  # Linux
+source ~/.zshrc   # macOS with zsh
+```
 
 ### **Configuration Issues**
 

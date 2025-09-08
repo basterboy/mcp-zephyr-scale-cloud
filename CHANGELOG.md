@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2025-01-19
+
+### 📚 Documentation Enhancement
+- **Added comprehensive Table of Contents** - Full navigation with clickable anchor links for easy README navigation
+- **Streamlined installation guide** - Focused on modern pipx approach with cross-platform support (macOS/Windows/Linux)
+- **Added Poetry installation alternative** - Support for Poetry-based dependency management
+- **Updated troubleshooting section** - Aligned with new installation methods, added pipx PATH resolution
+- **Added architecture diagram** - Visual representation of MCP server architecture
+- **Fixed all TOC anchor links** - Resolved GitHub markdown anchor generation issues with emoji headers
+
+### 🔧 Installation Improvements
+- **pipx as primary installation method** - Isolated package installation preventing conflicts
+- **Cross-platform pipx setup** - Instructions for Homebrew, apt, scoop, and pip installation
+- **Poetry workflow support** - Both project-level and global Poetry installation options
+- **Enhanced PATH troubleshooting** - Specific solutions for pipx ensurepath issues
+
 ## [0.1.5] - 2025-09-05
 
 ### 📚 Documentation Overhaul
