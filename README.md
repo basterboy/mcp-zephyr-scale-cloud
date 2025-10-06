@@ -42,6 +42,8 @@ A Model Context Protocol (MCP) server for Zephyr Scale Cloud, enabling AI assist
   - [🔗 Test Case Links](#test-case-links)
   - [🔄 Test Cycle Management](#test-cycle-management)
   - [🔗 Test Cycle Links](#test-cycle-links)
+  - [📋 Test Plan Management](#test-plan-management)
+  - [🔗 Test Plan Links](#test-plan-links)
 - [Usage Guides](#usage-guides)
   - [📊 Status Operations Guide](#status-operations-guide)
   - [📁 Folder Operations Guide](#folder-operations-guide)
@@ -60,9 +62,10 @@ A Model Context Protocol (MCP) server for Zephyr Scale Cloud, enabling AI assist
 - 📁 **Folder Management** - Organize test artifacts with hierarchical folder structure
 - 🧪 **Test Case Management** - Full CRUD operations for test cases with metadata
 - 🔄 **Test Cycle Management** - Full CRUD operations for test cycles with metadata and link management
+- 📋 **Test Plan Management** - Create and retrieve test plans with unique test cycle linking capability
 - 📝 **Test Steps & Scripts** - Manage test step definitions and scripts (plain/BDD)
-- 🔗 **Test Case & Cycle Links** - Link test cases and cycles to Jira issues and web resources
-- 📋 **Advanced Retrieval** - Pagination and filtering for test cases and cycles
+- 🔗 **Test Case, Cycle & Plan Links** - Link test artifacts to Jira issues, web resources, and other test entities
+- 📋 **Advanced Retrieval** - Pagination and filtering for test cases, cycles, and plans
 - 📚 **Version Management** - Test case version history and retrieval
 - 🔧 **Production Ready** - Server lifespan management and structured logging
 - 🧪 **Comprehensive Testing** - Unit tests, integration tests, and CI/CD pipeline
@@ -72,8 +75,7 @@ A Model Context Protocol (MCP) server for Zephyr Scale Cloud, enabling AI assist
 
 Based on the Zephyr Scale Cloud API documentation, the following major categories are planned for implementation:
 
-- 📈 **Test Execution Management** - Create, read, update test executions and results
-- 📋 **Test Plan Management** - Test plan operations and organization  
+- 📈 **Test Execution Management** - Create, read, update test executions and results  
 - 🌍 **Environment Management** - Test environment configuration and management
 - 👥 **Project Management** - Project information and configuration
 - 🔗 **Advanced Link Management** - Delete links and enhanced link operations
@@ -192,7 +194,7 @@ This package interfaces with the Zephyr Scale Cloud REST API, which provides com
 - **Protocol**: HTTP-based REST API
 - **Supported operations**: GET, POST, PUT requests for data retrieval and submission
 
-The MCP Zephyr Scale Cloud package provides 32 tools that wrap these API endpoints, making them easily accessible through AI assistants and automation workflows.
+The MCP Zephyr Scale Cloud package provides 38 tools that wrap these API endpoints, making them easily accessible through AI assistants and automation workflows.
 
 **API Resources:**
 - [REST API Overview](https://support.smartbear.com/zephyr/docs/en/rest-api/rest-api--overview-.html)
@@ -386,7 +388,9 @@ This server provides **32 MCP tools** for Zephyr Scale Cloud integration:
 | **Test Case Links** | 2 tools | Link management for test cases |
 | **Test Cycles** | 5 tools | Full CRUD operations for test cycle management |
 | **Test Cycle Links** | 2 tools | Link management for test cycles |
-| **Total** | **32 tools** | **Production-ready MCP server** |
+| **Test Plans** | 3 tools | Test plan creation and retrieval |
+| **Test Plan Links** | 3 tools | Link management including unique test cycle links |
+| **Total** | **38 tools** | **Production-ready MCP server** |
 
 ### Currently Available:
 
@@ -441,6 +445,16 @@ This server provides **32 MCP tools** for Zephyr Scale Cloud integration:
 #### **Test Cycle Links**
 - `create_test_cycle_issue_link` - Link test cycles to Jira issues for traceability
 - `create_test_cycle_web_link` - Add web links to test cycles for documentation
+
+#### **Test Plan Management**
+- `get_test_plans` - Retrieve test plans with offset-based pagination
+- `get_test_plan` - Get detailed test plan information including all associated links
+- `create_test_plan` - Create new test plans with metadata and organizational support
+
+#### **Test Plan Links**
+- `create_test_plan_issue_link` - Link test plans to Jira issues for traceability
+- `create_test_plan_web_link` - Add web links to test plans (description required)
+- `create_test_plan_test_cycle_link` - Link test plans to test cycles (unique bidirectional feature)
 
 ## Usage Guides
 

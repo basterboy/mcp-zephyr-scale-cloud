@@ -45,7 +45,7 @@ class TestMCPServerIntegration:
                 assert result["config_valid"] is True
                 assert result["api_accessible"] is True
                 assert result["startup_errors"] == []
-                assert result["tools_count"] == 23
+                assert result["tools_count"] == 38
 
     @pytest.mark.asyncio
     async def test_server_lifespan_config_error(self):
@@ -1492,3 +1492,203 @@ class TestCycleMCPTools:
             mock_client.create_test_cycle_web_link.assert_called_once()
             assert "456" in response
             assert "link-456" in response
+
+
+class TestPlanMCPTools:
+    """Test test plan MCP tools integration."""
+
+    @pytest.mark.asyncio
+    async def test_get_test_plans_success(self, mock_env_vars):
+        """Test get_test_plans MCP tool with successful response."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import TestPlan, TestPlanList
+        from src.mcp_zephyr_scale_cloud.server import get_test_plans
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        test_plan1 = TestPlan(
+            id=1,
+            key="PROJ-P1",
+            name="Integration Plan",
+            project={"id": 10000, "key": "PROJ"},
+            status={"id": 1, "name": "Draft"},
+        )
+        test_plan2 = TestPlan(
+            id=2,
+            key="PROJ-P2",
+            name="Regression Plan",
+            project={"id": 10000, "key": "PROJ"},
+            status={"id": 1, "name": "In Progress"},
+        )
+        mock_response_data = TestPlanList(
+            maxResults=10,
+            startAt=0,
+            total=2,
+            isLast=True,
+            values=[test_plan1, test_plan2],
+        )
+        mock_client.get_test_plans.return_value = ValidationResult(
+            True, data=mock_response_data
+        )
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await get_test_plans(project_key="PROJ")
+
+            mock_client.get_test_plans.assert_called_once()
+            assert "PROJ-P1" in response
+            assert "PROJ-P2" in response
+
+    @pytest.mark.asyncio
+    async def test_get_test_plan_success(self, mock_env_vars):
+        """Test get_test_plan MCP tool with successful response."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import TestPlan
+        from src.mcp_zephyr_scale_cloud.server import get_test_plan
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        test_plan = TestPlan(
+            id=1,
+            key="PROJ-P1",
+            name="Integration Test Plan",
+            project={"id": 10000, "key": "PROJ"},
+            status={"id": 1, "name": "Draft"},
+            objective="Test all features",
+        )
+        mock_client.get_test_plan.return_value = ValidationResult(True, data=test_plan)
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await get_test_plan(test_plan_key="PROJ-P1")
+
+            mock_client.get_test_plan.assert_called_once()
+            assert "PROJ-P1" in response
+            assert "Integration Test Plan" in response
+
+    @pytest.mark.asyncio
+    async def test_get_test_plan_invalid_key_format(self, mock_env_vars):
+        """Test get_test_plan with invalid key format."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_plan
+
+        mock_client = AsyncMock()
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await get_test_plan(test_plan_key="INVALID")
+            assert "errorCode" in response
+            assert "400" in response
+
+    @pytest.mark.asyncio
+    async def test_create_test_plan_success(self, mock_env_vars):
+        """Test create_test_plan MCP tool."""
+        from src.mcp_zephyr_scale_cloud.server import create_test_plan
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        from src.mcp_zephyr_scale_cloud.schemas.base import CreatedResource
+
+        mock_response_data = CreatedResource(id=123, key="PROJ-P123")
+        mock_client.create_test_plan.return_value = ValidationResult(
+            True, data=mock_response_data
+        )
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await create_test_plan(name="New Test Plan", project_key="PROJ")
+
+            mock_client.create_test_plan.assert_called_once()
+            assert "123" in response
+
+    @pytest.mark.asyncio
+    async def test_create_test_plan_validation_error(self, mock_env_vars):
+        """Test create_test_plan with validation error (missing name)."""
+        from src.mcp_zephyr_scale_cloud.server import create_test_plan
+
+        mock_client = AsyncMock()
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await create_test_plan(name="", project_key="PROJ")
+
+            assert "errorCode" in response
+            assert "400" in response
+
+    @pytest.mark.asyncio
+    async def test_create_test_plan_issue_link_success(self, mock_env_vars):
+        """Test create_test_plan_issue_link MCP tool."""
+        from src.mcp_zephyr_scale_cloud.server import create_test_plan_issue_link
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        from src.mcp_zephyr_scale_cloud.schemas.base import CreatedResource
+
+        mock_response_data = CreatedResource(id=456, key="link-456")
+        mock_client.create_test_plan_issue_link.return_value = ValidationResult(
+            True, data=mock_response_data
+        )
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await create_test_plan_issue_link(
+                test_plan_key="PROJ-P1", issue_id=12345
+            )
+
+            mock_client.create_test_plan_issue_link.assert_called_once()
+            assert "456" in response
+
+    @pytest.mark.asyncio
+    async def test_create_test_plan_web_link_success(self, mock_env_vars):
+        """Test create_test_plan_web_link MCP tool."""
+        from src.mcp_zephyr_scale_cloud.server import create_test_plan_web_link
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        from src.mcp_zephyr_scale_cloud.schemas.base import CreatedResource
+
+        mock_response_data = CreatedResource(id=789, key="link-789")
+        mock_client.create_test_plan_web_link.return_value = ValidationResult(
+            True, data=mock_response_data
+        )
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await create_test_plan_web_link(
+                test_plan_key="PROJ-P1",
+                url="https://example.com",
+                description="Test link",
+            )
+
+            mock_client.create_test_plan_web_link.assert_called_once()
+            assert "789" in response
+
+    @pytest.mark.asyncio
+    async def test_create_test_plan_web_link_missing_description(self, mock_env_vars):
+        """Test create_test_plan_web_link with missing description."""
+        from src.mcp_zephyr_scale_cloud.server import create_test_plan_web_link
+
+        mock_client = AsyncMock()
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await create_test_plan_web_link(
+                test_plan_key="PROJ-P1", url="https://example.com", description=""
+            )
+
+            assert "errorCode" in response
+            assert "400" in response
+            assert "required" in response.lower()
+
+    @pytest.mark.asyncio
+    async def test_create_test_plan_test_cycle_link_success(self, mock_env_vars):
+        """Test create_test_plan_test_cycle_link MCP tool."""
+        from src.mcp_zephyr_scale_cloud.server import (
+            create_test_plan_test_cycle_link,
+        )
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        from src.mcp_zephyr_scale_cloud.schemas.base import CreatedResource
+
+        mock_response_data = CreatedResource(id=999, key="link-999")
+        mock_client.create_test_plan_test_cycle_link.return_value = ValidationResult(
+            True, data=mock_response_data
+        )
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await create_test_plan_test_cycle_link(
+                test_plan_key="PROJ-P1", test_cycle_id_or_key="456"
+            )
+
+            mock_client.create_test_plan_test_cycle_link.assert_called_once()
+            assert "999" in response

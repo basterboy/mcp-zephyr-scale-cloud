@@ -1080,3 +1080,224 @@ class TestZephyrClientTestCycles:
 
             assert result.is_valid
             assert result.data.id == 0
+
+
+class TestZephyrClientTestPlans:
+    """Test Zephyr client test plan methods."""
+
+    @pytest.mark.asyncio
+    async def test_get_test_plans_success(self, mock_zephyr_client):
+        """Test successful retrieval of test plans."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {
+                "maxResults": 10,
+                "startAt": 0,
+                "total": 2,
+                "isLast": True,
+                "values": [
+                    {
+                        "id": 1,
+                        "key": "PROJ-P1",
+                        "name": "Integration Test Plan",
+                        "project": {"id": 10000, "key": "PROJ"},
+                        "status": {"id": 1, "name": "Draft"},
+                    },
+                    {
+                        "id": 2,
+                        "key": "PROJ-P2",
+                        "name": "Regression Test Plan",
+                        "project": {"id": 10000, "key": "PROJ"},
+                        "status": {"id": 1, "name": "In Progress"},
+                    },
+                ],
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_client.get.return_value = mock_response
+
+            result = await mock_zephyr_client.get_test_plans(
+                project_key="PROJ", max_results=10, start_at=0
+            )
+
+            assert result.is_valid
+            assert len(result.data.values) == 2
+            assert result.data.values[0].key == "PROJ-P1"
+            assert result.data.values[1].key == "PROJ-P2"
+
+    @pytest.mark.asyncio
+    async def test_get_test_plan_success(self, mock_zephyr_client):
+        """Test successful retrieval of a specific test plan."""
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {
+                "id": 1,
+                "key": "PROJ-P1",
+                "name": "Integration Test Plan",
+                "project": {"id": 10000, "key": "PROJ"},
+                "status": {"id": 1, "name": "Draft"},
+                "objective": "Test all integration points",
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_client.get.return_value = mock_response
+
+            result = await mock_zephyr_client.get_test_plan(test_plan_key="PROJ-P1")
+
+            assert result.is_valid
+            assert result.data.key == "PROJ-P1"
+            assert result.data.name == "Integration Test Plan"
+
+    @pytest.mark.asyncio
+    async def test_create_test_plan_success(self, mock_zephyr_client):
+        """Test successful creation of a test plan."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import TestPlanInput
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 201
+            mock_response.json.return_value = {"id": 123, "key": "PROJ-P123"}
+            mock_response.raise_for_status.return_value = None
+            mock_client.post.return_value = mock_response
+
+            test_plan_input = TestPlanInput(projectKey="PROJ", name="New Test Plan")
+            result = await mock_zephyr_client.create_test_plan(
+                test_plan_input=test_plan_input
+            )
+
+            assert result.is_valid
+            assert result.data.id == 123
+
+    @pytest.mark.asyncio
+    async def test_create_test_plan_issue_link_success(self, mock_zephyr_client):
+        """Test successful creation of test plan issue link."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import IssueLinkInput
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 201
+            mock_response.json.return_value = {"id": 456}
+            mock_response.raise_for_status.return_value = None
+            mock_client.post.return_value = mock_response
+
+            issue_link_input = IssueLinkInput(issueId=12345)
+            result = await mock_zephyr_client.create_test_plan_issue_link(
+                test_plan_key="PROJ-P1", issue_link_input=issue_link_input
+            )
+
+            assert result.is_valid
+            assert result.data.id == 456
+
+    @pytest.mark.asyncio
+    async def test_create_test_plan_issue_link_no_content(self, mock_zephyr_client):
+        """Test test plan issue link creation with 204 No Content response."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_case import IssueLinkInput
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 204
+            mock_response.content = b""
+            mock_response.raise_for_status.return_value = None
+            mock_client.post.return_value = mock_response
+
+            issue_link_input = IssueLinkInput(issueId=12345)
+            result = await mock_zephyr_client.create_test_plan_issue_link(
+                test_plan_key="PROJ-P1", issue_link_input=issue_link_input
+            )
+
+            assert result.is_valid
+            assert result.data.id == 0
+
+    @pytest.mark.asyncio
+    async def test_create_test_plan_web_link_success(self, mock_zephyr_client):
+        """Test successful creation of test plan web link."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import (
+            WebLinkInputWithMandatoryDescription,
+        )
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 201
+            mock_response.json.return_value = {"id": 789}
+            mock_response.raise_for_status.return_value = None
+            mock_client.post.return_value = mock_response
+
+            web_link_input = WebLinkInputWithMandatoryDescription(
+                url="https://example.com", description="Test link"
+            )
+            result = await mock_zephyr_client.create_test_plan_web_link(
+                test_plan_key="PROJ-P1", web_link_input=web_link_input
+            )
+
+            assert result.is_valid
+            assert result.data.id == 789
+
+    @pytest.mark.asyncio
+    async def test_create_test_plan_test_cycle_link_success(self, mock_zephyr_client):
+        """Test successful creation of test plan to test cycle link."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import (
+            TestPlanTestCycleLinkInput,
+        )
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 201
+            mock_response.json.return_value = {"id": 999}
+            mock_response.raise_for_status.return_value = None
+            mock_client.post.return_value = mock_response
+
+            link_input = TestPlanTestCycleLinkInput(testCycleIdOrKey="456")
+            result = await mock_zephyr_client.create_test_plan_test_cycle_link(
+                test_plan_key="PROJ-P1", test_cycle_link_input=link_input
+            )
+
+            assert result.is_valid
+            assert result.data.id == 999
+
+    @pytest.mark.asyncio
+    async def test_create_test_plan_test_cycle_link_no_content(
+        self, mock_zephyr_client
+    ):
+        """Test test plan test cycle link creation with 204 No Content response."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import (
+            TestPlanTestCycleLinkInput,
+        )
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            mock_response = MagicMock()
+            mock_response.status_code = 204
+            mock_response.content = b""
+            mock_response.raise_for_status.return_value = None
+            mock_client.post.return_value = mock_response
+
+            link_input = TestPlanTestCycleLinkInput(testCycleIdOrKey="456")
+            result = await mock_zephyr_client.create_test_plan_test_cycle_link(
+                test_plan_key="PROJ-P1", test_cycle_link_input=link_input
+            )
+
+            assert result.is_valid
+            assert result.data.id == 0

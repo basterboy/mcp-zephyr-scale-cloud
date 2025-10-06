@@ -58,6 +58,15 @@ from .test_cycle import (
     TestCycleLinkList,
     TestCycleList,
 )
+from .test_plan import (
+    TestPlan,
+    TestPlanInput,
+    TestPlanLinks,
+    TestPlanList,
+    TestPlanTestCycleLink,
+    TestPlanTestCycleLinkInput,
+    WebLinkInputWithMandatoryDescription,
+)
 from .test_script import (
     TestScript,
     TestScriptInput,
@@ -122,6 +131,13 @@ __all__ = [
     "TestCycleInput",
     "TestCycleLinkList",
     "TestCycleList",
+    "TestPlan",
+    "TestPlanInput",
+    "TestPlanLinks",
+    "TestPlanList",
+    "TestPlanTestCycleLink",
+    "TestPlanTestCycleLinkInput",
+    "WebLinkInputWithMandatoryDescription",
     "TestScript",
     "TestScriptInput",
     "TestScriptType",

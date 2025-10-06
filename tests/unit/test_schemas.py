@@ -558,3 +558,217 @@ class TestTestCycleSchemas:
         )
         assert len(link_list.issues) == 1
         assert len(link_list.web_links) == 1
+
+
+class TestTestPlanSchemas:
+    """Test cases for test plan-related schemas."""
+
+    def test_test_plan_input_valid(self):
+        """Test creating a valid TestPlanInput."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import TestPlanInput
+
+        test_plan_input = TestPlanInput(
+            projectKey="TEST",
+            name="Integration Test Plan",
+            objective="Test all integration points",
+            folderId=123,
+            statusName="Draft",
+            ownerId="user123",
+            labels=["integration", "smoke"],
+            customFields={"Environment": "Staging"},
+        )
+
+        assert test_plan_input.project_key == "TEST"
+        assert test_plan_input.name == "Integration Test Plan"
+        assert test_plan_input.objective == "Test all integration points"
+        assert test_plan_input.folder_id == 123
+        assert test_plan_input.status_name == "Draft"
+        assert test_plan_input.owner_id == "user123"
+        assert test_plan_input.labels == ["integration", "smoke"]
+        assert test_plan_input.custom_fields.Environment == "Staging"
+
+    def test_test_plan_input_minimal(self):
+        """Test creating TestPlanInput with minimal required fields."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import TestPlanInput
+
+        test_plan_input = TestPlanInput(
+            projectKey="PROJ",
+            name="Minimal Plan",
+        )
+
+        assert test_plan_input.project_key == "PROJ"
+        assert test_plan_input.name == "Minimal Plan"
+        assert test_plan_input.objective is None
+        assert test_plan_input.folder_id is None
+
+    def test_test_plan_input_missing_required_fields(self):
+        """Test that TestPlanInput requires name and projectKey."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import TestPlanInput
+
+        with pytest.raises(ValidationError) as exc_info:
+            TestPlanInput(projectKey="TEST")
+
+        errors = exc_info.value.errors()
+        assert any(error["loc"] == ("name",) for error in errors)
+
+    def test_test_plan_valid(self):
+        """Test creating a valid TestPlan."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import TestPlan
+
+        test_plan = TestPlan(
+            id=123,
+            key="TEST-P10",
+            name="Integration Test Plan",
+            project={"id": 1000, "key": "TEST"},
+            status={"id": 1, "name": "In Progress"},
+            objective="Test all features",
+            folder={"id": 5, "name": "Test Plans"},
+            owner={"accountId": "user123"},
+            labels=["integration"],
+            customFields={"Release": "v1.0"},
+        )
+
+        assert test_plan.id == 123
+        assert test_plan.key == "TEST-P10"
+        assert test_plan.name == "Integration Test Plan"
+        assert test_plan.project.id == 1000
+        assert test_plan.status.id == 1
+        assert test_plan.objective == "Test all features"
+
+    def test_test_plan_key_validation(self):
+        """Test test plan key format validation."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import TestPlan
+
+        # Valid key
+        test_plan = TestPlan(
+            id=1,
+            key="PROJ-P123",
+            name="Test",
+            project={"id": 100, "key": "PROJ"},
+            status={"id": 1, "name": "Draft"},
+        )
+        assert test_plan.key == "PROJ-P123"
+
+        # Invalid key format should raise error
+        with pytest.raises(ValidationError) as exc_info:
+            TestPlan(
+                id=1,
+                key="INVALID",
+                name="Test",
+                project={"id": 100, "key": "PROJ"},
+                status={"id": 1, "name": "Draft"},
+            )
+        errors = exc_info.value.errors()
+        assert any("key" in str(error) for error in errors)
+
+    def test_test_plan_list(self):
+        """Test creating TestPlanList."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import (
+            TestPlan,
+            TestPlanList,
+        )
+
+        test_plan = TestPlan(
+            id=1,
+            key="TEST-P1",
+            name="Plan 1",
+            project={"id": 100, "key": "TEST"},
+            status={"id": 1, "name": "Draft"},
+        )
+
+        test_plan_list = TestPlanList(
+            maxResults=10,
+            startAt=0,
+            total=1,
+            isLast=True,
+            values=[test_plan],
+        )
+
+        assert test_plan_list.maxResults == 10
+        assert test_plan_list.startAt == 0
+        assert test_plan_list.total == 1
+        assert test_plan_list.isLast is True
+        assert len(test_plan_list.values) == 1
+        assert test_plan_list.values[0].key == "TEST-P1"
+
+    def test_test_plan_test_cycle_link_input(self):
+        """Test creating TestPlanTestCycleLinkInput."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import (
+            TestPlanTestCycleLinkInput,
+        )
+
+        # Test with numeric ID as string
+        link_input = TestPlanTestCycleLinkInput(testCycleIdOrKey="456")
+        assert link_input.test_cycle_id_or_key == "456"
+
+        # Test with test cycle key
+        link_input2 = TestPlanTestCycleLinkInput(testCycleIdOrKey="PROJ-R123")
+        assert link_input2.test_cycle_id_or_key == "PROJ-R123"
+
+    def test_test_plan_test_cycle_link_input_invalid(self):
+        """Test TestPlanTestCycleLinkInput validation."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import (
+            TestPlanTestCycleLinkInput,
+        )
+
+        # Invalid format should fail
+        with pytest.raises(ValidationError):
+            TestPlanTestCycleLinkInput(testCycleIdOrKey="INVALID")
+
+        with pytest.raises(ValidationError):
+            TestPlanTestCycleLinkInput(testCycleIdOrKey="PROJ-T123")  # Wrong type
+
+    def test_web_link_input_with_mandatory_description(self):
+        """Test WebLinkInputWithMandatoryDescription."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import (
+            WebLinkInputWithMandatoryDescription,
+        )
+
+        link_input = WebLinkInputWithMandatoryDescription(
+            url="https://example.com",
+            description="Example link",
+        )
+
+        assert link_input.url == "https://example.com"
+        assert link_input.description == "Example link"
+
+    def test_web_link_input_missing_description(self):
+        """Test that WebLinkInputWithMandatoryDescription requires description."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import (
+            WebLinkInputWithMandatoryDescription,
+        )
+
+        # Missing description
+        with pytest.raises(ValidationError) as exc_info:
+            WebLinkInputWithMandatoryDescription(url="https://example.com")
+
+        errors = exc_info.value.errors()
+        assert any(error["loc"] == ("description",) for error in errors)
+
+        # Empty description
+        with pytest.raises(ValidationError):
+            WebLinkInputWithMandatoryDescription(
+                url="https://example.com", description=""
+            )
+
+    def test_test_plan_links(self):
+        """Test TestPlanLinks with all link types."""
+        from src.mcp_zephyr_scale_cloud.schemas.test_plan import TestPlanLinks
+
+        links = TestPlanLinks(
+            webLinks=[{"id": 1, "url": "https://example.com", "type": "RELATED"}],
+            issues=[
+                {
+                    "id": 2,
+                    "issueId": 12345,
+                    "target": "https://jira.com/issue/12345",
+                    "type": "COVERAGE",
+                }
+            ],
+            testCycles=[{"id": 3, "testCycleId": 789, "self": "http://link"}],
+        )
+
+        assert len(links.web_links) == 1
+        assert len(links.issues) == 1
+        assert len(links.test_cycles) == 1
+        assert links.test_cycles[0].test_cycle_id == 789

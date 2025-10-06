@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "mcp-zephyr-scale-cloud"
-version = "0.1.7"
+version = "0.1.8"
 description = "Model Context Protocol server for Zephyr Scale Cloud"
 authors = [
     {name = "Yevhen Burlaka", email = "yevhen.burlaka@example.com"}
@@ -50,7 +50,7 @@ mcp-zephyr-scale-cloud = "mcp_zephyr_scale_cloud.server:main"
 
 [tool.poetry]
 name = "mcp-zephyr-scale-cloud"
-version = "0.1.7"
+version = "0.1.8"
 description = "Model Context Protocol server for Zephyr Scale Cloud"
 authors = ["Yevhen Burlaka <yevhen.burlaka@example.com>"]
 readme = "README.md"

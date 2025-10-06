@@ -774,3 +774,86 @@ def validate_jira_version_id(version_id: str | int) -> ValidationResult:
             False,
             [f"Invalid Jira version ID: '{version_id}'. Must be a positive integer"],
         )
+
+
+def validate_test_plan_key(test_plan_key: str) -> ValidationResult:
+    """Validate test plan key format.
+
+    Test plan keys follow the pattern: [PROJECT_KEY]-P[NUMBER]
+    Examples: PROJ-P1, TEST-P123
+
+    Args:
+        test_plan_key: Test plan key to validate
+
+    Returns:
+        ValidationResult with validation status and any errors
+    """
+    if not test_plan_key:
+        return ValidationResult(False, ["Test plan key is required"])
+
+    # Test plan keys follow pattern: [A-Z]+-P[0-9]+
+    pattern = r"^[A-Z][A-Z0-9_]+-P[0-9]+$"
+    if not re.match(pattern, test_plan_key):
+        return ValidationResult(
+            False,
+            [
+                f"Invalid test plan key format: '{test_plan_key}'. "
+                "Expected format: [PROJECT]-P[NUMBER] (e.g., 'PROJ-P123')"
+            ],
+        )
+
+    return ValidationResult(True, data=test_plan_key)
+
+
+def validate_test_plan_input(test_plan_data: dict) -> ValidationResult:
+    """Validate test plan input data using Pydantic schema.
+
+    Args:
+        test_plan_data: Raw test plan data to validate
+
+    Returns:
+        ValidationResult with validation status and parsed TestPlanInput
+    """
+    try:
+        from ..schemas.test_plan import TestPlanInput
+
+        validated_data = TestPlanInput(**test_plan_data)
+        return ValidationResult(True, data=validated_data)
+
+    except ValidationError as e:
+        errors = []
+        for error in e.errors():
+            field = " -> ".join(str(loc) for loc in error["loc"])
+            message = error["msg"]
+            errors.append(f"Field '{field}': {message}")
+
+        return ValidationResult(False, errors)
+    except Exception as e:
+        return ValidationResult(False, [f"Unexpected validation error: {str(e)}"])
+
+
+def validate_test_plan_test_cycle_link_input(link_data: dict) -> ValidationResult:
+    """Validate test plan test cycle link input data using Pydantic schema.
+
+    Args:
+        link_data: Raw link data to validate
+
+    Returns:
+        ValidationResult with validation status and parsed TestPlanTestCycleLinkInput
+    """
+    try:
+        from ..schemas.test_plan import TestPlanTestCycleLinkInput
+
+        validated_data = TestPlanTestCycleLinkInput(**link_data)
+        return ValidationResult(True, data=validated_data)
+
+    except ValidationError as e:
+        errors = []
+        for error in e.errors():
+            field = " -> ".join(str(loc) for loc in error["loc"])
+            message = error["msg"]
+            errors.append(f"Field '{field}': {message}")
+
+        return ValidationResult(False, errors)
+    except Exception as e:
+        return ValidationResult(False, [f"Unexpected validation error: {str(e)}"])

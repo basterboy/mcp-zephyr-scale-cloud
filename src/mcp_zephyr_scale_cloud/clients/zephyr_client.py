@@ -38,6 +38,11 @@ from ..schemas.test_cycle import (
     TestCycleLinkList,
     TestCycleList,
 )
+from ..schemas.test_plan import (
+    TestPlanInput,
+    TestPlanTestCycleLinkInput,
+    WebLinkInputWithMandatoryDescription,
+)
 from ..schemas.test_script import TestScript, TestScriptInput
 from ..schemas.test_step import TestStepsInput, TestStepsList
 from ..schemas.version import TestCaseVersionList
@@ -1323,4 +1328,238 @@ class ZephyrClient:
         except httpx.HTTPError as e:
             return self._handle_http_error(
                 e, f"Failed to create web link for test cycle {test_cycle_key}"
+            )
+
+    # ========================
+    # Test Plan Operations
+    # ========================
+
+    async def get_test_plans(
+        self,
+        project_key: str | None = None,
+        max_results: int = 10,
+        start_at: int = 0,
+    ) -> ValidationResult:
+        """Get test plans from Zephyr Scale Cloud.
+
+        Args:
+            project_key: Optional Jira project key to filter test plans
+            max_results: Maximum number of results to return (default: 10, max: 1000)
+            start_at: Zero-indexed starting position (default: 0)
+
+        Returns:
+            ValidationResult containing TestPlanList or errors
+        """
+        # Validate pagination parameters
+        pagination_validation = validate_pagination_params(max_results, start_at)
+        if not pagination_validation:
+            return pagination_validation
+
+        params = pagination_validation.data
+        if project_key:
+            params["projectKey"] = project_key
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"{self.config.base_url}/testplans",
+                    headers=self.headers,
+                    params=params,
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+
+                # Validate response against schema
+                from ..schemas.test_plan import TestPlanList
+
+                return validate_api_response(response.json(), TestPlanList)
+
+            except httpx.HTTPError as e:
+                return self._handle_http_error(e, "Failed to retrieve test plans")
+
+    async def get_test_plan(self, test_plan_key: str) -> ValidationResult:
+        """Get a specific test plan by key or ID.
+
+        Args:
+            test_plan_key: The key or ID of the test plan
+
+        Returns:
+            ValidationResult containing TestPlan or errors
+        """
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"{self.config.base_url}/testplans/{test_plan_key}",
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+
+                # Validate response against schema
+                from ..schemas.test_plan import TestPlan
+
+                return validate_api_response(response.json(), TestPlan)
+
+            except httpx.HTTPError as e:
+                return self._handle_http_error(
+                    e, f"Failed to retrieve test plan {test_plan_key}"
+                )
+
+    async def create_test_plan(
+        self, test_plan_input: "TestPlanInput"
+    ) -> "ValidationResult[CreatedResource]":
+        """Create a new test plan.
+
+        Args:
+            test_plan_input: Test plan input data
+
+        Returns:
+            ValidationResult with CreatedResource data or error messages
+        """
+        try:
+            # Convert to dict for API request
+            request_data = test_plan_input.model_dump(by_alias=True, exclude_none=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/testplans",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CreatedResource)
+
+        except httpx.HTTPError as e:
+            return self._handle_http_error(e, "Failed to create test plan")
+
+    async def create_test_plan_issue_link(
+        self, test_plan_key: str, issue_link_input: IssueLinkInput
+    ) -> "ValidationResult[CreatedResource]":
+        """Create a link between a test plan and a Jira issue.
+
+        Args:
+            test_plan_key: The key or ID of the test plan
+            issue_link_input: Issue link input data
+
+        Returns:
+            ValidationResult with CreatedResource data or error messages
+        """
+        try:
+            # Convert to dict for API request
+            request_data = issue_link_input.model_dump(by_alias=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/testplans/{test_plan_key}/links/issues",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+
+                # Handle both 201 with body and 204 No Content
+                if response.status_code == 204 or not response.content:
+                    # Return success with a placeholder ID
+                    return ValidationResult(True, data=CreatedResource(id=0))
+
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CreatedResource)
+
+        except httpx.HTTPError as e:
+            return self._handle_http_error(
+                e, f"Failed to create issue link for test plan {test_plan_key}"
+            )
+
+    async def create_test_plan_web_link(
+        self, test_plan_key: str, web_link_input: "WebLinkInputWithMandatoryDescription"
+    ) -> "ValidationResult[CreatedResource]":
+        """Create a link between a test plan and a web URL.
+
+        Note: Test plan web links require a mandatory description.
+
+        Args:
+            test_plan_key: The key or ID of the test plan
+            web_link_input: Web link input data with mandatory description
+
+        Returns:
+            ValidationResult with CreatedResource data or error messages
+        """
+        try:
+            # Convert to dict for API request
+            request_data = web_link_input.model_dump(by_alias=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/testplans/{test_plan_key}/links/weblinks",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+
+                # Handle both 201 with body and 204 No Content
+                if response.status_code == 204 or not response.content:
+                    # Return success with a placeholder ID
+                    return ValidationResult(True, data=CreatedResource(id=0))
+
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CreatedResource)
+
+        except httpx.HTTPError as e:
+            return self._handle_http_error(
+                e, f"Failed to create web link for test plan {test_plan_key}"
+            )
+
+    async def create_test_plan_test_cycle_link(
+        self,
+        test_plan_key: str,
+        test_cycle_link_input: "TestPlanTestCycleLinkInput",
+    ) -> "ValidationResult[CreatedResource]":
+        """Create a link between a test plan and a test cycle.
+
+        Args:
+            test_plan_key: The key or ID of the test plan
+            test_cycle_link_input: Test cycle link input data
+
+        Returns:
+            ValidationResult with CreatedResource data or error messages
+        """
+        try:
+            # Convert to dict for API request
+            request_data = test_cycle_link_input.model_dump(by_alias=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/testplans/{test_plan_key}/links/testcycles",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+
+                # Handle both 201 with body and 204 No Content
+                if response.status_code == 204 or not response.content:
+                    # Return success with a placeholder ID
+                    return ValidationResult(True, data=CreatedResource(id=0))
+
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CreatedResource)
+
+        except httpx.HTTPError as e:
+            return self._handle_http_error(
+                e, f"Failed to create test cycle link for test plan {test_plan_key}"
             )

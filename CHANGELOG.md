@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2025-10-08
+
+### ✨ New Features: Test Plan Management
+
+- **Test Plan Operations** - Create and retrieve test plans with comprehensive metadata
+  - `get_test_plans` - Retrieve test plans with pagination support
+  - `get_test_plan` - Get detailed test plan information by key
+  - `create_test_plan` - Create new test plans with metadata and organizational support
+
+- **Test Plan Link Management** - Connect test plans to other entities
+  - `create_test_plan_issue_link` - Link test plans to Jira issues
+  - `create_test_plan_web_link` - Add web links to test plans (description required)
+  - `create_test_plan_test_cycle_link` - Link test plans to test cycles (unique bidirectional feature)
+
+### 📦 Schema Additions
+
+- **TestPlanInput** - Schema for creating test plans
+- **TestPlan** - Main test plan entity schema
+- **TestPlanList** - Paginated response for test plan lists
+- **TestPlanTestCycleLinkInput** - Schema for linking test plans to test cycles
+- **TestPlanLinks** - Comprehensive link management including test cycle links
+- **WebLinkInputWithMandatoryDescription** - Web link schema with required description (test plan specific)
+
+### 🔧 API Enhancements
+
+- **6 new HTTP client methods** - Complete test plan API integration
+- **3 new validation functions** - Test plan data validation
+  - `validate_test_plan_key` - Validate test plan key format (PROJ-P123)
+  - `validate_test_plan_input` - Validate test plan creation data
+  - `validate_test_plan_test_cycle_link_input` - Validate test plan-to-cycle link data
+
+### 📊 Total MCP Tools
+
+- **38 tools** (increased from 32) - Comprehensive test management capabilities
+- **6 test plan tools** - Create, retrieve, and link test plans
+- **32 existing tools** - Test cases, test cycles, priorities, statuses, folders, steps, scripts
+
+### 🎯 Key Features
+
+- **Test plan organization** - Organize test artifacts with test plans
+- **Unique test cycle linking** - Bidirectional link between test plans and test cycles
+- **Mandatory web link descriptions** - Enhanced documentation for test plan web links
+- **Offset-based pagination** - Efficient bulk data retrieval (up to 1000 records)
+- **Custom fields support** - Flexible metadata with custom fields
+- **Label support** - Tag test plans for better organization
+
+### ⚠️ API Limitations
+
+- **No update operation** - Zephyr Scale Cloud API does not provide PUT endpoint for test plans
+  - Only GET and POST operations are available for test plans
+
+### 🧪 Testing
+
+- **11 new schema tests** - Comprehensive test plan schema validation
+- **All tests passing** - Maintained test coverage for new functionality
+- **Integration tests ready** - Test plan tools ready for end-to-end testing
+
 ## [0.1.7] - 2025-10-07
 
 ### ✨ New Features: Test Cycle Management

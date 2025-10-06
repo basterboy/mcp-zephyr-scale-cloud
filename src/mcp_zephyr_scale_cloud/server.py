@@ -33,6 +33,9 @@ from .utils.validation import (
     validate_test_case_update_input,
     validate_test_cycle_input,
     validate_test_cycle_key,
+    validate_test_plan_input,
+    validate_test_plan_key,
+    validate_test_plan_test_cycle_link_input,
     validate_test_script_input,
     validate_test_script_type,
     validate_test_steps_input,
@@ -148,7 +151,7 @@ async def zephyr_server_lifespan(server):
         "config_valid": config is not None,
         "api_accessible": zephyr_client is not None and not startup_errors,
         "startup_errors": startup_errors,
-        "tools_count": 23,
+        "tools_count": 38,
         "base_url": config.base_url if config else None,
     }
 
@@ -2876,6 +2879,538 @@ async def create_test_cycle_web_link(
                     "; ".join(result.errors)
                     if result.errors
                     else f"Failed to create web link for test cycle {test_cycle_key}"
+                ),
+            },
+            indent=2,
+        )
+
+
+# ============================================================================
+# Test Plan Management Tools
+# ============================================================================
+
+
+@mcp.tool()
+async def get_test_plans(
+    project_key: str | None = None,
+    max_results: int = 10,
+    start_at: int = 0,
+) -> str:
+    """Get test plans using traditional offset-based pagination.
+
+    This tool uses the stable /testplans endpoint that provides reliable
+    offset-based pagination for retrieving test plans.
+
+    📖 OFFSET-BASED PAGINATION GUIDE:
+    Offset pagination works like pages in a book - you specify which "page" to start
+    reading from and how many items per "page".
+
+    🔢 HOW TO PAGINATE THROUGH ALL RESULTS:
+    1. FIRST REQUEST: start_at=0, max_results=1000 (gets items 0-999)
+    2. NEXT REQUEST: start_at=1000, max_results=1000 (gets items 1000-1999)
+    3. CONTINUE: start_at=2000, max_results=1000 (gets items 2000-2999)
+    4. STOP when response has fewer items than max_results
+
+    💡 PAGINATION FORMULA:
+    - Next start_at = current_start_at + max_results
+    - Example: If start_at=0 and max_results=1000, next start_at=1000
+    - Always ensure start_at is a multiple of max_results (as per API docs)
+
+    ⚡ PERFORMANCE TIP:
+    Use max_results=1000 (maximum allowed) for fastest data retrieval.
+    The API default is only 10, which is very slow for large datasets.
+
+    🛑 IMPORTANT:
+    - start_at should be a multiple of max_results (API requirement)
+    - Check response length vs max_results to detect the last page
+    - Server may return fewer results than requested due to constraints
+
+    Args:
+        project_key: Jira project key filter (e.g., 'PROJ'). If you have access to
+                    more than 1000 projects, this parameter may be mandatory.
+                    Uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided
+        max_results: Maximum number of results to return (default: 10, max: 1000).
+                    RECOMMENDATION: Use 1000 for fastest bulk data retrieval.
+        start_at: Zero-indexed starting position (default: 0).
+                 MUST be a multiple of max_results.
+                 For next page: start_at + max_results
+
+    Returns:
+        JSON response with test plans and pagination information.
+        Check if len(values) < max_results to detect the last page.
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Get project key with default fallback
+    project_key = get_project_key_with_default(project_key)
+
+    # Validate project key if provided
+    if project_key:
+        project_key_result = validate_project_key(project_key)
+        if not project_key_result.is_valid:
+            return json.dumps(
+                {"errorCode": 400, "message": "; ".join(project_key_result.errors)},
+                indent=2,
+            )
+
+    # Call the client
+    result = await zephyr_client.get_test_plans(
+        project_key=project_key,
+        max_results=max_results,
+        start_at=start_at,
+    )
+
+    if result.is_valid:
+        # Return the paginated response
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True),
+            indent=2,
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": "; ".join(result.errors),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+async def get_test_plan(test_plan_key: str) -> str:
+    """Get detailed information for a specific test plan in Zephyr Scale Cloud.
+
+    Args:
+        test_plan_key: The key of the test plan (format: [PROJECT]-P[NUMBER])
+
+    Returns:
+        Formatted test plan information or error message
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate test plan key
+    test_plan_validation = validate_test_plan_key(test_plan_key)
+    if not test_plan_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_plan_validation.errors)},
+            indent=2,
+        )
+
+    # Get test plan from API
+    result = await zephyr_client.get_test_plan(test_plan_key=test_plan_key)
+
+    if result.is_valid:
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True),
+            indent=2,
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": (
+                    f"Test plan '{test_plan_key}' does not exist or you do not "
+                    "have access to it"
+                ),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+async def create_test_plan(
+    name: str,
+    project_key: str | None = None,
+    objective: str | None = None,
+    folder_id: str | None = None,
+    status_name: str | None = None,
+    owner_id: str | None = None,
+    labels: str | None = None,
+    custom_fields: str | dict | None = None,
+) -> str:
+    """Create a new test plan in Zephyr Scale Cloud.
+
+    Args:
+        name: Test plan name
+        project_key: Jira project key (optional, uses
+                     ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided)
+        objective: Test plan objective (optional)
+        folder_id: Folder ID as string to place the test plan (optional)
+        status_name: Status name, defaults to default status if not specified (optional)
+        owner_id: Jira user account ID for owner (optional)
+        labels: Labels as JSON array string (e.g., '["automation", "smoke"]') or
+                comma-separated (e.g., "automation, smoke") (optional)
+        custom_fields: Custom fields as JSON string or dict (e.g.,
+                      '{"Environment": "Production", "Release": "v1.0.0"}' or
+                      {"Environment": "Production", "Release": "v1.0.0"}) (optional)
+
+    Returns:
+        Success message with created test plan details or error message
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Get project key with default fallback
+    project_key = get_project_key_with_default(project_key)
+
+    # Validate project key (required for CREATE operations)
+    project_validation = validate_project_key(project_key)
+    if not project_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(project_validation.errors)},
+            indent=2,
+        )
+
+    # Validate name
+    if not name or not name.strip():
+        return json.dumps(
+            {"errorCode": 400, "message": "Test plan name is required"},
+            indent=2,
+        )
+
+    # Parse optional folder_id
+    parsed_folder_id = None
+    if folder_id is not None:
+        try:
+            parsed_folder_id = int(folder_id)
+            folder_validation = validate_folder_id(parsed_folder_id)
+            if not folder_validation.is_valid:
+                return json.dumps(
+                    {"errorCode": 400, "message": "; ".join(folder_validation.errors)},
+                    indent=2,
+                )
+        except (ValueError, TypeError):
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Folder ID must be a valid integer, got: {folder_id}",
+                },
+                indent=2,
+            )
+
+    # Parse and validate labels
+    parsed_labels = None
+    if labels is not None:
+        try:
+            # Try JSON array format first
+            parsed_labels = json.loads(labels)
+            if not isinstance(parsed_labels, list):
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": "Labels must be a JSON array (e.g., "
+                        '\'["automation", "smoke"]\') or comma-separated string',
+                    },
+                    indent=2,
+                )
+            # Validate all items are strings
+            for item in parsed_labels:
+                if not isinstance(item, str):
+                    return json.dumps(
+                        {"errorCode": 400, "message": "All labels must be strings"},
+                        indent=2,
+                    )
+        except json.JSONDecodeError:
+            # Fall back to comma-separated format
+            try:
+                parsed_labels = [
+                    label.strip() for label in labels.split(",") if label.strip()
+                ]
+                if not parsed_labels:
+                    return json.dumps(
+                        {
+                            "errorCode": 400,
+                            "message": "Labels cannot be empty. Use JSON array "
+                            "format or comma-separated values",
+                        },
+                        indent=2,
+                    )
+            except Exception as e:
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": f"Failed to parse labels: {str(e)}. Use JSON array "
+                        'format (e.g., \'["label1", "label2"]\') or comma-separated '
+                        "(e.g., 'label1, label2')",
+                    },
+                    indent=2,
+                )
+
+    # Parse custom_fields if provided
+    parsed_custom_fields = None
+    if custom_fields is not None:
+        if isinstance(custom_fields, str):
+            try:
+                parsed_custom_fields = json.loads(custom_fields)
+            except json.JSONDecodeError:
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": "Invalid JSON format for custom_fields parameter",
+                    },
+                    indent=2,
+                )
+        elif isinstance(custom_fields, dict):
+            parsed_custom_fields = custom_fields
+        else:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": "custom_fields must be a JSON string or dict",
+                },
+                indent=2,
+            )
+
+    # Build test plan data
+    test_plan_data = {
+        "projectKey": project_key,
+        "name": name,
+    }
+
+    # Add optional fields
+    if objective is not None:
+        test_plan_data["objective"] = objective
+
+    if parsed_folder_id is not None:
+        test_plan_data["folderId"] = parsed_folder_id
+
+    if status_name is not None:
+        test_plan_data["statusName"] = status_name
+
+    if owner_id is not None:
+        test_plan_data["ownerId"] = owner_id
+
+    if parsed_labels is not None:
+        test_plan_data["labels"] = parsed_labels
+
+    if parsed_custom_fields is not None:
+        test_plan_data["customFields"] = parsed_custom_fields
+
+    # Validate complete test plan input
+    validation_result = validate_test_plan_input(test_plan_data)
+    if not validation_result.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(validation_result.errors)},
+            indent=2,
+        )
+
+    # Create test plan via API
+    result = await zephyr_client.create_test_plan(
+        test_plan_input=validation_result.data
+    )
+
+    if result.is_valid:
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to create test plan in project {project_key}"
+                ),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+async def create_test_plan_issue_link(test_plan_key: str, issue_id: int) -> str:
+    """Create a link between a test plan and a Jira issue in Zephyr Scale Cloud.
+
+    Args:
+        test_plan_key: The key of the test plan (format: [PROJECT]-P[NUMBER])
+        issue_id: The numeric Jira issue ID to link to (NOT the issue key)
+                  Use the Atlassian/Jira MCP tool to get the issue ID from a key
+
+    Returns:
+        Success message with created link ID or error message
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate test plan key
+    test_plan_validation = validate_test_plan_key(test_plan_key)
+    if not test_plan_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_plan_validation.errors)},
+            indent=2,
+        )
+
+    # Validate issue_id
+    issue_validation = validate_issue_id(issue_id)
+    if not issue_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(issue_validation.errors)}, indent=2
+        )
+
+    # Prepare link input
+    link_data = {"issueId": issue_validation.data}
+    link_validation = validate_issue_link_input(link_data)
+    if not link_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(link_validation.errors)}, indent=2
+        )
+
+    # Create link via API
+    result = await zephyr_client.create_test_plan_issue_link(
+        test_plan_key=test_plan_key, issue_link_input=link_validation.data
+    )
+
+    if result.is_valid:
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to create issue link for test plan {test_plan_key}"
+                ),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+async def create_test_plan_web_link(
+    test_plan_key: str, url: str, description: str
+) -> str:
+    """Create a link between a test plan and a web URL in Zephyr Scale Cloud.
+
+    Note: Description is REQUIRED for test plan web links.
+
+    Args:
+        test_plan_key: The key of the test plan (format: [PROJECT]-P[NUMBER])
+        url: The web URL to link to
+        description: Description for the link (required for test plans)
+
+    Returns:
+        Success message with created link ID or error message
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate test plan key
+    test_plan_validation = validate_test_plan_key(test_plan_key)
+    if not test_plan_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_plan_validation.errors)},
+            indent=2,
+        )
+
+    # Validate description is provided (required for test plans)
+    if not description or not description.strip():
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": "Description is required for test plan web links",
+            },
+            indent=2,
+        )
+
+    # Prepare link input using the mandatory description schema
+    try:
+        from .schemas.test_plan import WebLinkInputWithMandatoryDescription
+
+        link_input = WebLinkInputWithMandatoryDescription(
+            url=url, description=description
+        )
+    except Exception as e:
+        return json.dumps(
+            {"errorCode": 400, "message": f"Failed to validate web link: {str(e)}"},
+            indent=2,
+        )
+
+    # Create link via API
+    result = await zephyr_client.create_test_plan_web_link(
+        test_plan_key=test_plan_key, web_link_input=link_input
+    )
+
+    if result.is_valid:
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to create web link for test plan {test_plan_key}"
+                ),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+async def create_test_plan_test_cycle_link(
+    test_plan_key: str, test_cycle_id_or_key: str | int
+) -> str:
+    """Create a link between a test plan and a test cycle in Zephyr Scale Cloud.
+
+    This is a unique feature for test plans - they can be linked to test cycles.
+
+    Args:
+        test_plan_key: The key of the test plan (format: [PROJECT]-P[NUMBER])
+        test_cycle_id_or_key: The test cycle ID (as int or string) or key
+                             (format: [PROJECT]-R[NUMBER])
+
+    Returns:
+        Success message with created link ID or error message
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate test plan key
+    test_plan_validation = validate_test_plan_key(test_plan_key)
+    if not test_plan_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_plan_validation.errors)},
+            indent=2,
+        )
+
+    # Convert test_cycle_id_or_key to string
+    test_cycle_str = str(test_cycle_id_or_key)
+
+    # Prepare link input
+    link_data = {"testCycleIdOrKey": test_cycle_str}
+    link_validation = validate_test_plan_test_cycle_link_input(link_data)
+    if not link_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(link_validation.errors)}, indent=2
+        )
+
+    # Create link via API
+    result = await zephyr_client.create_test_plan_test_cycle_link(
+        test_plan_key=test_plan_key, test_cycle_link_input=link_validation.data
+    )
+
+    if result.is_valid:
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else (
+                        f"Failed to create test cycle link for test plan "
+                        f"{test_plan_key}"
+                    )
                 ),
             },
             indent=2,

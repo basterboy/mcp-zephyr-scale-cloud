@@ -757,3 +757,155 @@ class TestTestCycleValidation:
         result = validate_jira_version_id("abc")
         assert result.is_valid is False
         assert len(result.errors) > 0
+
+
+class TestTestPlanValidation:
+    """Test test plan validation functions."""
+
+    def test_validate_test_plan_key_valid(self):
+        """Test validation passes for valid test plan keys."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_plan_key,
+        )
+
+        valid_keys = ["PROJ-P1", "ABC-P123", "TEST-P999", "AB-P1"]
+        for key in valid_keys:
+            result = validate_test_plan_key(key)
+            assert result.is_valid is True
+            assert result.data == key
+            assert result.errors == []
+
+    def test_validate_test_plan_key_invalid(self):
+        """Test validation fails for invalid test plan keys."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_plan_key,
+        )
+
+        invalid_keys = ["PROJ-T1", "PROJ-R1", "P123", "PROJ-P", "", "PROJ-p1"]
+        for key in invalid_keys:
+            result = validate_test_plan_key(key)
+            assert result.is_valid is False
+            assert len(result.errors) > 0
+
+    def test_validate_test_plan_key_empty(self):
+        """Test validation fails for empty test plan key."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_plan_key,
+        )
+
+        result = validate_test_plan_key("")
+        assert result.is_valid is False
+        assert "required" in result.errors[0].lower()
+
+    def test_validate_test_plan_input_minimal(self):
+        """Test validation passes for minimal valid input."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_plan_input,
+        )
+
+        data = {"projectKey": "PROJ", "name": "Integration Test Plan"}
+        result = validate_test_plan_input(data)
+        assert result.is_valid is True
+        assert result.data.project_key == "PROJ"
+        assert result.data.name == "Integration Test Plan"
+
+    def test_validate_test_plan_input_full(self):
+        """Test validation passes for complete valid input."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_plan_input,
+        )
+
+        data = {
+            "projectKey": "PROJ",
+            "name": "Sprint Test Plan",
+            "objective": "Test all features",
+            "folderId": 123,
+            "statusName": "Draft",
+            "ownerId": "user123",
+            "labels": ["integration", "smoke"],
+            "customFields": {"Environment": "Staging"},
+        }
+        result = validate_test_plan_input(data)
+        assert result.is_valid is True
+        assert result.data.project_key == "PROJ"
+        assert result.data.name == "Sprint Test Plan"
+        assert result.data.objective == "Test all features"
+        assert result.data.folder_id == 123
+
+    def test_validate_test_plan_input_missing_name(self):
+        """Test validation fails when name is missing."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_plan_input,
+        )
+
+        data = {"projectKey": "PROJ"}
+        result = validate_test_plan_input(data)
+        assert result.is_valid is False
+        assert any("name" in error.lower() for error in result.errors)
+
+    def test_validate_test_plan_input_missing_project_key(self):
+        """Test validation fails when project key is missing."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_plan_input,
+        )
+
+        data = {"name": "Test Plan"}
+        result = validate_test_plan_input(data)
+        assert result.is_valid is False
+        assert any("projectkey" in error.lower() for error in result.errors)
+
+    def test_validate_test_plan_input_invalid_type(self):
+        """Test validation fails with invalid data type."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_plan_input,
+        )
+
+        result = validate_test_plan_input("not_a_dict")
+        assert result.is_valid is False
+        assert len(result.errors) > 0
+
+    def test_validate_test_plan_test_cycle_link_input_valid(self):
+        """Test validation passes for valid test cycle link input."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_plan_test_cycle_link_input,
+        )
+
+        # Test with numeric ID as string
+        data = {"testCycleIdOrKey": "123"}
+        result = validate_test_plan_test_cycle_link_input(data)
+        assert result.is_valid is True
+        assert result.data.test_cycle_id_or_key == "123"
+
+        # Test with test cycle key
+        data2 = {"testCycleIdOrKey": "PROJ-R456"}
+        result2 = validate_test_plan_test_cycle_link_input(data2)
+        assert result2.is_valid is True
+        assert result2.data.test_cycle_id_or_key == "PROJ-R456"
+
+    def test_validate_test_plan_test_cycle_link_input_missing_id(self):
+        """Test validation fails when test cycle ID is missing."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_plan_test_cycle_link_input,
+        )
+
+        result = validate_test_plan_test_cycle_link_input({})
+        assert result.is_valid is False
+        assert any("testcycleidorkey" in error.lower() for error in result.errors)
+
+    def test_validate_test_plan_test_cycle_link_input_invalid_id(self):
+        """Test validation fails for invalid test cycle ID format."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_plan_test_cycle_link_input,
+        )
+
+        # Invalid format
+        result = validate_test_plan_test_cycle_link_input(
+            {"testCycleIdOrKey": "INVALID"}
+        )
+        assert result.is_valid is False
+
+        # Wrong type (test case instead of cycle)
+        result2 = validate_test_plan_test_cycle_link_input(
+            {"testCycleIdOrKey": "PROJ-T123"}
+        )
+        assert result2.is_valid is False
