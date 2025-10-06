@@ -439,3 +439,122 @@ class TestFolderSchemas:
         assert dumped["name"] == "Test Folder"
         assert dumped["folderType"] == "TEST_CASE"
         assert dumped["parentId"] == 1
+
+
+class TestTestCycleSchemas:
+    """Test test cycle Pydantic schemas."""
+
+    def test_jira_project_version_valid(self):
+        """Test creating valid JiraProjectVersion."""
+        from mcp_zephyr_scale_cloud.schemas.test_cycle import JiraProjectVersion
+
+        version = JiraProjectVersion(id=123)
+        assert version.id == 123
+
+    def test_test_cycle_input_minimal(self):
+        """Test creating TestCycleInput with minimal required fields."""
+        from mcp_zephyr_scale_cloud.schemas.test_cycle import TestCycleInput
+
+        test_cycle_input = TestCycleInput(project_key="PROJ", name="Sprint 1 Testing")
+        assert test_cycle_input.project_key == "PROJ"
+        assert test_cycle_input.name == "Sprint 1 Testing"
+        assert test_cycle_input.description is None
+
+    def test_test_cycle_input_full(self):
+        """Test creating TestCycleInput with all fields."""
+        from mcp_zephyr_scale_cloud.schemas.test_cycle import TestCycleInput
+
+        test_cycle_input = TestCycleInput(
+            project_key="PROJ",
+            name="Sprint 1 Testing",
+            description="Testing cycle for sprint 1",
+            planned_start_date="2025-01-15T09:00:00Z",
+            planned_end_date="2025-01-22T17:00:00Z",
+            jira_project_version="10000",
+            status_name="In Progress",
+            folder_id="123",
+            owner_id="account123",
+            custom_fields={"Environment": "Production"},
+        )
+        assert test_cycle_input.project_key == "PROJ"
+        assert test_cycle_input.custom_fields == {"Environment": "Production"}
+
+    def test_test_cycle_input_missing_name(self):
+        """Test TestCycleInput validation fails without required name."""
+        from mcp_zephyr_scale_cloud.schemas.test_cycle import TestCycleInput
+
+        with pytest.raises(ValidationError) as exc_info:
+            TestCycleInput(project_key="PROJ")
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("name",)
+
+    def test_test_cycle_input_empty_name(self):
+        """Test TestCycleInput validation fails with empty name."""
+        from mcp_zephyr_scale_cloud.schemas.test_cycle import TestCycleInput
+
+        with pytest.raises(ValidationError):
+            TestCycleInput(project_key="PROJ", name="")
+
+    def test_test_cycle_valid_minimal(self):
+        """Test creating TestCycle with minimal fields."""
+        from mcp_zephyr_scale_cloud.schemas.test_cycle import TestCycle
+
+        test_cycle = TestCycle(
+            id=1,
+            key="PROJ-R1",
+            name="Sprint 1 Testing",
+            project={"id": 10000, "key": "PROJ"},
+            status={"id": 1, "name": "In Progress"},
+        )
+        assert test_cycle.id == 1
+        assert test_cycle.key == "PROJ-R1"
+        assert test_cycle.name == "Sprint 1 Testing"
+
+    def test_test_cycle_key_validation_valid(self):
+        """Test TestCycle key validation with valid patterns."""
+        from mcp_zephyr_scale_cloud.schemas.test_cycle import TestCycle
+
+        valid_keys = ["PROJ-R1", "ABC-R123", "TEST-R999"]
+        for key in valid_keys:
+            test_cycle = TestCycle(
+                id=1,
+                key=key,
+                name="Test",
+                project={"id": 10000, "key": "PROJ"},
+                status={"id": 1, "name": "In Progress"},
+            )
+            assert test_cycle.key == key
+
+    def test_test_cycle_key_validation_invalid(self):
+        """Test TestCycle key validation with invalid patterns."""
+        from mcp_zephyr_scale_cloud.schemas.test_cycle import TestCycle
+
+        invalid_keys = ["PROJ-T1", "PROJ-1", "R123"]
+        for key in invalid_keys:
+            with pytest.raises(ValidationError):
+                TestCycle(
+                    id=1, key=key, name="Test", project={"id": 10000, "key": "PROJ"}
+                )
+
+    def test_test_cycle_list_empty(self):
+        """Test creating empty TestCycleList."""
+        from mcp_zephyr_scale_cloud.schemas.test_cycle import TestCycleList
+
+        test_cycle_list = TestCycleList(
+            maxResults=10, startAt=0, total=0, isLast=True, values=[]
+        )
+        assert test_cycle_list.total == 0
+        assert test_cycle_list.isLast is True
+
+    def test_test_cycle_link_list(self):
+        """Test creating TestCycleLinkList."""
+        from mcp_zephyr_scale_cloud.schemas.test_cycle import TestCycleLinkList
+
+        link_list = TestCycleLinkList(
+            issues=[{"id": 1, "issue_id": 10001}],
+            webLinks=[{"id": 2, "url": "https://example.com"}],
+        )
+        assert len(link_list.issues) == 1
+        assert len(link_list.web_links) == 1

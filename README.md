@@ -40,6 +40,8 @@ A Model Context Protocol (MCP) server for Zephyr Scale Cloud, enabling AI assist
   - [📄 Test Script Management](#test-script-management)
   - [📋 Test Case Management](#test-case-management)
   - [🔗 Test Case Links](#test-case-links)
+  - [🔄 Test Cycle Management](#test-cycle-management)
+  - [🔗 Test Cycle Links](#test-cycle-links)
 - [Usage Guides](#usage-guides)
   - [📊 Status Operations Guide](#status-operations-guide)
   - [📁 Folder Operations Guide](#folder-operations-guide)
@@ -57,9 +59,10 @@ A Model Context Protocol (MCP) server for Zephyr Scale Cloud, enabling AI assist
 - 📊 **Status Management** - Manage test execution statuses with type filtering
 - 📁 **Folder Management** - Organize test artifacts with hierarchical folder structure
 - 🧪 **Test Case Management** - Full CRUD operations for test cases with metadata
+- 🔄 **Test Cycle Management** - Full CRUD operations for test cycles with metadata and link management
 - 📝 **Test Steps & Scripts** - Manage test step definitions and scripts (plain/BDD)
-- 🔗 **Test Case Links** - Link test cases to Jira issues and web resources
-- 📋 **Test Case Retrieval** - Advanced pagination and filtering capabilities
+- 🔗 **Test Case & Cycle Links** - Link test cases and cycles to Jira issues and web resources
+- 📋 **Advanced Retrieval** - Pagination and filtering for test cases and cycles
 - 📚 **Version Management** - Test case version history and retrieval
 - 🔧 **Production Ready** - Server lifespan management and structured logging
 - 🧪 **Comprehensive Testing** - Unit tests, integration tests, and CI/CD pipeline
@@ -69,7 +72,6 @@ A Model Context Protocol (MCP) server for Zephyr Scale Cloud, enabling AI assist
 
 Based on the Zephyr Scale Cloud API documentation, the following major categories are planned for implementation:
 
-- 🔄 **Test Cycle Management** - Create, read, update test cycles with metadata
 - 📈 **Test Execution Management** - Create, read, update test executions and results
 - 📋 **Test Plan Management** - Test plan operations and organization  
 - 🌍 **Environment Management** - Test environment configuration and management
@@ -190,7 +192,7 @@ This package interfaces with the Zephyr Scale Cloud REST API, which provides com
 - **Protocol**: HTTP-based REST API
 - **Supported operations**: GET, POST, PUT requests for data retrieval and submission
 
-The MCP Zephyr Scale Cloud package provides 25 tools that wrap these API endpoints, making them easily accessible through AI assistants and automation workflows.
+The MCP Zephyr Scale Cloud package provides 32 tools that wrap these API endpoints, making them easily accessible through AI assistants and automation workflows.
 
 **API Resources:**
 - [REST API Overview](https://support.smartbear.com/zephyr/docs/en/rest-api/rest-api--overview-.html)
@@ -370,7 +372,7 @@ Tests run automatically on:
 
 ## MCP Tools
 
-This server provides **25 MCP tools** for Zephyr Scale Cloud integration:
+This server provides **32 MCP tools** for Zephyr Scale Cloud integration:
 
 | **Category** | **Tools** | **Description** |
 |--------------|-----------|-----------------|
@@ -382,7 +384,9 @@ This server provides **25 MCP tools** for Zephyr Scale Cloud integration:
 | **Test Scripts** | 2 tools | Test script retrieval and creation |
 | **Test Cases** | 7 tools | Complete test case management suite |
 | **Test Case Links** | 2 tools | Link management for test cases |
-| **Total** | **25 tools** | **Production-ready MCP server** |
+| **Test Cycles** | 5 tools | Full CRUD operations for test cycle management |
+| **Test Cycle Links** | 2 tools | Link management for test cycles |
+| **Total** | **32 tools** | **Production-ready MCP server** |
 
 ### Currently Available:
 
@@ -426,6 +430,17 @@ This server provides **25 MCP tools** for Zephyr Scale Cloud integration:
 #### **Test Case Links**
 - `create_issue_link` - Link test cases to Jira issues for traceability
 - `create_web_link` - Add web links to test cases for documentation
+
+#### **Test Cycle Management**
+- `get_test_cycles` - Retrieve test cycles with advanced offset-based pagination and filtering
+- `get_test_cycle` - Get detailed test cycle information including metadata, dates, and links
+- `create_test_cycle` - Create new test cycles with comprehensive metadata support
+- `update_test_cycle` - Update existing test cycles with validation and error handling
+- `get_test_cycle_links` - Get all links (issues + web links) associated with a test cycle
+
+#### **Test Cycle Links**
+- `create_test_cycle_issue_link` - Link test cycles to Jira issues for traceability
+- `create_test_cycle_web_link` - Add web links to test cycles for documentation
 
 ## Usage Guides
 

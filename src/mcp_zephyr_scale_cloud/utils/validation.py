@@ -669,3 +669,108 @@ def validate_component_id(component_id: int) -> "ValidationResult[int]":
             ["Component ID must be a non-negative integer"],
         )
     return ValidationResult(True, data=component_id)
+
+
+def validate_test_cycle_key(test_cycle_key: str) -> ValidationResult:
+    """Validate test cycle key format.
+
+    Test cycle keys follow the pattern: [PROJECT_KEY]-R[NUMBER]
+    Examples: PROJ-R1, TEST-R123
+
+    Args:
+        test_cycle_key: Test cycle key to validate
+
+    Returns:
+        ValidationResult with validation status and any errors
+    """
+    if not test_cycle_key:
+        return ValidationResult(False, ["Test cycle key is required"])
+
+    # Test cycle keys follow pattern: [A-Z]+-R[0-9]+
+    pattern = r"^[A-Z][A-Z0-9_]+-R[0-9]+$"
+    if not re.match(pattern, test_cycle_key):
+        return ValidationResult(
+            False,
+            [
+                f"Test cycle key '{test_cycle_key}' is invalid. "
+                "Must follow format: [PROJECT]-R[NUMBER] (e.g., PROJ-R123)"
+            ],
+        )
+
+    return ValidationResult(True, data=test_cycle_key)
+
+
+def validate_test_cycle_input(test_cycle_data: dict) -> ValidationResult:
+    """Validate test cycle input data using Pydantic schema.
+
+    Args:
+        test_cycle_data: Raw test cycle data to validate
+
+    Returns:
+        ValidationResult with validation status and parsed TestCycleInput
+    """
+    try:
+        from ..schemas.test_cycle import TestCycleInput
+
+        validated_data = TestCycleInput(**test_cycle_data)
+        return ValidationResult(True, data=validated_data)
+
+    except ValidationError as e:
+        errors = []
+        for error in e.errors():
+            field = " -> ".join(str(loc) for loc in error["loc"])
+            message = error["msg"]
+            errors.append(f"Field '{field}': {message}")
+        return ValidationResult(False, errors)
+    except Exception as e:
+        return ValidationResult(False, [f"Unexpected validation error: {str(e)}"])
+
+
+def validate_test_cycle_update_input(test_cycle_data: dict) -> ValidationResult:
+    """Validate test cycle update data using Pydantic schema.
+
+    Args:
+        test_cycle_data: Raw test cycle data to validate for update
+
+    Returns:
+        ValidationResult with validation status and parsed TestCycle
+    """
+    try:
+        from ..schemas.test_cycle import TestCycle
+
+        validated_data = TestCycle(**test_cycle_data)
+        return ValidationResult(True, data=validated_data)
+
+    except ValidationError as e:
+        errors = []
+        for error in e.errors():
+            field = " -> ".join(str(loc) for loc in error["loc"])
+            message = error["msg"]
+            errors.append(f"Field '{field}': {message}")
+        return ValidationResult(False, errors)
+    except Exception as e:
+        return ValidationResult(False, [f"Unexpected validation error: {str(e)}"])
+
+
+def validate_jira_version_id(version_id: str | int) -> ValidationResult:
+    """Validate Jira project version ID.
+
+    Args:
+        version_id: Jira version ID to validate (can be string or int)
+
+    Returns:
+        ValidationResult with validated integer version ID or error messages
+    """
+    try:
+        parsed_id = int(version_id)
+        if parsed_id < 1:
+            return ValidationResult(
+                False,
+                ["Jira version ID must be a positive integer"],
+            )
+        return ValidationResult(True, data=parsed_id)
+    except (ValueError, TypeError):
+        return ValidationResult(
+            False,
+            [f"Invalid Jira version ID: '{version_id}'. Must be a positive integer"],
+        )

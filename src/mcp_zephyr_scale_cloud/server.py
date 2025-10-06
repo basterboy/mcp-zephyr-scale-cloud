@@ -22,6 +22,7 @@ from .utils.validation import (
     validate_folder_type,
     validate_issue_id,
     validate_issue_link_input,
+    validate_jira_version_id,
     validate_priority_data,
     validate_project_key,
     validate_status_data,
@@ -30,6 +31,8 @@ from .utils.validation import (
     validate_test_case_key,
     validate_test_case_name,
     validate_test_case_update_input,
+    validate_test_cycle_input,
+    validate_test_cycle_key,
     validate_test_script_input,
     validate_test_script_type,
     validate_test_steps_input,
@@ -2203,6 +2206,676 @@ async def update_test_case(
                     "; ".join(result.errors)
                     if result.errors
                     else f"Failed to update test case {test_case_key}"
+                ),
+            },
+            indent=2,
+        )
+
+
+# ============================================================================
+# Test Cycle Management Tools
+# ============================================================================
+
+
+@mcp.tool()
+async def get_test_cycles(
+    project_key: str | None = None,
+    folder_id: str | None = None,
+    jira_project_version_id: str | None = None,
+    max_results: int = 10,
+    start_at: int = 0,
+) -> str:
+    """Get test cycles using traditional offset-based pagination.
+
+    This tool uses the stable /testcycles endpoint that provides reliable
+    offset-based pagination for retrieving test cycles.
+
+    📖 OFFSET-BASED PAGINATION GUIDE:
+    Offset pagination works like pages in a book - you specify which "page" to start
+    reading from and how many items per "page".
+
+    🔢 HOW TO PAGINATE THROUGH ALL RESULTS:
+    1. FIRST REQUEST: start_at=0, max_results=1000 (gets items 0-999)
+    2. NEXT REQUEST: start_at=1000, max_results=1000 (gets items 1000-1999)
+    3. CONTINUE: start_at=2000, max_results=1000 (gets items 2000-2999)
+    4. STOP when response has fewer items than max_results
+
+    💡 PAGINATION FORMULA:
+    - Next start_at = current_start_at + max_results
+    - Example: If start_at=0 and max_results=1000, next start_at=1000
+    - Always ensure start_at is a multiple of max_results (as per API docs)
+
+    ⚡ PERFORMANCE TIP:
+    Use max_results=1000 (maximum allowed) for fastest data retrieval.
+    The API default is only 10, which is very slow for large datasets.
+
+    🛑 IMPORTANT:
+    - start_at should be a multiple of max_results (API requirement)
+    - Check response length vs max_results to detect the last page
+    - Server may return fewer results than requested due to constraints
+
+    Args:
+        project_key: Jira project key filter (e.g., 'PROJ'). If you have access to
+                    more than 1000 projects, this parameter may be mandatory.
+                    Uses ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided
+        folder_id: ID of a folder to filter test cycles (optional)
+        jira_project_version_id: Jira project version ID to filter test cycles
+                                 (optional)
+        max_results: Maximum number of results to return (default: 10, max: 1000).
+                    RECOMMENDATION: Use 1000 for fastest bulk data retrieval.
+        start_at: Zero-indexed starting position (default: 0).
+                 MUST be a multiple of max_results.
+                 For next page: start_at + max_results
+
+    Returns:
+        JSON response with test cycles and pagination information.
+        Check if len(values) < max_results to detect the last page.
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Get project key with default fallback
+    project_key = get_project_key_with_default(project_key)
+
+    # Parse optional folder_id
+    parsed_folder_id = None
+    if folder_id is not None:
+        try:
+            folder_id_int = int(folder_id)
+            folder_validation = validate_folder_id(folder_id_int)
+            if not folder_validation.is_valid:
+                return json.dumps(
+                    {"errorCode": 400, "message": "; ".join(folder_validation.errors)},
+                    indent=2,
+                )
+            parsed_folder_id = folder_validation.data
+        except (ValueError, TypeError):
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Folder ID must be a valid integer, got: {folder_id}",
+                },
+                indent=2,
+            )
+
+    # Parse optional jira_project_version_id
+    parsed_version_id = None
+    if jira_project_version_id is not None:
+        version_validation = validate_jira_version_id(jira_project_version_id)
+        if not version_validation.is_valid:
+            return json.dumps(
+                {"errorCode": 400, "message": "; ".join(version_validation.errors)},
+                indent=2,
+            )
+        parsed_version_id = version_validation.data
+
+    # Get test cycles from API
+    result = await zephyr_client.get_test_cycles(
+        project_key=project_key,
+        folder_id=parsed_folder_id,
+        jira_project_version_id=parsed_version_id,
+        max_results=max_results,
+        start_at=start_at,
+    )
+
+    if result.is_valid:
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else "Failed to retrieve test cycles"
+                ),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+async def get_test_cycle(test_cycle_key: str) -> str:
+    """Get detailed information for a specific test cycle in Zephyr Scale Cloud.
+
+    Args:
+        test_cycle_key: The key of the test cycle (format: [PROJECT]-R[NUMBER])
+
+    Returns:
+        Formatted test cycle information or error message
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate test cycle key
+    test_cycle_validation = validate_test_cycle_key(test_cycle_key)
+    if not test_cycle_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_cycle_validation.errors)},
+            indent=2,
+        )
+
+    # Get test cycle from API
+    result = await zephyr_client.get_test_cycle(test_cycle_key=test_cycle_key)
+
+    if result.is_valid:
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": (
+                    f"Test cycle '{test_cycle_key}' does not exist or you do not "
+                    "have access to it"
+                ),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+async def create_test_cycle(
+    name: str,
+    project_key: str | None = None,
+    description: str | None = None,
+    planned_start_date: str | None = None,
+    planned_end_date: str | None = None,
+    jira_project_version: str | None = None,
+    status_name: str | None = None,
+    folder_id: str | None = None,
+    owner_id: str | None = None,
+    custom_fields: str | dict | None = None,
+) -> str:
+    """Create a new test cycle in Zephyr Scale Cloud.
+
+    Args:
+        name: Test cycle name
+        project_key: Jira project key (optional, uses
+                     ZEPHYR_SCALE_DEFAULT_PROJECT_KEY if not provided)
+        description: Test cycle description (optional)
+        planned_start_date: Planned start date
+                            (format: yyyy-MM-dd'T'HH:mm:ss'Z',
+                            e.g., 2018-05-19T13:15:13Z) (optional)
+        planned_end_date: Planned end date
+                          (format: yyyy-MM-dd'T'HH:mm:ss'Z',
+                          e.g., 2018-05-20T13:15:13Z) (optional)
+        jira_project_version: Jira project version ID as string (optional)
+        status_name: Status name, defaults to default status if not specified (optional)
+        folder_id: Folder ID as string to place the test cycle (optional)
+        owner_id: Jira user account ID for owner (optional)
+        custom_fields: Custom fields as JSON string or dict (e.g.,
+                      '{"Environment": "Production", "Release": "v1.0.0"}' or
+                      {"Environment": "Production", "Release": "v1.0.0"}) (optional)
+
+    Returns:
+        Success message with created test cycle details or error message
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Get project key with default fallback
+    project_key = get_project_key_with_default(project_key)
+
+    # Validate project key (required for CREATE operations)
+    project_validation = validate_project_key(project_key)
+    if not project_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(project_validation.errors)},
+            indent=2,
+        )
+
+    # Validate name
+    if not name or not name.strip():
+        return json.dumps(
+            {"errorCode": 400, "message": "Test cycle name is required"},
+            indent=2,
+        )
+
+    # Parse optional folder_id
+    parsed_folder_id = None
+    if folder_id is not None:
+        try:
+            parsed_folder_id = int(folder_id)
+            folder_validation = validate_folder_id(parsed_folder_id)
+            if not folder_validation.is_valid:
+                return json.dumps(
+                    {"errorCode": 400, "message": "; ".join(folder_validation.errors)},
+                    indent=2,
+                )
+        except (ValueError, TypeError):
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Folder ID must be a valid integer, got: {folder_id}",
+                },
+                indent=2,
+            )
+
+    # Parse optional jira_project_version
+    parsed_version_id = None
+    if jira_project_version is not None:
+        version_validation = validate_jira_version_id(jira_project_version)
+        if not version_validation.is_valid:
+            return json.dumps(
+                {"errorCode": 400, "message": "; ".join(version_validation.errors)},
+                indent=2,
+            )
+        parsed_version_id = version_validation.data
+
+    # Parse custom_fields if provided
+    parsed_custom_fields = None
+    if custom_fields is not None:
+        if isinstance(custom_fields, str):
+            try:
+                parsed_custom_fields = json.loads(custom_fields)
+            except json.JSONDecodeError:
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": "Invalid JSON format for custom_fields parameter",
+                    },
+                    indent=2,
+                )
+        elif isinstance(custom_fields, dict):
+            parsed_custom_fields = custom_fields
+        else:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": "custom_fields must be a JSON string or dict",
+                },
+                indent=2,
+            )
+
+    # Build test cycle data
+    test_cycle_data = {
+        "projectKey": project_key,
+        "name": name,
+    }
+
+    # Add optional fields
+    if description is not None:
+        test_cycle_data["description"] = description
+
+    if planned_start_date is not None:
+        test_cycle_data["plannedStartDate"] = planned_start_date
+
+    if planned_end_date is not None:
+        test_cycle_data["plannedEndDate"] = planned_end_date
+
+    if parsed_version_id is not None:
+        test_cycle_data["jiraProjectVersion"] = parsed_version_id
+
+    if status_name is not None:
+        test_cycle_data["statusName"] = status_name
+
+    if parsed_folder_id is not None:
+        test_cycle_data["folderId"] = parsed_folder_id
+
+    if owner_id is not None:
+        test_cycle_data["ownerId"] = owner_id
+
+    if parsed_custom_fields is not None:
+        test_cycle_data["customFields"] = parsed_custom_fields
+
+    # Validate complete test cycle input
+    validation_result = validate_test_cycle_input(test_cycle_data)
+    if not validation_result.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(validation_result.errors)},
+            indent=2,
+        )
+
+    # Create test cycle via API
+    result = await zephyr_client.create_test_cycle(
+        test_cycle_input=validation_result.data
+    )
+
+    if result.is_valid:
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to create test cycle in project {project_key}"
+                ),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+async def update_test_cycle(
+    test_cycle_key: str,
+    name: str | None = None,
+    description: str | None = None,
+    planned_start_date: str | None = None,
+    planned_end_date: str | None = None,
+    jira_project_version_id: str | None = None,
+    status_id: str | None = None,
+    folder_id: str | None = None,
+    owner_id: str | None = None,
+    custom_fields: str | dict | None = None,
+) -> str:
+    """Update an existing test cycle in Zephyr Scale Cloud.
+
+    Args:
+        test_cycle_key: The key of the test cycle to update
+                        (format: [PROJECT]-R[NUMBER])
+        name: Test cycle name (optional)
+        description: Test cycle description (optional)
+        planned_start_date: Planned start date
+                            (format: yyyy-MM-dd'T'HH:mm:ss'Z') (optional)
+        planned_end_date: Planned end date (format: yyyy-MM-dd'T'HH:mm:ss'Z') (optional)
+        jira_project_version_id: Jira project version ID as string (optional)
+        status_id: Status ID as string (optional, use get_statuses to find IDs)
+        folder_id: Folder ID as string (optional, use get_folders to find IDs)
+        owner_id: Jira user account ID for owner (optional)
+        custom_fields: Custom fields as JSON string or dict (e.g.,
+                      '{"Environment": "Production"}' or
+                      {"Environment": "Production"}) (optional)
+
+    Returns:
+        Success message or error message
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate test cycle key
+    test_cycle_validation = validate_test_cycle_key(test_cycle_key)
+    if not test_cycle_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_cycle_validation.errors)},
+            indent=2,
+        )
+
+    # First, get the existing test cycle
+    get_result = await zephyr_client.get_test_cycle(test_cycle_key=test_cycle_key)
+    if not get_result.is_valid:
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": (
+                    f"Test cycle '{test_cycle_key}' does not exist or you do not "
+                    "have access to it"
+                ),
+            },
+            indent=2,
+        )
+
+    # Get the existing test cycle data
+    test_cycle = get_result.data
+
+    # Update fields if provided
+    if name is not None:
+        test_cycle.name = name
+
+    if description is not None:
+        test_cycle.description = description
+
+    if planned_start_date is not None:
+        test_cycle.planned_start_date = planned_start_date
+
+    if planned_end_date is not None:
+        test_cycle.planned_end_date = planned_end_date
+
+    if jira_project_version_id is not None:
+        version_validation = validate_jira_version_id(jira_project_version_id)
+        if not version_validation.is_valid:
+            return json.dumps(
+                {"errorCode": 400, "message": "; ".join(version_validation.errors)},
+                indent=2,
+            )
+        from ..schemas.test_cycle import JiraProjectVersion
+
+        test_cycle.jira_project_version = JiraProjectVersion(id=version_validation.data)
+
+    if status_id is not None:
+        status_id_int = int(status_id)
+
+        # We need to preserve the status structure
+        if test_cycle.status:
+            test_cycle.status.id = status_id_int
+
+    if folder_id is not None:
+        try:
+            folder_id_int = int(folder_id)
+            folder_validation = validate_folder_id(folder_id_int)
+            if not folder_validation.is_valid:
+                return json.dumps(
+                    {"errorCode": 400, "message": "; ".join(folder_validation.errors)},
+                    indent=2,
+                )
+            from ..schemas.folder import FolderLink
+
+            test_cycle.folder = FolderLink(id=folder_validation.data)
+        except (ValueError, TypeError):
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": f"Folder ID must be a valid integer, got: {folder_id}",
+                },
+                indent=2,
+            )
+
+    if owner_id is not None:
+        from ..schemas.test_cycle import JiraUserLink
+
+        test_cycle.owner = JiraUserLink(account_id=owner_id)
+
+    if custom_fields is not None:
+        if isinstance(custom_fields, str):
+            try:
+                parsed_custom_fields = json.loads(custom_fields)
+            except json.JSONDecodeError:
+                return json.dumps(
+                    {
+                        "errorCode": 400,
+                        "message": "Invalid JSON format for custom_fields parameter",
+                    },
+                    indent=2,
+                )
+        elif isinstance(custom_fields, dict):
+            parsed_custom_fields = custom_fields
+        else:
+            return json.dumps(
+                {
+                    "errorCode": 400,
+                    "message": "custom_fields must be a JSON string or dict",
+                },
+                indent=2,
+            )
+        from ..schemas.common import CustomFields
+
+        test_cycle.custom_fields = CustomFields(**parsed_custom_fields)
+
+    # Update test cycle via API
+    result = await zephyr_client.update_test_cycle(
+        test_cycle_key=test_cycle_key, test_cycle=test_cycle
+    )
+
+    if result.is_valid:
+        return json.dumps(
+            {"message": f"Test cycle {test_cycle_key} updated successfully"}, indent=2
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to update test cycle {test_cycle_key}"
+                ),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+async def get_test_cycle_links(test_cycle_key: str) -> str:
+    """Get all links (issues + web links) for a test cycle in Zephyr Scale Cloud.
+
+    Args:
+        test_cycle_key: The key of the test cycle (format: [PROJECT]-R[NUMBER])
+
+    Returns:
+        Formatted list of links or error message
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate test cycle key
+    test_cycle_validation = validate_test_cycle_key(test_cycle_key)
+    if not test_cycle_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_cycle_validation.errors)},
+            indent=2,
+        )
+
+    # Get links from API
+    result = await zephyr_client.get_test_cycle_links(test_cycle_key=test_cycle_key)
+
+    if result.is_valid:
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 404,
+                "message": (
+                    f"Test cycle '{test_cycle_key}' does not exist or you do not "
+                    "have access to it"
+                ),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+async def create_test_cycle_issue_link(test_cycle_key: str, issue_id: int) -> str:
+    """Create a link between a test cycle and a Jira issue in Zephyr Scale Cloud.
+
+    Args:
+        test_cycle_key: The key of the test cycle (format: [PROJECT]-R[NUMBER])
+        issue_id: The numeric Jira issue ID to link to (NOT the issue key)
+                  Use the Atlassian/Jira MCP tool to get the issue ID from a key
+
+    Returns:
+        Success message with created link ID or error message
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate test cycle key
+    test_cycle_validation = validate_test_cycle_key(test_cycle_key)
+    if not test_cycle_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_cycle_validation.errors)},
+            indent=2,
+        )
+
+    # Validate issue_id
+    issue_validation = validate_issue_id(issue_id)
+    if not issue_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(issue_validation.errors)}, indent=2
+        )
+
+    # Prepare link input
+    link_data = {"issueId": issue_validation.data}
+    link_validation = validate_issue_link_input(link_data)
+    if not link_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(link_validation.errors)}, indent=2
+        )
+
+    # Create link via API
+    result = await zephyr_client.create_test_cycle_issue_link(
+        test_cycle_key=test_cycle_key, issue_link_input=link_validation.data
+    )
+
+    if result.is_valid:
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to create issue link for test cycle {test_cycle_key}"
+                ),
+            },
+            indent=2,
+        )
+
+
+@mcp.tool()
+async def create_test_cycle_web_link(
+    test_cycle_key: str, url: str, description: str | None = None
+) -> str:
+    """Create a link between a test cycle and a web URL in Zephyr Scale Cloud.
+
+    Args:
+        test_cycle_key: The key of the test cycle (format: [PROJECT]-R[NUMBER])
+        url: The web URL to link to
+        description: Optional description for the link
+
+    Returns:
+        Success message with created link ID or error message
+    """
+    if not zephyr_client:
+        return _CONFIG_ERROR_MSG
+
+    # Validate test cycle key
+    test_cycle_validation = validate_test_cycle_key(test_cycle_key)
+    if not test_cycle_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(test_cycle_validation.errors)},
+            indent=2,
+        )
+
+    # Prepare link input
+    link_data = {"url": url}
+    if description is not None:
+        link_data["description"] = description
+
+    link_validation = validate_web_link_input(link_data)
+    if not link_validation.is_valid:
+        return json.dumps(
+            {"errorCode": 400, "message": "; ".join(link_validation.errors)}, indent=2
+        )
+
+    # Create link via API
+    result = await zephyr_client.create_test_cycle_web_link(
+        test_cycle_key=test_cycle_key, web_link_input=link_validation.data
+    )
+
+    if result.is_valid:
+        return json.dumps(
+            result.data.model_dump(by_alias=True, exclude_none=True), indent=2
+        )
+    else:
+        return json.dumps(
+            {
+                "errorCode": 400,
+                "message": (
+                    "; ".join(result.errors)
+                    if result.errors
+                    else f"Failed to create web link for test cycle {test_cycle_key}"
                 ),
             },
             indent=2,

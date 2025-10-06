@@ -51,6 +51,13 @@ from .test_case import (
     WebLink,
     WebLinkInput,
 )
+from .test_cycle import (
+    JiraProjectVersion,
+    TestCycle,
+    TestCycleInput,
+    TestCycleLinkList,
+    TestCycleList,
+)
 from .test_script import (
     TestScript,
     TestScriptInput,
@@ -110,6 +117,11 @@ __all__ = [
     "TestCaseTestScriptLink",
     "WebLink",
     "WebLinkInput",
+    "JiraProjectVersion",
+    "TestCycle",
+    "TestCycleInput",
+    "TestCycleLinkList",
+    "TestCycleList",
     "TestScript",
     "TestScriptInput",
     "TestScriptType",

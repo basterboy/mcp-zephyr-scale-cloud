@@ -1,7 +1,7 @@
 """Integration tests for MCP server."""
 
 import json
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -1255,3 +1255,240 @@ class TestFolderMCPTools:
             # Should return configuration error
             assert "ERROR" in response
             assert "configuration not found" in response
+
+
+class TestCycleMCPTools:
+    """Test test cycle MCP tools integration."""
+
+    @pytest.mark.asyncio
+    async def test_get_test_cycles_success(self, mock_env_vars):
+        """Test get_test_cycles MCP tool with successful response."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_cycles
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        mock_response_data = MagicMock()
+        mock_response_data.model_dump.return_value = {
+            "maxResults": 10,
+            "startAt": 0,
+            "total": 2,
+            "isLast": True,
+            "values": [
+                {"id": 1, "key": "PROJ-R1", "name": "Sprint 1"},
+                {"id": 2, "key": "PROJ-R2", "name": "Sprint 2"},
+            ],
+        }
+        mock_client.get_test_cycles.return_value = ValidationResult(
+            True, data=mock_response_data
+        )
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await get_test_cycles(project_key="PROJ")
+
+            mock_client.get_test_cycles.assert_called_once()
+            assert '"key": "PROJ-R1"' in response
+            assert '"key": "PROJ-R2"' in response
+
+    @pytest.mark.asyncio
+    async def test_get_test_cycle_success(self, mock_env_vars):
+        """Test get_test_cycle MCP tool with successful response."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_cycle
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        mock_response_data = MagicMock()
+        mock_response_data.model_dump.return_value = {
+            "id": 1,
+            "key": "PROJ-R1",
+            "name": "Sprint 1 Testing",
+            "project": {"id": 10000, "key": "PROJ"},
+        }
+        mock_client.get_test_cycle.return_value = ValidationResult(
+            True, data=mock_response_data
+        )
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await get_test_cycle(test_cycle_key="PROJ-R1")
+
+            mock_client.get_test_cycle.assert_called_once_with(test_cycle_key="PROJ-R1")
+            assert '"key": "PROJ-R1"' in response
+            assert '"name": "Sprint 1 Testing"' in response
+
+    @pytest.mark.asyncio
+    async def test_get_test_cycle_invalid_key_format(self, mock_env_vars):
+        """Test get_test_cycle with invalid key format."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_cycle
+
+        mock_client = AsyncMock()
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await get_test_cycle(test_cycle_key="INVALID")
+
+            # Should return validation error without calling client
+            mock_client.get_test_cycle.assert_not_called()
+            assert "errorCode" in response
+            assert "400" in response
+
+    @pytest.mark.asyncio
+    async def test_create_test_cycle_success(self, mock_env_vars):
+        """Test create_test_cycle MCP tool with successful response."""
+        from src.mcp_zephyr_scale_cloud.server import create_test_cycle
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        mock_response_data = MagicMock()
+        mock_response_data.model_dump.return_value = {
+            "id": 1,
+            "key": "PROJ-R1",
+            "name": "Sprint 1",
+        }
+        mock_client.create_test_cycle.return_value = ValidationResult(
+            True, data=mock_response_data
+        )
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await create_test_cycle(project_key="PROJ", name="Sprint 1")
+
+            mock_client.create_test_cycle.assert_called_once()
+            assert '"key": "PROJ-R1"' in response
+
+    @pytest.mark.asyncio
+    async def test_create_test_cycle_validation_error(self, mock_env_vars):
+        """Test create_test_cycle with validation error."""
+        from src.mcp_zephyr_scale_cloud.server import create_test_cycle
+
+        mock_client = AsyncMock()
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            # Missing required name
+            response = await create_test_cycle(project_key="PROJ", name="")
+
+            # Should return validation error without calling client
+            mock_client.create_test_cycle.assert_not_called()
+            assert "errorCode" in response
+            assert "400" in response
+
+    @pytest.mark.asyncio
+    async def test_update_test_cycle_success(self, mock_env_vars):
+        """Test update_test_cycle MCP tool with successful response."""
+        from src.mcp_zephyr_scale_cloud.server import update_test_cycle
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+
+        # Mock get_test_cycle response
+        mock_existing_cycle = MagicMock()
+        mock_existing_cycle.name = "Old Name"
+        mock_existing_cycle.description = None
+        mock_existing_cycle.planned_start_date = None
+        mock_existing_cycle.planned_end_date = None
+        mock_existing_cycle.status = None
+        mock_existing_cycle.folder = None
+        mock_existing_cycle.owner = None
+        mock_client.get_test_cycle.return_value = ValidationResult(
+            True, data=mock_existing_cycle
+        )
+
+        # Mock update_test_cycle response
+        mock_client.update_test_cycle.return_value = ValidationResult(True)
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await update_test_cycle(
+                test_cycle_key="PROJ-R1", name="Updated Name"
+            )
+
+            mock_client.get_test_cycle.assert_called_once()
+            mock_client.update_test_cycle.assert_called_once()
+            assert "updated successfully" in response
+
+    @pytest.mark.asyncio
+    async def test_update_test_cycle_not_found(self, mock_env_vars):
+        """Test update_test_cycle when cycle doesn't exist."""
+        from src.mcp_zephyr_scale_cloud.server import update_test_cycle
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        mock_client.get_test_cycle.return_value = ValidationResult(
+            False, errors=["Not found"]
+        )
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await update_test_cycle(
+                test_cycle_key="PROJ-R999", name="New Name"
+            )
+
+            mock_client.get_test_cycle.assert_called_once()
+            mock_client.update_test_cycle.assert_not_called()
+            assert "errorCode" in response
+            assert "404" in response
+
+    @pytest.mark.asyncio
+    async def test_get_test_cycle_links_success(self, mock_env_vars):
+        """Test get_test_cycle_links MCP tool."""
+        from src.mcp_zephyr_scale_cloud.server import get_test_cycle_links
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        mock_response_data = MagicMock()
+        mock_response_data.model_dump.return_value = {
+            "issueLinks": [{"id": 1, "issueId": 10001}],
+            "webLinks": [{"id": 2, "url": "https://example.com"}],
+        }
+        mock_client.get_test_cycle_links.return_value = ValidationResult(
+            True, data=mock_response_data
+        )
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await get_test_cycle_links(test_cycle_key="PROJ-R1")
+
+            mock_client.get_test_cycle_links.assert_called_once()
+            assert "issueLinks" in response
+            assert "webLinks" in response
+
+    @pytest.mark.asyncio
+    async def test_create_test_cycle_issue_link_success(self, mock_env_vars):
+        """Test create_test_cycle_issue_link MCP tool."""
+        from src.mcp_zephyr_scale_cloud.server import (
+            create_test_cycle_issue_link,
+        )
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        from src.mcp_zephyr_scale_cloud.schemas.base import CreatedResource
+
+        mock_response_data = CreatedResource(id=123, key="link-123")
+        mock_client.create_test_cycle_issue_link.return_value = ValidationResult(
+            True, data=mock_response_data
+        )
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await create_test_cycle_issue_link(
+                test_cycle_key="PROJ-R1", issue_id=10001
+            )
+
+            mock_client.create_test_cycle_issue_link.assert_called_once()
+            assert "123" in response
+            assert "link-123" in response
+
+    @pytest.mark.asyncio
+    async def test_create_test_cycle_web_link_success(self, mock_env_vars):
+        """Test create_test_cycle_web_link MCP tool."""
+        from src.mcp_zephyr_scale_cloud.server import create_test_cycle_web_link
+        from src.mcp_zephyr_scale_cloud.utils.validation import ValidationResult
+
+        mock_client = AsyncMock()
+        from src.mcp_zephyr_scale_cloud.schemas.base import CreatedResource
+
+        mock_response_data = CreatedResource(id=456, key="link-456")
+        mock_client.create_test_cycle_web_link.return_value = ValidationResult(
+            True, data=mock_response_data
+        )
+
+        with patch("src.mcp_zephyr_scale_cloud.server.zephyr_client", mock_client):
+            response = await create_test_cycle_web_link(
+                test_cycle_key="PROJ-R1", url="https://example.com"
+            )
+
+            mock_client.create_test_cycle_web_link.assert_called_once()
+            assert "456" in response
+            assert "link-456" in response

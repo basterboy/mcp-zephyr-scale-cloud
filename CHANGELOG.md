@@ -5,7 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.6] - 2025-01-19
+## [0.1.7] - 2025-10-07
+
+### ✨ New Features: Test Cycle Management
+
+- **Test Cycle CRUD Operations** - Complete lifecycle management for test cycles
+  - `get_test_cycles` - Retrieve test cycles with pagination and filtering
+  - `get_test_cycle` - Get detailed test cycle information by key
+  - `create_test_cycle` - Create new test cycles with comprehensive metadata
+  - `update_test_cycle` - Update existing test cycles
+  - `get_test_cycle_links` - Retrieve all links for a test cycle
+  - `create_test_cycle_issue_link` - Link test cycles to Jira issues
+  - `create_test_cycle_web_link` - Add web links to test cycles
+
+### 📦 Schema Additions
+
+- **TestCycleInput** - Schema for creating test cycles
+- **TestCycle** - Main test cycle entity schema
+- **TestCycleList** - Paginated response for test cycle lists
+- **JiraProjectVersion** - Jira version integration schema
+- **TestCycleLinkList** - Schema for managing test cycle links
+
+### 🔧 API Enhancements
+
+- **7 new HTTP client methods** - Complete test cycle API integration
+- **4 new validation functions** - Test cycle data validation
+  - `validate_test_cycle_key` - Validate test cycle key format (PROJ-R123)
+  - `validate_test_cycle_input` - Validate test cycle creation data
+  - `validate_test_cycle_update_input` - Validate test cycle updates
+  - `validate_jira_version_id` - Validate Jira project version IDs
+
+### 📊 Total MCP Tools
+
+- **32 tools** (increased from 25) - Comprehensive test management capabilities
+- **7 test cycle tools** - Full CRUD with link management
+- **25 existing tools** - Test cases, priorities, statuses, folders, steps, scripts
+
+### 🎯 Key Features
+
+- **Offset-based pagination** - Efficient bulk data retrieval (up to 1000 records)
+- **Jira version integration** - Link test cycles to specific Jira project versions
+- **Planned date support** - Track start and end dates for test cycles
+- **Link management** - Connect test cycles to Jira issues and web resources
+- **Custom fields support** - Flexible metadata with custom fields
+- **Environment variable fallback** - Automatic project key resolution
+
+## [0.1.6] - 2025-09-08
 
 ### 📚 Documentation Enhancement
 - **Added comprehensive Table of Contents** - Full navigation with clickable anchor links for easy README navigation

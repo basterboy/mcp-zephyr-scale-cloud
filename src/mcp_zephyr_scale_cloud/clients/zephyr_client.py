@@ -32,6 +32,12 @@ from ..schemas.test_case import (
     TestCaseUpdateInput,
     WebLinkInput,
 )
+from ..schemas.test_cycle import (
+    TestCycle,
+    TestCycleInput,
+    TestCycleLinkList,
+    TestCycleList,
+)
 from ..schemas.test_script import TestScript, TestScriptInput
 from ..schemas.test_step import TestStepsInput, TestStepsList
 from ..schemas.version import TestCaseVersionList
@@ -1060,4 +1066,261 @@ class ZephyrClient:
         except httpx.HTTPError as e:
             return self._handle_http_error(
                 e, f"Failed to update test case {test_case_key}"
+            )
+
+    # ========================
+    # Test Cycle Operations
+    # ========================
+
+    async def get_test_cycles(
+        self,
+        project_key: str | None = None,
+        folder_id: int | None = None,
+        jira_project_version_id: int | None = None,
+        max_results: int = 10,
+        start_at: int = 0,
+    ) -> ValidationResult:
+        """Get test cycles from Zephyr Scale Cloud.
+
+        Args:
+            project_key: Optional Jira project key to filter test cycles
+            folder_id: Optional folder ID to filter test cycles
+            jira_project_version_id: Optional Jira project version ID to filter
+            max_results: Maximum number of results to return (default: 10, max: 1000)
+            start_at: Zero-indexed starting position (default: 0)
+
+        Returns:
+            ValidationResult containing TestCycleList or errors
+        """
+        # Validate pagination parameters
+        pagination_validation = validate_pagination_params(max_results, start_at)
+        if not pagination_validation:
+            return pagination_validation
+
+        params = pagination_validation.data
+        if project_key:
+            params["projectKey"] = project_key
+        if folder_id:
+            params["folderId"] = folder_id
+        if jira_project_version_id:
+            params["jiraProjectVersionId"] = jira_project_version_id
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"{self.config.base_url}/testcycles",
+                    headers=self.headers,
+                    params=params,
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+
+                # Validate response against schema
+                return validate_api_response(response.json(), TestCycleList)
+
+            except httpx.HTTPError as e:
+                return self._handle_http_error(e, "Failed to retrieve test cycles")
+
+    async def get_test_cycle(self, test_cycle_key: str) -> ValidationResult:
+        """Get a specific test cycle by key or ID.
+
+        Args:
+            test_cycle_key: The key or ID of the test cycle
+
+        Returns:
+            ValidationResult containing TestCycle or errors
+        """
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"{self.config.base_url}/testcycles/{test_cycle_key}",
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+
+                # Validate response against schema
+                return validate_api_response(response.json(), TestCycle)
+
+            except httpx.HTTPError as e:
+                return self._handle_http_error(
+                    e, f"Failed to retrieve test cycle {test_cycle_key}"
+                )
+
+    async def create_test_cycle(
+        self, test_cycle_input: TestCycleInput
+    ) -> "ValidationResult[CreatedResource]":
+        """Create a new test cycle.
+
+        Args:
+            test_cycle_input: Test cycle input data
+
+        Returns:
+            ValidationResult with CreatedResource data or error messages
+        """
+        try:
+            # Convert to dict for API request
+            request_data = test_cycle_input.model_dump(by_alias=True, exclude_none=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/testcycles",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CreatedResource)
+
+        except httpx.HTTPError as e:
+            return self._handle_http_error(e, "Failed to create test cycle")
+
+    async def update_test_cycle(
+        self, test_cycle_key: str, test_cycle: TestCycle
+    ) -> ValidationResult:
+        """Update an existing test cycle.
+
+        Args:
+            test_cycle_key: The key or ID of the test cycle to update
+            test_cycle: Test cycle data with updates
+
+        Returns:
+            ValidationResult indicating success or errors
+        """
+        try:
+            # Convert to dict for API request, exclude None values
+            request_data = test_cycle.model_dump(by_alias=True, exclude_none=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.put(
+                    f"{self.config.base_url}/testcycles/{test_cycle_key}",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+
+                # Handle both 200 with body and 204 No Content
+                if response.status_code == 204 or not response.content:
+                    return ValidationResult(True, data=test_cycle)
+
+                # PUT returns 200 with TestCycle data according to API spec
+                return validate_api_response(response.json(), TestCycle)
+
+        except httpx.HTTPError as e:
+            return self._handle_http_error(
+                e, f"Failed to update test cycle {test_cycle_key}"
+            )
+
+    async def get_test_cycle_links(self, test_cycle_key: str) -> ValidationResult:
+        """Get all links for a test cycle.
+
+        Args:
+            test_cycle_key: The key or ID of the test cycle
+
+        Returns:
+            ValidationResult containing TestCycleLinkList or errors
+        """
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"{self.config.base_url}/testcycles/{test_cycle_key}/links",
+                    headers=self.headers,
+                    timeout=10.0,
+                )
+                response.raise_for_status()
+
+                # Validate response against schema
+                return validate_api_response(response.json(), TestCycleLinkList)
+
+            except httpx.HTTPError as e:
+                return self._handle_http_error(
+                    e, f"Failed to retrieve links for test cycle {test_cycle_key}"
+                )
+
+    async def create_test_cycle_issue_link(
+        self, test_cycle_key: str, issue_link_input: IssueLinkInput
+    ) -> "ValidationResult[CreatedResource]":
+        """Create a link between a test cycle and a Jira issue.
+
+        Args:
+            test_cycle_key: The key or ID of the test cycle
+            issue_link_input: Issue link input data
+
+        Returns:
+            ValidationResult with CreatedResource data or error messages
+        """
+        try:
+            # Convert to dict for API request
+            request_data = issue_link_input.model_dump(by_alias=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/testcycles/{test_cycle_key}/links/issues",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+
+                # Handle both 201 with body and 204 No Content
+                if response.status_code == 204 or not response.content:
+                    # Return success with a placeholder ID
+                    return ValidationResult(True, data=CreatedResource(id=0))
+
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CreatedResource)
+
+        except httpx.HTTPError as e:
+            return self._handle_http_error(
+                e, f"Failed to create issue link for test cycle {test_cycle_key}"
+            )
+
+    async def create_test_cycle_web_link(
+        self, test_cycle_key: str, web_link_input: WebLinkInput
+    ) -> "ValidationResult[CreatedResource]":
+        """Create a link between a test cycle and a web URL.
+
+        Args:
+            test_cycle_key: The key or ID of the test cycle
+            web_link_input: Web link input data
+
+        Returns:
+            ValidationResult with CreatedResource data or error messages
+        """
+        try:
+            # Convert to dict for API request
+            request_data = web_link_input.model_dump(by_alias=True)
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.config.base_url}/testcycles/{test_cycle_key}/links/weblinks",
+                    headers=self.headers,
+                    json=request_data,
+                    timeout=10.0,
+                )
+
+                response.raise_for_status()
+
+                # Handle both 201 with body and 204 No Content
+                if response.status_code == 204 or not response.content:
+                    # Return success with a placeholder ID
+                    return ValidationResult(True, data=CreatedResource(id=0))
+
+                response_data = response.json()
+
+                # Validate and parse response
+                return validate_api_response(response_data, CreatedResource)
+
+        except httpx.HTTPError as e:
+            return self._handle_http_error(
+                e, f"Failed to create web link for test cycle {test_cycle_key}"
             )

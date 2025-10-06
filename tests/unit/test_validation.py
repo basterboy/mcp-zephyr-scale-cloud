@@ -629,3 +629,131 @@ class TestTestCaseUpdateInputValidation:
 
         assert not result.is_valid
         assert "Unexpected validation error" in result.errors[0]
+
+
+class TestTestCycleValidation:
+    """Test test cycle validation functions."""
+
+    def test_validate_test_cycle_key_valid(self):
+        """Test validation passes for valid test cycle keys."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_cycle_key,
+        )
+
+        valid_keys = ["PROJ-R1", "ABC-R123", "TEST-R999", "AB-R1"]
+        for key in valid_keys:
+            result = validate_test_cycle_key(key)
+            assert result.is_valid is True
+            assert result.data == key
+            assert result.errors == []
+
+    def test_validate_test_cycle_key_invalid(self):
+        """Test validation fails for invalid test cycle keys."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_cycle_key,
+        )
+
+        invalid_keys = ["PROJ-T1", "PROJ-1", "R123", "PROJ-R", ""]
+        for key in invalid_keys:
+            result = validate_test_cycle_key(key)
+            assert result.is_valid is False
+            assert len(result.errors) > 0
+
+    def test_validate_test_cycle_input_minimal(self):
+        """Test validation passes for minimal valid input."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_cycle_input,
+        )
+
+        data = {"project_key": "PROJ", "name": "Sprint 1 Testing"}
+        result = validate_test_cycle_input(data)
+        assert result.is_valid is True
+        assert result.data.project_key == "PROJ"
+        assert result.data.name == "Sprint 1 Testing"
+
+    def test_validate_test_cycle_input_full(self):
+        """Test validation passes for complete valid input."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_cycle_input,
+        )
+
+        data = {
+            "project_key": "PROJ",
+            "name": "Sprint 1",
+            "description": "Testing for sprint 1",
+            "custom_fields": {"Environment": "Production"},
+        }
+        result = validate_test_cycle_input(data)
+        assert result.is_valid is True
+        assert result.data.custom_fields == {"Environment": "Production"}
+
+    def test_validate_test_cycle_input_missing_name(self):
+        """Test validation fails when name is missing."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_cycle_input,
+        )
+
+        data = {"project_key": "PROJ"}
+        result = validate_test_cycle_input(data)
+        assert result.is_valid is False
+        assert len(result.errors) > 0
+
+    def test_validate_test_cycle_input_invalid_type(self):
+        """Test validation fails with invalid data type."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_test_cycle_input,
+        )
+
+        result = validate_test_cycle_input("not_a_dict")
+        assert result.is_valid is False
+        assert len(result.errors) > 0
+
+    def test_validate_jira_version_id_valid_string(self):
+        """Test validation passes for valid version ID as string."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_jira_version_id,
+        )
+
+        result = validate_jira_version_id("10000")
+        assert result.is_valid is True
+        assert result.data == 10000
+
+    def test_validate_jira_version_id_valid_int(self):
+        """Test validation passes for valid version ID as integer."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_jira_version_id,
+        )
+
+        result = validate_jira_version_id(12345)
+        assert result.is_valid is True
+        assert result.data == 12345
+
+    def test_validate_jira_version_id_invalid_zero(self):
+        """Test validation fails for zero version ID."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_jira_version_id,
+        )
+
+        result = validate_jira_version_id("0")
+        assert result.is_valid is False
+        assert len(result.errors) > 0
+
+    def test_validate_jira_version_id_invalid_negative(self):
+        """Test validation fails for negative version ID."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_jira_version_id,
+        )
+
+        result = validate_jira_version_id("-1")
+        assert result.is_valid is False
+        assert len(result.errors) > 0
+
+    def test_validate_jira_version_id_invalid_non_numeric(self):
+        """Test validation fails for non-numeric version ID."""
+        from src.mcp_zephyr_scale_cloud.utils.validation import (
+            validate_jira_version_id,
+        )
+
+        result = validate_jira_version_id("abc")
+        assert result.is_valid is False
+        assert len(result.errors) > 0
